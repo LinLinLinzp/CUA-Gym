@@ -1,7 +1,7 @@
 {
  "task_id": "cua-hard/escalation-review-prep",
- "task_version": "0.1.0",
- "verifier_version": "0.1.0",
+ "task_version": "0.1.1",
+ "verifier_version": "0.1.1",
  "reward_file": "/logs/verifier/reward.txt",
  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。主杠杆 L03（隐藏数据）：17 张目标工单中有 8 张（3141、3157、3166、3177、3183、3186、3204、3218）为 solved 或 hold，不在默认视图“Your unsolved tickets”中，也不在任何 unsolved 视图的可见范围内（solved 只出现在“Recently solved tickets”且共 81 行，按更新时间倒序，9–10 月的目标排在第 19–45 行）；升级到研发的工单只能靠 Engineering Escalations 分组与折叠在“Show more”里的“Jira issue”自定义字段识别，搜索不覆盖自定义字段，各工单的升级备注措辞也不同，没有单一筛选或搜索恰好列出它们。逐工单计分：标签三组（Z1–Z3）、隐藏目标（Z4）、Jira 评论中的工单号/账户数/ARR（J1–J3）、CSV 逐行（C1）都按目标逐个计分，只做首屏可见部分（visible_only 夹具）约得 0.33。标 core 的检查点即逐目标组，仅作说明，不调用 g.gate()/g.cap()。“不应改动/不应多做”类检查（Z5、Z6、J5）乘以覆盖率 cov 才得分：cov = 当前已带正确 bug 标签的目标数/17，但若没有任何目标新增正确标签则 cov=0，因此空操作为 0。站点状态文件缺失或不可解析、工单或 Jira issue 从状态中消失时记为 invalid，以非零退出码结束且不写 reward。",
  "numeric_rule": "“今天”为 2026-11-18（America/Los_Angeles）。时间窗口“opened since September 1”= created_at ≥ 2026-09-01T00:00:00-07:00（即 2026-09-01T07:00:00Z）；3140 创建于 2026-08-31T23:40 PT（2026-09-01T06:40:00Z），不在窗口内。ARR 来自 /workspace/input/billing_accounts.csv 的 arr_usd，按请求人邮箱域名与 billing_domain 精确匹配求 account_id（Zendesk 组织名与账单名不一致，组织“Brightline”= brightline-electric.com = ACC-1004，而非 Brightline Solar ACC-1016；3177 的请求人无组织，域名 summitroofing.co = ACC-1005，不是 summitgutters.com 的 ACC-1021）。同一账户多张工单只计一次 ARR。阈值：受影响账户 ARR 合计 ≥ 150,000 则 Jira 优先级改为 Highest。文本中金额用正则提取：支持 $287,000、287000、$287k、287.0K，先去掉千分位逗号，k/K 乘 1000，取整后比较；工单号按 4 位整数提取（允许前导 #）。",

@@ -15,7 +15,9 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
+import shlex
 import shutil
 import subprocess
 import sys
@@ -33,6 +35,7 @@ CATALOG = json.loads((FACTORY / "catalog" / "sites.json").read_text())["sites"]
 # world.py may render media (Pillow/reportlab) -> prefer the factory venv.
 WORLD_PYTHON = str(FACTORY / ".venv" / "bin" / "python") if (FACTORY / ".venv" / "bin" / "python").exists() else sys.executable
 TEMPLATE = FACTORY / "templates" / "harbor_task"
+COMPUTER_RUNTIME = FACTORY / "runtime" / "computer_mcp"
 # Labels are numeric. operation_difficulty: 1 初级 / 2 中级 / 3 高级;
 # tool_type: 1 纯web / 2 web+app 或 web+cli / 3 web+cli+app; difficulty = product
 # (1-2 简单, 3-4 中等, 6/9 困难).
@@ -80,12 +83,26 @@ def selfcheck(src: Path, build: Path, spec: dict) -> dict:
             for line in result.stdout.splitlines() if line.startswith("PASS")}
 
 
-def task_toml(spec: dict) -> str:
+def task_toml(spec: dict, *, computer_mcp: bool = False) -> str:
     md = spec["metadata"]
     check_labels(md)
     keywords = ", ".join(json.dumps(k) for k in spec["keywords"])
+    artifacts = "" if computer_mcp else 'artifacts = ["/workspace/output", "/logs/agent/browser", "/var/lib/cua/state"]'
+    endpoint = (
+        'name = "desktop"\ntransport = "streamable-http"\nurl = "http://desktop:8000/mcp"'
+        if computer_mcp else 'name = "browser"\ntransport = "stdio"\ncommand = "/usr/local/bin/browser-mcp"'
+    )
+    healthcheck = '' if computer_mcp else '''[environment.healthcheck]
+command = "curl -fsS http://127.0.0.1:8079/health >/dev/null && curl -fsS http://127.0.0.1:8090/__health >/dev/null"
+interval_sec = 2.0
+timeout_sec = 10.0
+retries = 30
+
+'''
+    desktop_apps = "\ndesktop_apps = " + json.dumps(spec["computer_mcp"]["applications"]) if computer_mcp else ""
+    verifier_mode = '\nenvironment_mode = "shared"' if computer_mcp else ""
     return f'''schema_version = "1.4"
-artifacts = ["/workspace/output", "/logs/agent/browser", "/var/lib/cua/state"]
+{artifacts}
 
 [task]
 name = "{spec["name"]}"
@@ -101,15 +118,15 @@ operation_difficulty = {md["operation_difficulty"]}
 tool_type = {md["tool_type"]}
 difficulty = {md["difficulty"]}
 sites = [{", ".join(json.dumps(CATALOG[s]["brand"]) for s in spec["sites"])}]
-language = "en"
+language = "en"{desktop_apps}
 
 [agent]
-timeout_sec = {float(spec.get("agent_timeout_sec", AGENT_TIMEOUT_SEC))}
+timeout_sec = {float(spec.get("agent_timeout_sec", 1500 if computer_mcp else AGENT_TIMEOUT_SEC))}
 user = "agent"
 
 [verifier]
 timeout_sec = 600.0
-user = "root"
+user = "root"{verifier_mode}
 
 [environment]
 build_timeout_sec = 1800.0
@@ -117,16 +134,8 @@ cpus = 2
 memory_mb = 4096
 storage_mb = 10240
 
-[environment.healthcheck]
-command = "curl -fsS http://127.0.0.1:8079/health >/dev/null && curl -fsS http://127.0.0.1:8090/__health >/dev/null"
-interval_sec = 2.0
-timeout_sec = 10.0
-retries = 30
-
-[[environment.mcp_servers]]
-name = "browser"
-transport = "stdio"
-command = "/usr/local/bin/browser-mcp"
+{healthcheck}[[environment.mcp_servers]]
+{endpoint}
 '''
 
 
@@ -174,6 +183,44 @@ def copy_runtime(env: Path):
     shutil.copy(FACTORY / "runtime" / "entrypoint.sh", cua / "entrypoint.sh")
 
 
+def snapshot_manifest(spec: dict) -> dict:
+    desktop = spec["computer_mcp"]
+    if desktop["applications"] not in ([], ["libreoffice_calc"]):
+        raise ValueError("Unsupported computer MCP desktop applications")
+    sites = spec["sites"]
+    outputs = desktop["outputs"]
+    attachments = desktop.get("attachments", {})
+    for site, names in attachments.items():
+        if site not in sites:
+            raise ValueError(f"Snapshot attachment site is outside the task: {site}")
+    for name in [*outputs, *(name for names in attachments.values() for name in names)]:
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_. -]*", name):
+            raise ValueError(f"Snapshot entries must be filenames: {name}")
+    return {"sites": sites, "outputs": outputs, "attachments": attachments}
+
+
+def copy_computer_runtime(env: Path, spec: dict):
+    shutil.copytree(COMPUTER_RUNTIME / "environment", env, ignore=shutil.ignore_patterns("__pycache__"))
+    cua = env / "desktop" / "cua"
+    shutil.copytree(FACTORY / "runtime" / "sitehost", cua / "sitehost",
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    if spec["computer_mcp"]["applications"]:
+        shutil.copy(COMPUTER_RUNTIME / "registrymodifications.xcu", cua / "sources")
+    return cua
+
+
+def stage_computer_oracle(src: Path, solution: Path, draft: bool):
+    solution.mkdir()
+    replay = src / "solution" / "solve.py"
+    if not replay.is_file():
+        if draft:
+            return
+        raise ValueError(f"Missing desktop GUI Oracle: {replay}")
+    shutil.copy(replay, solution)
+    shutil.copy(COMPUTER_RUNTIME / "solution" / "computer.py", solution)
+    shutil.copy(COMPUTER_RUNTIME / "solution" / "solve.sh", solution)
+
+
 def style_gate(src: Path):
     result = subprocess.run([sys.executable, str(FACTORY / "pipeline" / "style_lint.py"), str(src / "instruction.md")],
                             capture_output=True, text=True)
@@ -184,9 +231,10 @@ def style_gate(src: Path):
 MIN_SITES = 3  # project rule: every task spans at least three websites
 
 
-def package(task: str, out_root: Path, skip_selfcheck: bool = False) -> Path:
+def package(task: str, out_root: Path, skip_selfcheck: bool = False, *, computer_mcp: bool = False) -> Path:
     src = FACTORY / "tasks_src" / task
     spec = json.loads((src / "spec.json").read_text())
+    manifest = snapshot_manifest(spec) if computer_mcp else None
     if len(set(spec["sites"])) < MIN_SITES:
         raise SystemExit(f"{task}: uses {len(set(spec['sites']))} sites, at least {MIN_SITES} required")
     style_gate(src)
@@ -199,14 +247,19 @@ def package(task: str, out_root: Path, skip_selfcheck: bool = False) -> Path:
         if out.exists():
             shutil.rmtree(out)
         env = out / "environment"
-        copy_runtime(env)
-        cua = env / "cua"
+        if computer_mcp:
+            cua = copy_computer_runtime(env, spec)
+        else:
+            copy_runtime(env)
+            cua = env / "cua"
         dists = {}
         for site in spec["sites"]:
             dists[site] = build_dists.build(site)
             shutil.copytree(dists[site], cua / "sites" / site / "dist")
         shutil.copytree(build / "seed", cua / "seed")
         if (build / "triggers.json").exists():  # lever L14: reactive world
+            if computer_mcp:
+                raise ValueError("Reactive site triggers require a verified computer MCP desktop implementation")
             shutil.copy(build / "triggers.json", cua / "triggers.json")
         offline_assets.collect(list(dists.values()) + [build / "seed"], cua / "assets")
         config = {"sid": secrets.token_hex(3), "clock": spec["clock"], "timezone": spec["timezone"],
@@ -215,19 +268,26 @@ def package(task: str, out_root: Path, skip_selfcheck: bool = False) -> Path:
         if spec.get("hide_browser_debug"):
             config["hide_browser_debug"] = True
         (cua / "config.json").write_text(json.dumps(config, indent=1))
-        token = secrets.token_hex(32)
-        (cua / "oracle.sha256").write_text(hashlib.sha256(token.encode()).hexdigest())
-        workspace_input = env / "workspace" / "input"
+        context = env / "desktop" if computer_mcp else env
+        workspace_input = context / "workspace" / "input"
         workspace_input.mkdir(parents=True)
         if (build / "input").is_dir():
             shutil.copytree(build / "input", workspace_input, dirs_exist_ok=True)
 
         solution = out / "solution"
-        shutil.copytree(TEMPLATE / "solution", solution)
-        shutil.copytree(build / "golden", solution / "golden")
-        if (build / "golden_output").is_dir():
-            shutil.copytree(build / "golden_output", solution / "golden_output")
-        (solution / "oracle_token").write_text(token)
+        if computer_mcp:
+            if not any(path.is_file() for path in workspace_input.rglob("*")):
+                (workspace_input / ".gitkeep").touch()
+            (cua / "snapshot.json").write_text(json.dumps(manifest, indent=2))
+            stage_computer_oracle(src, solution, skip_selfcheck)
+        else:
+            token = secrets.token_hex(32)
+            (cua / "oracle.sha256").write_text(hashlib.sha256(token.encode()).hexdigest())
+            shutil.copytree(TEMPLATE / "solution", solution)
+            shutil.copytree(build / "golden", solution / "golden")
+            if (build / "golden_output").is_dir():
+                shutil.copytree(build / "golden_output", solution / "golden_output")
+            (solution / "oracle_token").write_text(token)
 
         tests = out / "tests"
         if (src / "tests").is_dir():
@@ -235,7 +295,12 @@ def package(task: str, out_root: Path, skip_selfcheck: bool = False) -> Path:
                 "__pycache__", "cuaverify.py", "cuaverify_additive.py", "expected.json"))
         else:
             tests.mkdir()
-        shutil.copy(TEMPLATE / "tests" / "test.sh", tests)
+        if computer_mcp:
+            shutil.copytree(COMPUTER_RUNTIME / "tests", tests, dirs_exist_ok=True,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+            shutil.copy(cua / "snapshot.json", tests)
+        else:
+            shutil.copy(TEMPLATE / "tests" / "test.sh", tests)
         shutil.copy(TEMPLATE / "tests" / "test_verifier.py", tests)
         copy_verifier_kit(tests, additive_scoring=spec.get("additive_scoring", False))
         if (build / "expected.json").exists():
@@ -246,18 +311,36 @@ def package(task: str, out_root: Path, skip_selfcheck: bool = False) -> Path:
     shutil.copy(src / "instruction.md", out / "instruction.md")
     shutil.copy(src / "proposal.md", out / "proposal.md")
     shutil.copy(src / "rubric.json", out / "rubric.json")
-    (out / "task.toml").write_text(task_toml(spec))
+    (out / "task.toml").write_text(task_toml(spec, computer_mcp=computer_mcp))
     (out / "verifier-checkpoints.md").write_text(checkpoints_md(json.loads((src / "rubric.json").read_text())))
     (out / "evaluation.json").write_text(json.dumps(evaluation_json(spec, rewards), ensure_ascii=False, indent=2))
-    for script in (out / "solution" / "solve.sh", out / "tests" / "test.sh", env / "cua" / "entrypoint.sh"):
-        script.chmod(0o755)
+    for script in (out / "solution" / "solve.sh", out / "tests" / "test.sh", cua / "entrypoint.sh"):
+        if script.is_file():
+            script.chmod(0o755)
     return out
 
 
-def make_tar(task_dir: Path, tars: Path) -> Path:
+def check_ap_context(path: Path):
+    """Check Docker COPY sources after AP drops all directory-only tar entries."""
+    with tarfile.open(path) as bundle:
+        files = {entry.name for entry in bundle if entry.isfile()}
+        for context in ("environment/", "environment/desktop/"):
+            recipe = bundle.extractfile(context + "Dockerfile").read().decode()
+            for line in recipe.splitlines():
+                if not line.startswith("COPY "):
+                    continue
+                sources = [field for field in shlex.split(line)[1:-1] if not field.startswith("--")]
+                for source in sources:
+                    prefix = context + source
+                    if prefix not in files and not any(name.startswith(prefix.rstrip("/") + "/") for name in files):
+                        raise ValueError(f"AP file-only repack loses Docker COPY source {prefix}")
+
+
+def make_tar(task_dir: Path, tars: Path, *, computer_mcp: bool = False) -> Path:
     """Platform format: files at the archive root, no top-level directory, no AppleDouble files."""
     tars.mkdir(parents=True, exist_ok=True)
-    target = tars / f"{task_dir.name}.tar.gz"
+    suffix = "-computer-mcp" if computer_mcp else ""
+    target = tars / f"{task_dir.name}{suffix}.tar.gz"
 
     def clean(info):
         name = Path(info.name).name
@@ -270,6 +353,11 @@ def make_tar(task_dir: Path, tars: Path) -> Path:
     with tarfile.open(target, "w:gz") as tar:
         for child in sorted(task_dir.iterdir()):
             tar.add(child, arcname=child.name, filter=clean)
+    if computer_mcp:
+        check_ap_context(target)
+        with target.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        target.with_name(target.name + ".sha256").write_text(f"{digest}  {target.name}\n")
     return target
 
 
@@ -278,13 +366,15 @@ def main():
     parser.add_argument("tasks", nargs="+")
     parser.add_argument("--out", type=Path, default=REPO / "output" / "harbor")
     parser.add_argument("--skip-selfcheck", action="store_true", help="draft package for UI probing (no verifier yet)")
+    parser.add_argument("--runtime", choices=("legacy", "computer-mcp"), default="legacy")
     args = parser.parse_args()
     os.environ.setdefault("COPYFILE_DISABLE", "1")
+    computer_mcp = args.runtime == "computer-mcp"
     for task in args.tasks:
-        out = package(task, args.out, args.skip_selfcheck)
+        out = package(task, args.out, args.skip_selfcheck, computer_mcp=computer_mcp)
         print("packaged", out)
         if not args.skip_selfcheck:
-            print("tar", make_tar(out, args.out / "tars"))
+            print("tar", make_tar(out, args.out / "tars", computer_mcp=computer_mcp))
 
 
 if __name__ == "__main__":

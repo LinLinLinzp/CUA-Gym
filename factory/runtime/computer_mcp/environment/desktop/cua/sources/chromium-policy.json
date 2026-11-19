@@ -1,0 +1,8 @@
+{
+  "DeveloperToolsAvailability": 2,
+  "CommandLineFlagSecurityWarningsEnabled": false,
+  "URLBlocklist": ["devtools://*", "chrome-devtools://*", "view-source:*", "javascript:*", "file://*", "chrome://inspect/*"],
+  "DownloadDirectory": "/workspace/downloads",
+  "PromptForDownloadLocation": false,
+  "ExtensionInstallBlocklist": ["*"]
+}

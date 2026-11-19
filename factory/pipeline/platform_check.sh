@@ -5,7 +5,11 @@
 # Prints "oracle=<r> nop=<r>" and exits 0 only for oracle 1.0 and nop 0.0.
 #   DOCKER_HOST=ssh://natura-116 factory/pipeline/platform_check.sh output/harbor/tasks/<task> [--reset]
 set -u
-T=${1:?task dir}; N=pc-$(basename "$T" | tr '[:upper:]' '[:lower:]')-$RANDOM
+T=${1:?task dir}
+if [[ -f "$T/environment/docker-compose.yaml" && -f "$T/tests/snapshot.json" ]]; then
+  exec python3 "$(dirname "$0")/check_computer_mcp.py" "$T"
+fi
+N=pc-$(basename "$T" | tr '[:upper:]' '[:lower:]')-$RANDOM
 docker build -q -t "$N:dev" "$T/environment" >/dev/null || { echo "build failed"; exit 2; }
 trap 'docker rm -f "$N-o" "$N-n" >/dev/null 2>&1; docker rmi "$N:dev" >/dev/null 2>&1' EXIT
 

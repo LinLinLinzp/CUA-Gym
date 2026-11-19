@@ -1,0 +1,68 @@
+{
+  "additive_scoring": true,
+  "task_id": "riverside-showcase-placement",
+  "name": "cua-hard/riverside-showcase-placement",
+  "version": "0.1.2",
+  "computer_mcp": {"applications": [], "outputs": []},
+  "description": "Interpret a revised visual floor plan and the operating constraints, then assign the approved equipment and hand off the placement.",
+  "keywords": [
+    "browser",
+    "multi-site",
+    "floor-plan",
+    "visual-evidence"
+  ],
+  "sites": [
+    "gmail",
+    "airtable",
+    "basecamp"
+  ],
+  "clock": "2026-11-19T09:10:00-05:00",
+  "timezone": "America/New_York",
+  "locale": "en-US",
+  "hide_browser_debug": true,
+  "metadata": {
+    "scenario": "组织办公",
+    "subscenario": "巡展布置与动线",
+    "operation_difficulty": 2,
+    "tool_type": 1,
+    "difficulty": 2,
+    "levers": [
+      "L02",
+      "L06"
+    ]
+  },
+  "fixture_expectations": {
+    "golden": [
+      1,
+      1
+    ],
+    "nop": [
+      0,
+      0
+    ],
+    "naive": [
+      0,
+      0.35
+    ],
+    "slip_width": [
+      0.55,
+      0.85
+    ],
+    "slip_approval": [
+      0.55,
+      0.95
+    ],
+    "slip_arrow": [
+      0.55,
+      0.85
+    ],
+    "advice_only": [
+      0.2,
+      0.2
+    ],
+    "semicolon_comment": [1, 1],
+    "semicolon_with_extra_todo": [0.85, 0.85],
+    "neighbor_reason_only": [0.93, 0.93],
+    "wrong_bay_reason": [0.93, 0.93]
+  }
+}

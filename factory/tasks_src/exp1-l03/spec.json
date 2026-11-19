@@ -1,11 +1,12 @@
 {
   "task_id": "escalation-review-prep",
   "name": "cua-hard/escalation-review-prep",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "computer_mcp": {"applications": ["libreoffice_calc"], "outputs": ["escalation_review.csv"]},
   "description": "Prepare a support-engineering escalation review: find every Zendesk ticket escalated on three Jira bugs since Sept 1 (many solved or on hold, outside the default views), tag them, post per-bug ticket/account/ARR comments in Jira using a local billing export, bump bugs over the ARR threshold, report back in Slack and write a CSV.",
   "keywords": [
     "browser",
-    "cli",
+    "libreoffice",
     "customer-support",
     "saas",
     "escalations",

@@ -1,0 +1,10 @@
+{
+  "allowManagedHooksOnly": true,
+  "allowManagedPermissionRulesOnly": true,
+  "allowedMcpServers": [{"serverUrl": "http://desktop:8000/mcp"}],
+  "disableClaudeAiConnectors": true,
+  "permissions": {"allow": ["mcp__desktop__computer"]},
+  "hooks": {
+    "PreToolUse": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cua-gui-tool-gate"}]}]
+  }
+}

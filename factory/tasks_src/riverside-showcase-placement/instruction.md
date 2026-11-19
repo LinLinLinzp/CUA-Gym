@@ -1,0 +1,3 @@
+I'm handing over tomorrow's setup for the Riverside showcase. The venue sent a revised floor plan in the Gmail thread “Riverside loading plan.” Use the latest approved plan, the Riverside Load List in Airtable, and the installation checklist in Basecamp to assign the three kits on the load list. Update their existing Airtable rows with the bay and disposition. Leave any kit without release approval on hold with its bay blank, and keep existing allocations in place.
+
+Leave one comment on the existing Riverside load-in to-do in Basecamp with the assignments, why each route works, and anything the crew needs to hold back.

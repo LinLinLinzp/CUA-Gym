@@ -1,0 +1,3 @@
+factory/runtime/computer_mcp/** text=auto eol=lf
+factory/pipeline/platform_check.sh text eol=lf
+factory/pipeline/prescreen.sh text eol=lf

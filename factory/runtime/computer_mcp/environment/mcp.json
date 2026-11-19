@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "desktop": {
+      "type": "http",
+      "url": "http://desktop:8000/mcp",
+      "alwaysLoad": true
+    }
+  }
+}

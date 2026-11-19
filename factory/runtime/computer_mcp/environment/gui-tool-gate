@@ -1,0 +1,12 @@
+#!/usr/local/bin/python3
+import json
+import sys
+
+try:
+    allowed = json.load(sys.stdin).get("tool_name") == "mcp__desktop__computer"
+except (AttributeError, ValueError):
+    allowed = False
+
+if not allowed:
+    print("This task permits only the desktop computer tool.", file=sys.stderr)
+    sys.exit(2)

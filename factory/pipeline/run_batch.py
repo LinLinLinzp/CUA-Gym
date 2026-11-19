@@ -157,7 +157,8 @@ def run_slot(slot: dict, rounds: int, status: dict, status_path: Path, agent_run
             review = f"world.py failed:\n{exc.stderr.decode()[-3000:]}"
             continue
         update(status, status_path, sid, f"round{attempt}:verifier")
-        spec_sites = json.loads((task_dir / "spec.json").read_text()).get("sites", slot["sites"])
+        spec = json.loads((task_dir / "spec.json").read_text())
+        spec_sites = spec.get("sites", slot["sites"])
         make_sandbox({**slot, "sites": spec_sites}, task_dir, build, sandbox, review)
         agent_runner("hard-verifier-writer", f"Sandbox: {sandbox}. Write tests/verifier.py there.", log, cwd=sandbox)
         if not (sandbox / "tests" / "verifier.py").exists():
@@ -168,7 +169,9 @@ def run_slot(slot: dict, rounds: int, status: dict, status_path: Path, agent_run
         update(status, status_path, sid, f"round{attempt}:style")
         agent_runner("hard-instruction-stylist", f"Task directory: {task_dir}", log)
         update(status, status_path, sid, f"round{attempt}:package")
-        result = subprocess.run([sys.executable, str(FACTORY / "pipeline" / "package.py"), sid],
+        runtime = "computer-mcp" if "computer_mcp" in spec else "legacy"
+        result = subprocess.run([sys.executable, str(FACTORY / "pipeline" / "package.py"), sid,
+                                 "--runtime", runtime],
                                 capture_output=True, text=True)
         with log.open("a") as f:
             f.write(result.stdout + result.stderr)
@@ -186,7 +189,7 @@ def run_slot(slot: dict, rounds: int, status: dict, status_path: Path, agent_run
                 continue
             with LOCK, (FACTORY / "catalog" / "usage.jsonl").open("a") as f:
                 f.write(json.dumps({**slot, "task_dir": str(task_dir.relative_to(REPO))}, ensure_ascii=False) + "\n")
-            return update(status, status_path, sid, "packaged", rounds=attempt)
+            return update(status, status_path, sid, "packaged", rounds=attempt, runtime=runtime)
         review = selfcheck_review(result.stdout + result.stderr)
     return update(status, status_path, sid, "failed", review=review)
 

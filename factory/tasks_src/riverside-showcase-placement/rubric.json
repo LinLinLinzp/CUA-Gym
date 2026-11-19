@@ -1,0 +1,50 @@
+{
+  "task_id": "cua-hard/riverside-showcase-placement",
+  "task_version": "0.1.2",
+  "verifier_version": "0.1.2",
+  "reward_rule": "按检查点加权计分，空操作得 0。仅依据本次交付与相对初态的新增或变更。",
+  "common": {
+    "type": "业务结果",
+    "implementation": "程序化",
+    "score_mode": "按检查点",
+    "coverage": "已实现"
+  },
+  "checkpoints": [
+    {
+      "id": "V1",
+      "weight": 25,
+      "requirement": "为 K17 确认有电且可入场的展位",
+      "evidence": "Airtable 原记录",
+      "rule": "B2 且 Assigned"
+    },
+    {
+      "id": "V2",
+      "weight": 25,
+      "requirement": "为 K24 确认满足净宽的展位",
+      "evidence": "Airtable 原记录",
+      "rule": "B3 且 Assigned"
+    },
+    {
+      "id": "V3",
+      "weight": 15,
+      "requirement": "待审批的 K31 挂起",
+      "evidence": "Airtable 原记录",
+      "rule": "Hold 且展位留空"
+    },
+    {
+      "id": "B1",
+      "weight": 20,
+      "requirement": "在原待办交接确认结果和依据",
+      "evidence": "Basecamp 新增评论",
+      "rule": "分别覆盖两套设备的展位和通行依据及暂缓理由。同一套件的说明可跨多个分句，其他套件或其他展位的依据不计入。"
+    },
+    {
+      "id": "P1",
+      "weight": 15,
+      "requirement": "保留无关、锁定及源数据",
+      "evidence": "Airtable 和 Basecamp 字段差异",
+      "rule": "完成至少一条正确分配，其他记录、输入字段和原待办保持"
+    }
+  ],
+  "subjective": []
+}

@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from cuaverify import InfraError, load_site, new_items, plain, read_csv, run  # noqa: E402
 
-TASK_ID, VERSION = "cua-hard/escalation-review-prep", "0.1.0"
+TASK_ID, VERSION = "cua-hard/escalation-review-prep", "0.1.1"
 
 # ticket -> (jira key, account_id, status in the seed). Status is the seed's; tagging
 # must not change it (Z6), so it is also what the CSV must report.
