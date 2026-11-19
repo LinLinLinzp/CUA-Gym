@@ -17,13 +17,17 @@ import json
 import os
 import re
 import secrets
-import shlex
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 from pathlib import Path
+
+if __package__:
+    from .ap_package import AP_AGENT_TIMEOUT_SEC, DESKTOP_MCP_URL, package_sha256, validate_package
+else:
+    from ap_package import AP_AGENT_TIMEOUT_SEC, DESKTOP_MCP_URL, package_sha256, validate_package
 
 FACTORY = Path(__file__).resolve().parents[1]
 REPO = FACTORY.parent
@@ -89,7 +93,7 @@ def task_toml(spec: dict, *, computer_mcp: bool = False) -> str:
     keywords = ", ".join(json.dumps(k) for k in spec["keywords"])
     artifacts = 'artifacts = ["/workspace/output", "/logs/agent/browser", "/var/lib/cua/state"]'
     endpoint = (
-        'name = "desktop"\ntransport = "streamable-http"\nurl = "http://desktop:8000/mcp"'
+        f'name = "desktop"\ntransport = "streamable-http"\nurl = "{DESKTOP_MCP_URL}"'
         if computer_mcp else 'name = "browser"\ntransport = "stdio"\ncommand = "/usr/local/bin/browser-mcp"'
     )
     healthcheck = '' if computer_mcp else '''[environment.healthcheck]
@@ -109,6 +113,7 @@ storage_mb = 10240'''
     footer = "" if computer_mcp else f"\n{environment}\n\n{healthcheck}{mcp_servers}\n"
     desktop_apps = "\ndesktop_apps = " + json.dumps(spec["computer_mcp"]["applications"]) if computer_mcp else ""
     verifier_mode = '\nenvironment_mode = "shared"' if computer_mcp else ""
+    agent_timeout = float(AP_AGENT_TIMEOUT_SEC if computer_mcp else spec.get("agent_timeout_sec", AGENT_TIMEOUT_SEC))
     return f'''schema_version = "1.4"
 {header}
 
@@ -129,7 +134,7 @@ sites = [{", ".join(json.dumps(CATALOG[s]["brand"]) for s in spec["sites"])}]
 language = "en"{desktop_apps}
 
 [agent]
-timeout_sec = {float(spec.get("agent_timeout_sec", AGENT_TIMEOUT_SEC))}
+timeout_sec = {agent_timeout}
 user = "agent"
 
 [verifier]
@@ -319,22 +324,6 @@ def package(task: str, out_root: Path, skip_selfcheck: bool = False, *, computer
     return out
 
 
-def check_ap_context(path: Path):
-    """Check Docker COPY sources after AP drops all directory-only tar entries."""
-    with tarfile.open(path) as bundle:
-        files = {entry.name for entry in bundle if entry.isfile()}
-        for context in ("environment/", "environment/desktop/"):
-            recipe = bundle.extractfile(context + "Dockerfile").read().decode()
-            for line in recipe.splitlines():
-                if not line.startswith("COPY "):
-                    continue
-                sources = [field for field in shlex.split(line)[1:-1] if not field.startswith("--")]
-                for source in sources:
-                    prefix = context + source
-                    if prefix not in files and not any(name.startswith(prefix.rstrip("/") + "/") for name in files):
-                        raise ValueError(f"AP file-only repack loses Docker COPY source {prefix}")
-
-
 def make_tar(task_dir: Path, tars: Path, *, computer_mcp: bool = False) -> Path:
     """Platform format: files at the archive root, no top-level directory, no AppleDouble files."""
     tars.mkdir(parents=True, exist_ok=True)
@@ -349,14 +338,22 @@ def make_tar(task_dir: Path, tars: Path, *, computer_mcp: bool = False) -> Path:
         info.uname = info.gname = "root"
         return info
 
-    with tarfile.open(target, "w:gz") as tar:
-        for child in sorted(task_dir.iterdir()):
-            tar.add(child, arcname=child.name, filter=clean)
+    def write_archive(path):
+        with tarfile.open(path, "w:gz") as tar:
+            for child in sorted(task_dir.iterdir()):
+                tar.add(child, arcname=child.name, filter=clean)
+
     if computer_mcp:
-        check_ap_context(target)
-        with target.open("rb") as stream:
-            digest = hashlib.file_digest(stream, "sha256").hexdigest()
-        target.with_name(target.name + ".sha256").write_text(f"{digest}  {target.name}\n")
+        with tempfile.TemporaryDirectory(dir=tars) as temp:
+            staged = Path(temp) / target.name
+            write_archive(staged)
+            validate_package(staged)
+            checksum = staged.with_name(staged.name + ".sha256")
+            checksum.write_text(f"{package_sha256(staged)}  {target.name}\n")
+            staged.replace(target)
+            checksum.replace(target.with_name(checksum.name))
+    else:
+        write_archive(target)
     return target
 
 
