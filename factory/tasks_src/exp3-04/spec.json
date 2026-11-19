@@ -1,0 +1,28 @@
+{
+  "additive_scoring": true,
+  "task_id": "exp3-04",
+  "name": "cua-hard/retainer-renewal-true-up",
+  "version": "0.1.1",
+  "description": "Reconcile October retainer overage across a mid-month renewal and leave two drafts for review.",
+  "keywords": ["browser", "accounting", "retainer", "multi-site"],
+  "sites": ["freshbooks", "microsoft_excel_for_the_web", "yahoo_mail"],
+  "clock": "2026-11-18T09:30:00-08:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "hide_browser_debug": true,
+  "metadata": {
+    "scenario": "专业事务",
+    "subscenario": "续约超时费对账",
+    "operation_difficulty": 2,
+    "tool_type": 1,
+    "difficulty": 2,
+    "levers": ["L12"]
+  },
+  "fixture_expectations": {
+    "golden": [1, 1],
+    "nop": [0, 0],
+    "naive": [0, 0.35],
+    "slip_duplicate": [0.55, 0.95],
+    "slip_rounding": [0.55, 0.95]
+  }
+}

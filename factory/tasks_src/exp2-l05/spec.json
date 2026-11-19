@@ -1,0 +1,42 @@
+{
+  "task_id": "checkout-rounding-rollback",
+  "name": "cua-hard/checkout-rounding-rollback",
+  "version": "0.1.0",
+  "description": "On-call handoff for a production error: follow Sentry CHECKOUT-API-3QK's release through a local deploy log to the exact commit, its GitHub PR, the Linear ticket that really tracks the change (the PR cites a duplicate) and its owner, then carry out the rollback plan from the owning team's Slack thread (revert PR from the right revert branch with the owner as reviewer, ticket back to In Progress, Sentry assignment and comment, thread reply) and write a JSON trace.",
+  "keywords": [
+    "browser",
+    "cli",
+    "incident-response",
+    "on-call",
+    "devops",
+    "multi-site"
+  ],
+  "sites": [
+    "sentry",
+    "github",
+    "linear",
+    "slack"
+  ],
+  "clock": "2026-11-18T09:40:00-08:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "数字技术",
+    "subscenario": "线上故障值班溯源与回滚",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L05"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "wrong_hop": [0.2, 0.45],
+    "flag_plan": [0.0, 0.4],
+    "slip_reviewer": [0.55, 0.95],
+    "slip_dup_ticket": [0.55, 0.95],
+    "slip_resolved": [0.55, 0.95],
+    "slip_merged": [0.55, 0.95]
+  }
+}

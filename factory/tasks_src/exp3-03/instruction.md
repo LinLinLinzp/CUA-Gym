@@ -1,0 +1,3 @@
+I'm Priya, the product lead for Harbor checkout. I'm with Support and need you to take the Harbor 24 handoff so they can pick it up from the register. Read the original Harbor 23 handoff in #harbor-delivery on Mattermost and check what we posted in ClickUp. Use that same closeout process with the current acceptance evidence in the Harbor Release Register in Microsoft Excel for the web.
+
+Update the status and sprint assignment of the existing ClickUp tasks still waiting for the Harbor 24 handoff. In the live register, fill in Disposition and Sprint Ledger on the matching H24 Handoff rows. Leave the sprint itself, previously posted work, and all other rows as they are.

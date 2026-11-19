@@ -1,0 +1,29 @@
+{
+  "task_id": "larkspur-map-flatfile",
+  "name": "cua-hard/larkspur-map-flatfile",
+  "version": "0.1.0",
+  "description": "Roll out a supplier's corrected 2027 cost/MAP sheet for a multi-channel kitchenware shop: download the Larkspur sheets from Yahoo Mail and the All Listings report from Amazon Seller Central, join them locally with Shopify stock under the co-owner's rules (effective-date cut-off at Black Friday, never lower prices, min = MAP / max = MSRP, FBM quantity = stock - 2 floored at 0, blank quantity on FBA, discontinued items excluded), upload a tab-delimited Price & Quantity flat file back to Seller Central, and raise below-MAP Shopify variants.",
+  "keywords": ["browser", "cli", "e-commerce", "marketplace", "pricing", "file-round-trip", "multi-site"],
+  "sites": ["amazon_seller", "yahoo_mail", "shopify"],
+  "clock": "2026-11-18T09:30:00-06:00",
+  "timezone": "America/Chicago",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "产业运营",
+    "subscenario": "多渠道卖家按供应商 MAP 表批量更新亚马逊价格与库存",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L13"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "format_comma": [0.15, 0.35],
+    "slip_v1_sheet": [0.55, 0.95],
+    "slip_fba_quantity": [0.55, 0.95],
+    "slip_effective_dates": [0.55, 0.95],
+    "slip_price_lowered": [0.55, 0.95]
+  }
+}

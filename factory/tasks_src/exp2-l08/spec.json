@@ -1,0 +1,40 @@
+{
+  "task_id": "summit-run-of-show",
+  "name": "cua-hard/summit-run-of-show",
+  "version": "0.1.0",
+  "description": "Re-plan a two-day conference run of show: reconcile the Trello day/room lists with the venue's confirmed calendar bookings and the speaker changes in Yahoo Mail (a corrected swap, a withdrawal filled from a local registration export, an approved move, a declined request), drag every session into the right list in start-time order, update the bookings calendar, confirm new slots to the speakers and export the final programme as CSV.",
+  "keywords": [
+    "browser",
+    "cli",
+    "event-planning",
+    "kanban",
+    "drag-and-drop",
+    "multi-site"
+  ],
+  "sites": [
+    "trello",
+    "yahoo_mail",
+    "google_calendar"
+  ],
+  "clock": "2026-11-18T09:15:00+00:00",
+  "timezone": "Europe/London",
+  "locale": "en-GB",
+  "metadata": {
+    "scenario": "组织办公",
+    "subscenario": "会议议程排期",
+    "operation_difficulty": 3,
+    "tool_type": 2,
+    "difficulty": 6,
+    "levers": ["L08"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "append_only": [0.35, 0.55],
+    "slip_swap_partner": [0.55, 0.95],
+    "slip_replacement": [0.55, 0.95],
+    "slip_declined": [0.55, 0.95],
+    "slip_draft": [0.55, 0.95]
+  }
+}

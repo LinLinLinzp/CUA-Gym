@@ -1,0 +1,155 @@
+{
+ "task_id": "cua-hard/stripe-payout-reconciliation",
+ "task_version": "0.1.1",
+ "verifier_version": "0.1.1",
+ "reward_file": "/logs/verifier/reward.txt",
+ "reward_rule": "各检查点独立评分（0～1），reward = Σ(权重×得分)/100。空操作时保护性检查 P9、P10、S2、G3、E3 均为 0。任务操作的证据包括相关发票支付字段变化、新退款、新发邮件、新 Stripe expense 或 CSV 数据行。站点状态缺失或不可解析、发票或付款消失记为 invalid，非零退出且不写 reward。",
+ "numeric_rule": "QuickBooks 金额为美元浮点，按两位小数比较，容差 0.005；Stripe 金额为美分整数，精确比较；邮件正文金额用正则提取（支持 $1,234.50、250、250.00），先去掉 HTML 标签；发票号按字符串匹配（如 '1176'）。“今天”为 2026-11-16（America/New_York）。payout 是否已到账以 Stripe payout status=paid 且 QuickBooks Checking 银行流水中有对应 STRIPE TRANSFER 为准：po_1QuGWB0KZqRczvjnKDM89oW（11/10，37,186.09）与 po_1Qun3S1emzce8TMzyYYGsdv（11/13，39,320.09）为待对账；po_1Q1yO5Gb3NxrZ2M4bfvKSDn（11/3）与 po_1QTtOTf6wtbjb9EwvkbbSRB（11/6）已有手续费 expense 与已收款发票；po_1QGiTQyE8EioP2xzCW4BFfo 为 in_transit（预计 11/16 到账，银行流水中无记录）。手续费 = CSV 中该 payout 所有行 fee 之和（退款行 fee 为 0）。",
+ "common": {
+  "type": "客观要求",
+  "implementation": "tests/verifier.py:evaluate",
+  "evidence": "/var/lib/cua/state/{quickbooks,stripe_dashboard,gmail}/{initial,current}.json、/workspace/output/payout_reconciliation.csv、expected.json",
+  "score_mode": "partial",
+  "coverage": "已实现，正反例夹具自测通过"
+ },
+ "checkpoints": [
+  {
+   "id": "P1.standard_paid",
+   "weight": 14,
+   "requirement": "由单笔正常扣款结清的 19 张发票在 QuickBooks 收款",
+   "rule": "1174、1175、1177、1180（Brightwater）、1185、1186、1187、1188、1189、1190、1196（Wren）、1201、1202、1203、1204、1205、1206、1207、1208 为 Paid 或实付已达总额；得分=正确项/19。",
+   "trap": "Nordvik(1190) 为国际卡，手续费 4.4%+0.30，CSV 净额与其他行费率不同但发票金额照常"
+  },
+  {
+   "id": "P2.deposit_balance_paid",
+   "weight": 6,
+   "requirement": "尾款付清的预付款发票按余额判断并收款",
+   "rule": "1154（7,200，已付 3,600，本次 3,600）、1157（9,500，已付 3,000，本次 6,500）、1160（4,800，已付 2,400，本次 2,400）status=Paid；得分=正确项/3",
+   "trap": "与发票总额比较会误判为少付，应与 Partial 发票的未付余额比较"
+  },
+  {
+   "id": "P3.combined_paid",
+   "weight": 6,
+   "requirement": "一笔付款覆盖多张发票时全部收款",
+   "rule": "Saltmarsh 4,300 → 1178(2,200)+1182(2,100)；Quillon 4,350 → 1191(3,150)+1198(1,200)（描述仅写 'Invoice 1191 + November retainer'，metadata invoice_numbers=1191,1198）；两个付款项各自要求其全部发票 Paid，得分=正确项/2",
+   "trap": "只按描述里出现的第一个发票号收款，漏掉 1182 / 1198"
+  },
+  {
+   "id": "P4.split_paid",
+   "weight": 3,
+   "requirement": "分两笔付清的发票收款",
+   "rule": "Lumen 1,000 + 860 两笔均写 'Invoice 1179'，合计 1,860 = 1179 总额；1179 status=Paid（两项均以此判定）",
+   "trap": "逐笔与发票总额比较会把两笔都当成少付"
+  },
+  {
+   "id": "P5.unreferenced_matched",
+   "weight": 5,
+   "requirement": "描述中无发票号的付款按客户和金额匹配",
+   "rule": "Marlowe Finch 的 1,800 记到 1183，Odessa Park 的 1,150 记到 1200；得分为两张发票中 Paid 的比例。",
+   "trap": "近似重名客户 Marlow & Finch Legal 的 1184 同为 1,800；Stripe 邮箱与 QuickBooks 客户邮箱不同"
+  },
+  {
+   "id": "P6.wrong_reference_1193",
+   "weight": 4,
+   "requirement": "客户写错发票号时按实际未结发票收款",
+   "rule": "Atlas 1,975 描述为 Invoice 1158，实际结清的是 1193；1193 Paid 得 1。",
+   "trap": "以为是对已付发票的重复付款而退款"
+  },
+  {
+   "id": "P7.corrected_reference_1197",
+   "weight": 4,
+   "requirement": "按客户更正邮件改记到正确发票",
+   "rule": "Juniper 更正为 1197，1197 Paid 得 1。",
+   "trap": "按描述把 1,450 当作 1192(2,900) 的少付并催款"
+  },
+  {
+   "id": "P8.calder_waived",
+   "weight": 4,
+   "requirement": "老板同意豁免的差额按已付清处理",
+   "rule": "Calder 已付 1,300，Nadia 同意豁免剩余 85；1194 Paid 得 1。",
+   "trap": "按少付规则留着不收并催 $85"
+  },
+  {
+   "id": "P9.short_left_open",
+   "weight": 3,
+   "requirement": "少付发票保持未结",
+   "rule": "1176 与 1195 均保持未结得 1，否则得 0。"
+  },
+  {
+   "id": "P10.non_targets_untouched",
+   "weight": 4,
+   "requirement": "不动非目标发票",
+   "rule": "1181、1209、1210、1211、1212（在途）、1213（失败）、1214（待结算）、1215、1161、1199、1192、1184 均应保持未结；得分为仍未结的比例。",
+   "trap": "把 11/16 在途、尚未入账的 payout 也一起对账"
+  },
+  {
+   "id": "S1.refund_wren",
+   "weight": 6,
+   "requirement": "未退款的重复扣款在 Stripe 全额退款",
+   "rule": "Wren 的两笔 2640 美元扣款中，至少一笔新增 264000 美分退款得 1。",
+   "trap": "Nadia 11/12 说“今晚我来退”，但 Stripe 上并无退款"
+  },
+  {
+   "id": "S2.no_extra_refunds",
+   "weight": 4,
+   "requirement": "不做多余退款",
+   "rule": "允许 Wren 的一笔扣款有新增退款；其余付款无新增退款，且没有无法关联到初始付款的新增退款，得 1。",
+   "trap": "Brightwater 重复扣款已退款，再退一次即重复处理"
+  },
+  {
+   "id": "G1.short_email_tidewater",
+   "weight": 4,
+   "requirement": "Tidewater 少付催款",
+   "rule": "新发送邮件（folder=sent）收件人含 ap@tidewaterbrewing.com，主题或正文含 1176 且含金额 250.00（容差 0.005，支持 $250 / 250.00）"
+  },
+  {
+   "id": "G2.short_email_harborpine",
+   "weight": 4,
+   "requirement": "Harbor & Pine 少付催款发到 QuickBooks 记录的账单地址",
+   "rule": "新发送邮件收件人含 accounts@harborpine.com，主题或正文含 1195 与 240.00。",
+   "trap": "Stripe 上的付款人是 Marta Ostrowski 的个人 gmail，不是账单联系地址"
+  },
+  {
+   "id": "G3.no_wrong_chasers",
+   "weight": 3,
+   "requirement": "不向无需催款的客户或错误地址发催款邮件",
+   "rule": "以下地址均未收到新邮件得 1：tomas@calderbikes.com、billing@juniperhealth.org、ap@kestrelanalytics.io、ap@greywell.partners、office@northgatedental.com、billing@lumensolar.coop、m.ostrowski@gmail.com。"
+  },
+  {
+   "id": "E1.fees_poB",
+   "weight": 5,
+   "requirement": "payout po_1QuGWB0KZqRczvjnKDM89oW 手续费入账",
+   "rule": "QuickBooks 新增 expense：vendorId=v_stripe 或 payee=Stripe，description 含 po_1QuGWB0KZqRczvjnKDM89oW，amount=1218.91"
+  },
+  {
+   "id": "E2.fees_poC",
+   "weight": 5,
+   "requirement": "payout po_1Qun3S1emzce8TMzyYYGsdv 手续费入账",
+   "rule": "QuickBooks 新增 expense：vendorId=v_stripe 或 payee=Stripe，description 含 po_1Qun3S1emzce8TMzyYYGsdv，amount=1179.91"
+  },
+  {
+   "id": "E3.no_extra_fee_entries",
+   "weight": 4,
+   "requirement": "不重复记已入账或在途 payout 的手续费",
+   "rule": "每条新增 Stripe expense 必须指向唯一一个待对账 payout，且每个 payout 至多一条；满足即得 1。",
+   "trap": "CSV 里有 5 个 payout，其中两个上周已记账、一个尚在途"
+  },
+  {
+   "id": "C1.recon_csv",
+   "weight": 12,
+   "requirement": "交付逐笔对账表",
+   "rule": "校验 /workspace/output/payout_reconciliation.csv 的 payment_id、payout_id、发票号集合与 action；Stripe 恰有一笔 Wren 全额退款时，CSV 的 refunded 行须指向该笔，其他情况允许两行互换。得分=正确行数/max(35, 总行数)。",
+   "trap": "多写已记账或在途 payout 的行会摊薄得分"
+  }
+ ],
+ "subjective": [],
+ "subjective_note": "无主观项：所有要求都落在三站持久化状态或本地 CSV 上。",
+ "fixtures": {
+  "golden": "1.0（参考终态）",
+  "nop": "0.0（未做任何操作）",
+  "naive": "0.4476（误处理在途款项、错收发票、重复记手续费、遗漏 Wren 退款、发错催款）",
+  "slip_in_transit": "0.9283（5 张在途发票误收、多记一条手续费、CSV 多 5 行）",
+  "slip_deposits": "0.8997（把三笔尾款当作少付，导致收款、催款与 CSV 各有错误）",
+  "slip_wren_refund": "0.9366（未在 Stripe 退款，CSV 也未将该笔记作 refunded）"
+ }
+}

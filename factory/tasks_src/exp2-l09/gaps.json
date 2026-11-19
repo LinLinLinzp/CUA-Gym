@@ -1,0 +1,12 @@
+[
+ {
+  "site": "visa_portal_ds160",
+  "feature": "Lock the application after final submission. Once Sign Application succeeds (ds160Application.status == \"Submitted\"), every form page (personal1 … photo) and the Sign page must be read-only: inputs/radios/selects/checkboxes disabled, Save and Next/Sign Application hidden or disabled, and a banner such as \"This application has been submitted and can no longer be edited\" with a link to the Confirmation page. updateState writes to form sections must be ignored while status is Submitted.",
+  "why": "Lever L09 (irreversible submit) depends on submission being final. Probed 2026-11-18 via ui_probe: after signing (status Submitted, signedDate 16:00:44Z) I changed Personal 1 marital status SINGLE→MARRIED from the sidebar and it reached server state with the status still Submitted. Today an agent that submits too early can quietly fix the data and re-sign, so 'submitted with wrong answers' is neither permanent nor observable."
+ },
+ {
+  "site": "visa_portal_ds160",
+  "feature": "Immutable submission record. On successful Sign Application, write state.submission = {submittedAt, applicationId, confirmationNumber, data: deep copy of personalInfo, addressAndPhone, passport, travel, travelCompanions, previousUSTravel, usContact, family, workEducation, security, photo.photoUploaded, signature}, and append the same object to state.submissionHistory[] (array, default []). Neither may be changed by later actions. Show confirmationNumber and submittedAt on the Confirmation page.",
+  "why": "The L09 verifier must grade what was actually submitted (the content of the first and only submission), not the live form. Today handleSign only sets signature.signedDate (overwritten by every re-sign) and status, and nothing records the submitted answers."
+ }
+]

@@ -1,0 +1,38 @@
+{
+  "task_id": "cua-hard/damage-claims-backlog",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。“不应退款/不应改动”类检查只有在对应工作确实完成（已发审批、已回复客户或至少一笔退款正确）后才得分，保证空操作为 0。无封顶项。主观项无。基础设施异常（站点状态文件缺失或不可解析、订单从状态中消失）记为 invalid 并以非零退出码结束，不写 reward。",
+  "numeric_rule": "金额按美元两位小数比较，容差 0.005；邮件/消息正文中的金额用正则提取（支持 $1,234.50、54、54.00 等写法）；日期以承运商导出的 delivered_date 为准，14 天窗口含当日，“今天”为 2026-03-16（America/Los_Angeles）。",
+  "common": {"type": "客观要求", "implementation": "tests/verifier.py:evaluate", "evidence": "/var/lib/cua/state/{shopify,slack,gmail}/{initial,current}.json、/workspace/output/claims_log.csv", "score_mode": "partial", "coverage": "已实现，正反例夹具自测通过"},
+  "checkpoints": [
+    {"id": "S1.refund_1042", "weight": 8, "requirement": "按现行政策处理 Emma 的破损索赔（含其更正邮件）", "rule": "#1042 本次新增退款恰为 CR-MUG-01×3、运费 0、合计 54.00", "trap": "客户第二封邮件把破损数量从 2 更正为 3"},
+    {"id": "S2.refund_1051", "weight": 8, "requirement": "玻璃制品破损按修订后政策退款", "rule": "#1051 新增退款为 GL-VASE-L×1 且退运费 14.95，合计 153.95", "trap": "政策修订在置顶消息的线程回复中：玻璃制品（GL- 前缀）退运费"},
+    {"id": "S3.refund_1044", "weight": 8, "requirement": "按修订后的审批额度直接退款", "rule": "#1044 新增退款为 TX-THROW×2、运费 0、合计 178.00（≤200 无需审批）", "trap": "旧额度 150 会误导为发审批而不退款"},
+    {"id": "S4.refund_1053", "weight": 8, "requirement": "退款落到破损商品实际所在的订单", "rule": "#1053 新增退款为 LN-NAP-4×1、合计 32.00", "trap": "客户邮件写的是 #1047，但餐巾只在其另一订单 #1053 中"},
+    {"id": "S5.no_refund_1038", "weight": 5, "requirement": "超额索赔走审批而非直接退款", "rule": "#1038 无新增退款，且 #refund-approvals 中已有该单审批消息", "trap": "整单损坏需全额 254.95，超过 200"},
+    {"id": "S6.no_refund_1029", "weight": 5, "requirement": "超出 14 天窗口的索赔不退款", "rule": "#1029 无新增退款，且已回复该客户", "trap": "客户称“上周到货”，承运商数据为 2/20 送达，3/13 来信时已 21 天"},
+    {"id": "S7.no_double_refund_1035", "weight": 5, "requirement": "已退款订单不得重复退款", "rule": "#1035 无新增退款，且已回复该客户", "trap": "客户催促邮件，但该单 3/10 已全额退款"},
+    {"id": "S8.damage_claim_tags", "weight": 6, "requirement": "受理的索赔（退款或审批）打 damage-claim 标签", "rule": "本次新增标签集合与 {#1038,#1042,#1044,#1051,#1053} 比较：(命中数−误加数)/5，下限 0"},
+    {"id": "S9.other_orders_untouched", "weight": 4, "requirement": "无人投诉的订单不得改动", "rule": "非索赔订单（含 #1047）无新增退款、财务状态与标签不变；且至少一笔退款正确（防止空操作得分）"},
+    {"id": "K1.approval_post_1038", "weight": 7, "requirement": "按政策在 #refund-approvals 提交审批", "rule": "新增消息含 1038 且含金额 254.95 得 1；只含单号得 0.5"},
+    {"id": "K2.no_needless_approvals", "weight": 4, "requirement": "不需要审批的索赔不发审批", "rule": "新增审批消息不提及其他索赔订单号；且至少一笔退款正确"},
+    {"id": "G1.reply_emma", "weight": 4, "requirement": "回复每位索赔客户", "rule": "发给 emma.reyes@fastmail.com 的新邮件提及 54.00；仅有回复无正确金额得 0.25"},
+    {"id": "G2.reply_liam_home", "weight": 4, "requirement": "回复客户来信地址", "rule": "发给 liam.chen.home@gmail.com（来信地址，而非订单邮箱）的新邮件提及 153.95"},
+    {"id": "G3.reply_sofia", "weight": 3, "requirement": "回复每位索赔客户", "rule": "发给 sofia.m@protonmail.com 的新邮件提及 178.00"},
+    {"id": "G4.reply_grace", "weight": 3, "requirement": "回复每位索赔客户", "rule": "发给 gracekim.design@gmail.com 的新邮件提及 32.00 且提及 1053 或 napkin"},
+    {"id": "G5.reply_priya", "weight": 3, "requirement": "告知审批中的客户", "rule": "发给 priya.nair@outlook.com 的新邮件含 approv/review/manager/escalat/pending 之一"},
+    {"id": "G6.reply_tom", "weight": 4, "requirement": "逾期索赔按政策给出折扣码", "rule": "发给 tbecker@gmail.com 的新邮件含 SORRY15"},
+    {"id": "G7.reply_noah", "weight": 3, "requirement": "告知已退款事实", "rule": "发给 noah.patel@icloud.com 的新邮件提及 56.95 或 3 月 10 日"},
+    {"id": "C1.claims_log", "weight": 8, "requirement": "本地交付处理日志", "rule": "claims_log.csv 每条索赔一行，order/customer_email/decision/refund_amount 全对计一行；得分 = 正确行数/max(7, 总行数)", "evidence": "/workspace/output/claims_log.csv"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.0（参考终态）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.32（只读置顶政策、只看第一封邮件、用发货日期、信任客户写错的单号）",
+    "one_slip": "≈0.88（仅漏看 Emma 的更正邮件）"
+  }
+}

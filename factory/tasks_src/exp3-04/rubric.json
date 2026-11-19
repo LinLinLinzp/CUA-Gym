@@ -1,0 +1,110 @@
+{
+  "task_id": "cua-hard/retainer-renewal-true-up",
+  "task_version": "0.1.1",
+  "verifier_version": "0.1.1",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "二元加权部分分，权重总和 100。发票按新建记录的客户和 Reference 匹配，每期须恰有一张可用草稿。保护性项按各自完成条件给分，空操作为 0。站点快照缺失或不可解析为基础设施异常。",
+  "numeric_rule": "金额以十进制定点按美分比较，分钟必须为精确整数。Excel 读取有效单元格值，数值字符串与同值数字等价。草稿号取实际新建发票的 invoiceNumber，不固定为夹具号。",
+  "common": {
+    "type": "客观要求",
+    "implementation": "tests/verifier.py:evaluate",
+    "evidence": "/var/lib/cua/state/{freshbooks,microsoft_excel_for_the_web,yahoo_mail}/{initial,current}.json",
+    "score_mode": "partial",
+    "coverage": "独立 verifier 及本地 Harbor Oracle、NOP、reset 已验证"
+  },
+  "checkpoints": [
+    {
+      "id": "FA.net_draft",
+      "weight": 20,
+      "requirement": "保存该期正确的未发送差额草稿",
+      "rule": "相对初始快照新建且唯一匹配 Cedarline Foods（cli_cedarline）及 Reference=CF-2026-10A 的发票为 active/draft、sentAt 为空、币种 USD、税额与折扣额均 0、total 与 amountDue 均为 282.18。允许任意合法明细布局。",
+      "trap": "按历史档费计算，毛额取整后扣除同客户同期已发超时费"
+    },
+    {
+      "id": "EA.allowance",
+      "weight": 5,
+      "requirement": "填入按日比例折算的分钟额度",
+      "rule": "October Retainer Close / Closeout D2=290。",
+      "trap": "按 31 天分别向下取整并使用已签约版本"
+    },
+    {
+      "id": "EA.excess",
+      "weight": 5,
+      "requirement": "填入符合条件的超时分钟",
+      "rule": "Closeout E2=119。",
+      "trap": "只加独立、已批的迟交分钟，已入账分钟只计一次"
+    },
+    {
+      "id": "EA.amounts",
+      "weight": 8,
+      "requirement": "保留可复核的计算结果",
+      "rule": "Closeout F2:H2 依次精确为 318.65、36.47、282.18，三值均正确才得分。",
+      "trap": "逐档分价后合并取整，并排除基础费用和异期预开票"
+    },
+    {
+      "id": "FB.net_draft",
+      "weight": 20,
+      "requirement": "保存该期正确的未发送差额草稿",
+      "rule": "相对初始快照新建且唯一匹配 Cedarline Foods（cli_cedarline）及 Reference=CF-2026-10B 的发票为 active/draft、sentAt 为空、币种 USD、税额与折扣额均 0、total 与 amountDue 均为 270.97。允许任意合法明细布局。",
+      "trap": "按历史档费计算，毛额取整后扣除同客户同期已发超时费"
+    },
+    {
+      "id": "EB.allowance",
+      "weight": 5,
+      "requirement": "填入按日比例折算的分钟额度",
+      "rule": "October Retainer Close / Closeout D3=379。",
+      "trap": "按 31 天分别向下取整并使用已签约版本"
+    },
+    {
+      "id": "EB.excess",
+      "weight": 5,
+      "requirement": "填入符合条件的超时分钟",
+      "rule": "Closeout E3=103。",
+      "trap": "只加独立、已批的迟交分钟，已入账分钟只计一次"
+    },
+    {
+      "id": "EB.amounts",
+      "weight": 8,
+      "requirement": "保留可复核的计算结果",
+      "rule": "Closeout F3:H3 依次精确为 299.60、28.63、270.97，三值均正确才得分。",
+      "trap": "逐档分价后合并取整，并排除基础费用和异期预开票"
+    },
+    {
+      "id": "E.refs_closeout",
+      "weight": 5,
+      "requirement": "把对账行链接至真实草稿",
+      "rule": "Closeout I2:I3 与按客户及 Reference 唯一匹配的两张新建 active/draft 发票的不同 invoiceNumber 对应；草稿存在且未发送。",
+      "trap": "使用实际发票号，避免把 Period ID 当成发票号"
+    },
+    {
+      "id": "EA.refs_late",
+      "weight": 5,
+      "requirement": "回填前半月迟交记录",
+      "rule": "Late Time H2、H3 等于前段对应新建 active/draft 发票号且 H4 空白；发票存在且未发送。",
+      "trap": "CF-782 重复导出，保留首行"
+    },
+    {
+      "id": "EB.refs_late",
+      "weight": 5,
+      "requirement": "回填后半月迟交记录",
+      "rule": "Late Time H5、H6 等于后段对应新建 active/draft 发票号且 H7 空白；发票存在且未发送。",
+      "trap": "10 月 16 日整天适用新计划，拒绝更正行排除"
+    },
+    {
+      "id": "P.isolation",
+      "weight": 9,
+      "requirement": "保护既有发票、邮件及工作簿非目标内容",
+      "rule": "至少一个净额草稿检查通过才可得分。FreshBooks 恰新增两张指定客户与 Reference 的未发送草稿，所有旧发票及其他业务集合不变（活动日志除外）；Excel 除 Closeout D2:I3、Late Time H2/H3/H5/H6/H4 外其他单元格内容不变，已有工作表和工作簿的结构不变（忽略审计、打开时间与当前选中工作表）；Yahoo 邮件内容、位置、发送状态不变（忽略阅读状态）。H4 另由 EA.refs_late 检查。",
+      "trap": "基础费用、近名客户、已开票的 Posted 行与其他月份不得改动"
+    }
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.00，两期草稿和跟踪表均正确",
+    "nop": "0.00，无操作",
+    "naive": "0.00～0.35，混用旧报价、错误分期及资格、逐档取整且漏扣已开票金额",
+    "slip_duplicate": "0.62，只重复计算 CF-782，且给重复行写入草稿号",
+    "slip_rounding": "0.72，只将逐档金额先按美分取整，前段差一美分"
+  }
+}

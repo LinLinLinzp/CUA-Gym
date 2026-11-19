@@ -1,0 +1,130 @@
+{
+  "task_id": "cua-hard/summit-dock-reconciliation",
+  "task_version": "0.1.2",
+  "verifier_version": "0.1.2",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "100权重加权，每项满足得1，否则0。保护性检查以前置业务动作完成为前提，空操作为0。M2–M5 须在目标线程中由当前用户新增的唯一有效回复，按正文和明确数值判断，可接受等价表达；单句内的数量与处理结论须一致，明确否定不算确认。无法读取必要状态视为基础设施异常。",
+  "numeric_rule": "数量按数字精确比较、美元容差0.005。子行 itemId 和 orderLineId 必须匹配初始 PO4582 的对应 SKU 行，禁止同 SKU 重复子行或其他 SKU。三项向量顺序为 BLT-5VX800、SPR-40B18、CHN-40-10；允许按 SKU 分别表述。运行时 ID和时间戳仅用于关联和新旧比较。",
+  "common": {
+    "type": "客观要求",
+    "implementation": "tests/verifier.py:evaluate",
+    "evidence": "/var/lib/cua/state/{netsuite,yahoo_mail,mattermost}/{initial,current}.json",
+    "score_mode": "partial",
+    "coverage": "独立 verifier 已通过 7 个夹具和浏览器实测终态校验"
+  },
+  "checkpoints": [
+    {
+      "id": "N1.receipt_link",
+      "weight": 5,
+      "requirement": "创建本次关联收货单",
+      "rule": "新增收货单全站恰一笔，createdFromId=po_4582、createdFromType=purchaseOrder，vendorId=vend_2004、locationId=loc_1、tranDate=2026-11-18、status=Received"
+    },
+    {
+      "id": "N2.belt_capacity",
+      "weight": 10,
+      "requirement": "按已批准的数量收皮带",
+      "rule": "N1成立；新增收货单原PO皮带行恰为10 Ea，rate=38.20、amount=382.00",
+      "trap": "Rev A 写22；Rev B 已收8，仅余10"
+    },
+    {
+      "id": "N3.dock_acceptance",
+      "weight": 9,
+      "requirement": "库存仅收签认的链轮和链条",
+      "rule": "N1成立；新增收货单无链轮行，链条行恰为5 Box、rate=54.00、amount=270.00；全单恰两行",
+      "trap": "发货清单3个链轮，签收为0"
+    },
+    {
+      "id": "N4.bill_link",
+      "weight": 5,
+      "requirement": "创建本次关联供应商账单",
+      "rule": "新增供应商账单全站恰一笔，createdFromId=po_4582、createdFromType=purchaseOrder，vendorId=vend_2004、locationId=loc_1"
+    },
+    {
+      "id": "N5.invoice_identity",
+      "weight": 10,
+      "requirement": "登记正式发票",
+      "rule": "N4成立；tranId=SPT-97641、tranDate=2026-11-18、dueDate=2026-12-18；termsId 沿用原PO",
+      "trap": "PB-97641 是预账单"
+    },
+    {
+      "id": "N6.bill_current_belts",
+      "weight": 9,
+      "requirement": "只入账本次合规皮带",
+      "rule": "N4成立；皮带行恰为10 Ea、rate=38.20、amount=382.00",
+      "trap": "累计未账自动带入旧批两条；Rev A 可能多收皮带"
+    },
+    {
+      "id": "N7.bill_issued_lines",
+      "weight": 10,
+      "requirement": "只入账正式发票且签收的链轮和链条",
+      "rule": "N4成立；无链轮，链条4 Box、rate=54.00、amount=216.00；全单恰两行且 expenses 为空",
+      "trap": "预账单的第5盒链条与拒收链轮不能入账"
+    },
+    {
+      "id": "N8.open_balance",
+      "weight": 5,
+      "requirement": "核对未付应付余额",
+      "rule": "N4成立；Open、total=598.00、amountRemaining=598.00、amountPaid=0，且 vendorPayments 不变"
+    },
+    {
+      "id": "N9.po_conservation",
+      "weight": 5,
+      "requirement": "保留采购授权并准确累计",
+      "rule": "N1和N4成立；PO4582 除审计时间、修改者与收/账计数外字段不变；按皮带/链轮/链条顺序 quantityReceived=18/4/5，quantityBilled=16/4/4，status=Pending Billing/Partially Received"
+    },
+    {
+      "id": "N10.stock_conservation",
+      "weight": 5,
+      "requirement": "波特兰库存与实收一致",
+      "rule": "N1成立；全部 SKU 与地点的 onHand 增量恰为 loc_1 皮带+10、链条+5；其余为0；无库存调整、调拨增删改"
+    },
+    {
+      "id": "N11.protect_history",
+      "weight": 3,
+      "requirement": "保护旧交易和其他采购单",
+      "rule": "N1、N4成立且 N2/N3/N6/N7 全正确；既有收货单、账单原样保留，其他PO及全部销售类交易不变"
+    },
+    {
+      "id": "M1.thread_target",
+      "weight": 4,
+      "requirement": "回复原收货讨论并写入凭证号",
+      "rule": "N1和N4成立；目标线程新增唯一未删除文本回复，userId=usr-alex-morgan、channelId=ch-portland-receiving、rootId=post-portland-l6712；正文包含真实 receipt.tranId、bill.transactionNumber 和 SPT-97641"
+    },
+    {
+      "id": "M2.po_scope",
+      "weight": 4,
+      "requirement": "说明采购授权及超收搁置",
+      "rule": "正文写明 Rev B 及三SKU批准总数18/12/10或收货前余额10/8/10，说明1条已签收皮带超限、未入库存"
+    },
+    {
+      "id": "M3.dock_scope",
+      "weight": 4,
+      "requirement": "说明实物验收",
+      "rule": "正文给出签认的11/0/5并说明3个链轮所在损坏箱拒收"
+    },
+    {
+      "id": "M4.ar_scope",
+      "weight": 4,
+      "requirement": "说明正式发票与争议金额",
+      "rule": "正文给出发票申报14/3/4、已入账598.00、争议235.00（4条皮带、3个链轮）",
+      "trap": "预账单与正式发票链条数不同"
+    },
+    {
+      "id": "M5.unbilled_lots",
+      "weight": 8,
+      "requirement": "记录未入账的实物",
+      "rule": "正文说明已收的1盒链条尚未入账，以及 SPT-L6680 或 AP-2691 的2条皮带仍独立未入账"
+    }
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.00",
+    "nop": "0.00",
+    "naive": "0.10；按过时采购确认上调授权、照抄预报收货、按预账单入账并混入前批欠账",
+    "slip_revision": "0.55；错误扩大皮带授权至22并多收多账1条",
+    "slip_dock": "0.55；误收误账被拒3个链轮",
+    "slip_invoice": "0.65；按预账单将第5盒链条入账",
+    "slip_prior_lot": "0.66；混入此前两条皮带"
+  }
+}

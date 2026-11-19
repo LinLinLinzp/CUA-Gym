@@ -1,0 +1,29 @@
+{
+  "task_id": "halvorsen-plateful-pricefile",
+  "name": "cua-hard/halvorsen-plateful-pricefile",
+  "version": "0.1.0",
+  "description": "Load a supplier's corrected 2027 price list into a bakery group's recipe-costing system: download the Halvorsen Mill & Pantry rev B list from Gmail, transform it locally (dedupe by latest Revised line, price basis to case price, imperial to metric, map to Airtable item codes, drop inactive/discontinued/contract-protected items and the look-alike dairy supplier), upload the CSV as an attachment from the old Yahoo account to Plateful's current private import address, and record discontinued items, price-review flags and the effective date in Airtable.",
+  "keywords": ["browser", "cli", "office", "purchasing", "csv", "unit-conversion", "file-round-trip", "multi-site"],
+  "sites": ["airtable", "yahoo_mail", "gmail"],
+  "clock": "2026-11-18T10:15:00-08:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "组织办公",
+    "subscenario": "采购分析师把供应商新价目表转换后导入配方成本系统并维护 Airtable 物料主数据",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L13"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_v1_file": [0.55, 0.95],
+    "slip_dedupe_first": [0.55, 0.95],
+    "slip_dairy_collision": [0.55, 0.95],
+    "slip_contract_boundary": [0.55, 0.95],
+    "slip_plateful_v2": [0.55, 0.95]
+  }
+}

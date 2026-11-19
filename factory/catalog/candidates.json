@@ -1,0 +1,1864 @@
+{
+ "公共工具": {
+  "existing": [],
+  "new": [
+   {
+    "brand": "Yahoo Mail",
+    "origin": "https://mail.yahoo.com",
+    "workflows": "inbox, folders, filters, attachments, reply/forward, contacts",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Proton Mail",
+    "origin": "https://mail.proton.me",
+    "workflows": "inbox, labels, attachments, encrypted share links, contacts",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Fastmail",
+    "origin": "https://app.fastmail.com",
+    "workflows": "mail, calendar, contacts, rules, attachments",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Google Chat",
+    "origin": "https://chat.google.com",
+    "workflows": "spaces, threads, DMs, file shares, pinned messages",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Mattermost",
+    "origin": "https://acme.cloud.mattermost.com",
+    "workflows": "channels, threads, pinned posts, file uploads",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Microsoft Excel for the web",
+    "origin": "https://excel.cloud.microsoft",
+    "workflows": "workbooks, sheets, formulas, filters, sharing",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Microsoft Word for the web",
+    "origin": "https://word.cloud.microsoft",
+    "workflows": "documents, comments, track changes, sharing",
+    "tier": "A",
+    "status": "to_build"
+   }
+  ]
+ },
+ "生活消费": {
+  "existing": [
+   "Amazon",
+   "Instacart",
+   "Uber Eats",
+   "Booking.com",
+   "Expedia",
+   "Google Flights",
+   "Tripadvisor",
+   "Zillow",
+   "eBay",
+   "PayPal",
+   "Robinhood",
+   "Coinbase",
+   "TradingView"
+  ],
+  "new": [
+   {
+    "brand": "Airbnb",
+    "origin": "https://www.airbnb.com",
+    "workflows": "search stays, book/cancel, guest-host messages, reviews, wishlists",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Walmart",
+    "origin": "https://www.walmart.com",
+    "workflows": "cart, orders, returns, pickup slots, registry",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Target",
+    "origin": "https://www.target.com",
+    "workflows": "cart, Circle offers, order pickup, returns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Costco",
+    "origin": "https://www.costco.com",
+    "workflows": "membership, orders, returns, travel bookings",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Best Buy",
+    "origin": "https://www.bestbuy.com",
+    "workflows": "orders, price match, protection plans, returns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Etsy",
+    "origin": "https://www.etsy.com",
+    "workflows": "buy, messages to shops, cases/returns, favorites",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Wayfair",
+    "origin": "https://www.wayfair.com",
+    "workflows": "orders, delivery scheduling, damage claims, returns",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "IKEA",
+    "origin": "https://www.ikea.com",
+    "workflows": "cart, delivery/assembly booking, returns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "The Home Depot",
+    "origin": "https://www.homedepot.com",
+    "workflows": "orders, tool rental, project lists, returns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "DoorDash",
+    "origin": "https://www.doordash.com",
+    "workflows": "orders, group orders, refunds, DashPass",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Grubhub",
+    "origin": "https://www.grubhub.com",
+    "workflows": "orders, scheduled delivery, refunds",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "OpenTable",
+    "origin": "https://www.opentable.com",
+    "workflows": "reservations, modify/cancel, reviews, points",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Yelp",
+    "origin": "https://www.yelp.com",
+    "workflows": "reviews, bookmarks, quote requests, reservations",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Uber",
+    "origin": "https://riders.uber.com",
+    "workflows": "trips, receipts, expense profiles, lost items, refunds",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Lyft",
+    "origin": "https://www.lyft.com",
+    "workflows": "rides, receipts, business profile, disputes",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "United Airlines",
+    "origin": "https://www.united.com",
+    "workflows": "bookings, seat changes, MileagePlus, travel credits",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Delta",
+    "origin": "https://www.delta.com",
+    "workflows": "my trips, change/cancel, SkyMiles, eCredits",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Southwest",
+    "origin": "https://www.southwest.com",
+    "workflows": "bookings, change, travel funds, Rapid Rewards",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Marriott Bonvoy",
+    "origin": "https://www.marriott.com",
+    "workflows": "stays, points, folio, requests",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Hilton Honors",
+    "origin": "https://www.hilton.com",
+    "workflows": "reservations, digital key, points",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Kayak",
+    "origin": "https://www.kayak.com",
+    "workflows": "trip planner, price alerts, bookings",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Turo",
+    "origin": "https://turo.com",
+    "workflows": "car trips, extensions, damage claims, messages",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Hertz",
+    "origin": "https://www.hertz.com",
+    "workflows": "reservations, upgrades, receipts",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Rover",
+    "origin": "https://www.rover.com",
+    "workflows": "pet sitter search, bookings, messages, reviews",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Venmo",
+    "origin": "https://venmo.com",
+    "workflows": "payments, requests, splits, statements",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Chase",
+    "origin": "https://secure.chase.com",
+    "workflows": "accounts, transfers, bill pay, disputes, alerts",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Monarch Money",
+    "origin": "https://app.monarchmoney.com",
+    "workflows": "transactions, categories, budgets, goals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Credit Karma",
+    "origin": "https://www.creditkarma.com",
+    "workflows": "credit reports, disputes, alerts",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Redfin",
+    "origin": "https://www.redfin.com",
+    "workflows": "saved homes, tours, offers, agent messages",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Apartments.com",
+    "origin": "https://www.apartments.com",
+    "workflows": "listings, applications, rent payments",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Ticketmaster",
+    "origin": "https://www.ticketmaster.com",
+    "workflows": "orders, transfers, resale, refunds",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Eventbrite",
+    "origin": "https://www.eventbrite.com",
+    "workflows": "tickets, refunds, follow organizers",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Zocdoc",
+    "origin": "https://www.zocdoc.com",
+    "workflows": "appointments, insurance, intake forms",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "CVS Pharmacy",
+    "origin": "https://www.cvs.com",
+    "workflows": "prescriptions, refills, pickup, vaccine appointments",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "GoodRx",
+    "origin": "https://www.goodrx.com",
+    "workflows": "price comparison, coupons, saved drugs",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Chewy",
+    "origin": "https://www.chewy.com",
+    "workflows": "autoship, orders, pet profiles, returns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Sephora",
+    "origin": "https://www.sephora.com",
+    "workflows": "orders, Beauty Insider points, returns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Zappos",
+    "origin": "https://www.zappos.com",
+    "workflows": "orders, exchanges, returns",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Poshmark",
+    "origin": "https://poshmark.com",
+    "workflows": "listings, offers, bundles, sales",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Peloton",
+    "origin": "https://members.onepeloton.com",
+    "workflows": "classes, schedule, membership, orders",
+    "tier": "B",
+    "status": "to_build"
+   }
+  ]
+ },
+ "文化内容": {
+  "existing": [
+   "YouTube",
+   "Reddit",
+   "X",
+   "Instagram",
+   "Pinterest",
+   "Facebook",
+   "LinkedIn",
+   "Discord",
+   "Canva",
+   "Canvas Editor"
+  ],
+  "new": [
+   {
+    "brand": "Medium",
+    "origin": "https://medium.com",
+    "workflows": "drafts, publish, lists, responses, publications",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Substack",
+    "origin": "https://substack.com",
+    "workflows": "posts, subscribers, comp subscriptions, comments",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "WordPress.com",
+    "origin": "https://wordpress.com",
+    "workflows": "posts, pages, media, comments moderation",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Tumblr",
+    "origin": "https://www.tumblr.com",
+    "workflows": "posts, queue, reblogs, tags",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Quora",
+    "origin": "https://www.quora.com",
+    "workflows": "questions, answers, spaces",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Goodreads",
+    "origin": "https://www.goodreads.com",
+    "workflows": "shelves, reviews, reading challenge",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Letterboxd",
+    "origin": "https://letterboxd.com",
+    "workflows": "diary, lists, reviews, watchlist",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "IMDb",
+    "origin": "https://www.imdb.com",
+    "workflows": "watchlist, ratings, lists",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Spotify",
+    "origin": "https://open.spotify.com",
+    "workflows": "playlists, library, follow, collaborative playlists",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Spotify for Artists",
+    "origin": "https://artists.spotify.com",
+    "workflows": "releases, pitches, team access",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "SoundCloud",
+    "origin": "https://soundcloud.com",
+    "workflows": "uploads, playlists, comments, stats",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Bandcamp",
+    "origin": "https://bandcamp.com",
+    "workflows": "releases, merch orders, fan messages",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Twitch",
+    "origin": "https://dashboard.twitch.tv",
+    "workflows": "stream settings, VODs, mod actions, schedule",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Vimeo",
+    "origin": "https://vimeo.com",
+    "workflows": "videos, showcases, privacy, review comments",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "TikTok Studio",
+    "origin": "https://www.tiktok.com",
+    "workflows": "posts, drafts, comments, analytics",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Flickr",
+    "origin": "https://www.flickr.com",
+    "workflows": "albums, licensing, groups",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Behance",
+    "origin": "https://www.behance.net",
+    "workflows": "projects, moodboards, job posts",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Dribbble",
+    "origin": "https://dribbble.com",
+    "workflows": "shots, collections, hiring",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Patreon",
+    "origin": "https://www.patreon.com",
+    "workflows": "posts, tiers, members, messages",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Kickstarter",
+    "origin": "https://www.kickstarter.com",
+    "workflows": "campaign, rewards, backer surveys, updates",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Wikipedia",
+    "origin": "https://en.wikipedia.org",
+    "workflows": "edit articles, talk pages, watchlist",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Fandom",
+    "origin": "https://www.fandom.com",
+    "workflows": "wiki edits, discussions",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Duolingo",
+    "origin": "https://www.duolingo.com",
+    "workflows": "courses, goals, friends quests",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Coursera",
+    "origin": "https://www.coursera.org",
+    "workflows": "enrollments, assignments, certificates",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Khan Academy",
+    "origin": "https://www.khanacademy.org",
+    "workflows": "classes, assignments, mastery",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Udemy",
+    "origin": "https://www.udemy.com",
+    "workflows": "courses, Q&A, instructor dashboard",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Audible",
+    "origin": "https://www.audible.com",
+    "workflows": "library, credits, returns, wishlist",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Libby",
+    "origin": "https://libbyapp.com",
+    "workflows": "loans, holds, tags, cards",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Rotten Tomatoes",
+    "origin": "https://www.rottentomatoes.com",
+    "workflows": "ratings, want-to-see, reviews",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Mastodon",
+    "origin": "https://mastodon.social",
+    "workflows": "posts, lists, filters, reports",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Threads",
+    "origin": "https://www.threads.net",
+    "workflows": "posts, replies, follows",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Bluesky",
+    "origin": "https://bsky.app",
+    "workflows": "posts, feeds, lists, moderation",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Ghost",
+    "origin": "https://ghost.org",
+    "workflows": "posts, newsletters, members, tiers",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Squarespace",
+    "origin": "https://account.squarespace.com",
+    "workflows": "pages, blog, store, forms",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Feedly",
+    "origin": "https://feedly.com",
+    "workflows": "feeds, boards, annotations",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Pocket",
+    "origin": "https://getpocket.com",
+    "workflows": "saves, tags, highlights",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Genius",
+    "origin": "https://genius.com",
+    "workflows": "annotations, edits, song pages",
+    "tier": "B",
+    "status": "to_build"
+   }
+  ]
+ },
+ "组织办公": {
+  "existing": [
+   "Asana",
+   "Trello",
+   "monday.com",
+   "Airtable",
+   "Confluence",
+   "Lucidchart",
+   "Miro",
+   "Lattice",
+   "BambooHR",
+   "Workday",
+   "ADP Workforce Now",
+   "Gusto",
+   "Greenhouse",
+   "Expensify",
+   "DocuSign"
+  ],
+  "new": [
+   {
+    "brand": "ClickUp",
+    "origin": "https://app.clickup.com",
+    "workflows": "tasks, docs, sprints, time tracking",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Basecamp",
+    "origin": "https://3.basecamp.com",
+    "workflows": "to-dos, message boards, schedules",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Smartsheet",
+    "origin": "https://app.smartsheet.com",
+    "workflows": "sheets, forms, approvals, Gantt",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Wrike",
+    "origin": "https://www.wrike.com",
+    "workflows": "projects, requests, approvals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Todoist",
+    "origin": "https://app.todoist.com",
+    "workflows": "projects, labels, recurring tasks",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Calendly",
+    "origin": "https://calendly.com",
+    "workflows": "event types, bookings, routing forms",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "SurveyMonkey",
+    "origin": "https://www.surveymonkey.com",
+    "workflows": "surveys, responses, collectors",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Typeform",
+    "origin": "https://admin.typeform.com",
+    "workflows": "forms, logic, responses",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Dropbox",
+    "origin": "https://www.dropbox.com",
+    "workflows": "files, sharing, file requests, versions",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Box",
+    "origin": "https://app.box.com",
+    "workflows": "folders, collaborators, tasks, retention",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "SharePoint",
+    "origin": "https://acme.sharepoint.com",
+    "workflows": "sites, lists, document libraries",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Rippling",
+    "origin": "https://app.rippling.com",
+    "workflows": "employees, devices, PTO, payroll",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Deel",
+    "origin": "https://app.deel.com",
+    "workflows": "contracts, invoices, time off",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Personio",
+    "origin": "https://app.personio.com",
+    "workflows": "absences, onboarding, documents",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Lever",
+    "origin": "https://hire.lever.co",
+    "workflows": "candidates, stages, feedback, offers",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Workable",
+    "origin": "https://www.workable.com",
+    "workflows": "jobs, pipelines, interviews",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Culture Amp",
+    "origin": "https://app.cultureamp.com",
+    "workflows": "surveys, reviews, goals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "15Five",
+    "origin": "https://my.15five.com",
+    "workflows": "check-ins, OKRs, 1:1s",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Envoy",
+    "origin": "https://dashboard.envoy.com",
+    "workflows": "visitors, deliveries, desk booking",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "SAP Concur",
+    "origin": "https://www.concursolutions.com",
+    "workflows": "expense reports, travel requests, approvals",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Navan",
+    "origin": "https://app.navan.com",
+    "workflows": "trip booking, policy, expenses",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Brex",
+    "origin": "https://dashboard.brex.com",
+    "workflows": "cards, expenses, receipts, limits",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Ramp",
+    "origin": "https://app.ramp.com",
+    "workflows": "cards, bills, approvals, policy",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Loom",
+    "origin": "https://www.loom.com",
+    "workflows": "videos, folders, comments",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Coda",
+    "origin": "https://coda.io",
+    "workflows": "docs, tables, automations",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Evernote",
+    "origin": "https://www.evernote.com",
+    "workflows": "notes, notebooks, tasks",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Okta",
+    "origin": "https://acme-admin.okta.com",
+    "workflows": "users, groups, app assignments",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Zoho People",
+    "origin": "https://people.zoho.com",
+    "workflows": "leave, attendance, appraisal",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Doodle",
+    "origin": "https://doodle.com",
+    "workflows": "group polls, booking pages",
+    "tier": "B",
+    "status": "to_build"
+   }
+  ]
+ },
+ "专业事务": {
+  "existing": [
+   "Clio",
+   "Westlaw",
+   "Contractbook",
+   "QuickBooks",
+   "Canvas LMS",
+   "OpenReview"
+  ],
+  "new": [
+   {
+    "brand": "Xero",
+    "origin": "https://go.xero.com",
+    "workflows": "invoices, bank reconciliation, bills, reports",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "FreshBooks",
+    "origin": "https://my.freshbooks.com",
+    "workflows": "invoices, time, expenses, retainers",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "TurboTax",
+    "origin": "https://myturbotax.intuit.com",
+    "workflows": "tax return interview, forms, filing status",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "H&R Block",
+    "origin": "https://www.hrblock.com",
+    "workflows": "returns, documents, appointments",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Carta",
+    "origin": "https://app.carta.com",
+    "workflows": "cap table, option grants, 409A",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "LexisNexis",
+    "origin": "https://advance.lexis.com",
+    "workflows": "research folders, citations, alerts",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "PACER",
+    "origin": "https://pacer.uscourts.gov",
+    "workflows": "case search, docket, filings",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Ironclad",
+    "origin": "https://ironcladapp.com",
+    "workflows": "contract workflows, approvals, repository",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "PandaDoc",
+    "origin": "https://app.pandadoc.com",
+    "workflows": "proposals, pricing tables, signatures",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "MyCase",
+    "origin": "https://www.mycase.com",
+    "workflows": "matters, time entries, invoices, trust",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Filevine",
+    "origin": "https://app.filevine.com",
+    "workflows": "cases, deadlines, documents",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "athenahealth",
+    "origin": "https://athenanet.athenahealth.com",
+    "workflows": "schedule, encounters, claims",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "SimplePractice",
+    "origin": "https://secure.simplepractice.com",
+    "workflows": "clients, notes, billing, insurance claims",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "DrChrono",
+    "origin": "https://app.drchrono.com",
+    "workflows": "appointments, charts, e-prescribe",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Zotero",
+    "origin": "https://www.zotero.org",
+    "workflows": "libraries, collections, citations",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "ScholarOne Manuscripts",
+    "origin": "https://mc.manuscriptcentral.com",
+    "workflows": "submissions, reviews, decisions",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "EasyChair",
+    "origin": "https://easychair.org",
+    "workflows": "submissions, reviewer assignment, decisions",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "ORCID",
+    "origin": "https://orcid.org",
+    "workflows": "works, employment, peer review records",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "arXiv",
+    "origin": "https://arxiv.org",
+    "workflows": "submissions, replacements, endorsements",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Moodle",
+    "origin": "https://moodle.school.edu",
+    "workflows": "courses, assignments, gradebook",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Blackboard",
+    "origin": "https://learn.school.edu",
+    "workflows": "courses, grade center, announcements",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Gradescope",
+    "origin": "https://www.gradescope.com",
+    "workflows": "assignments, rubrics, regrade requests",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "PowerSchool",
+    "origin": "https://district.powerschool.com",
+    "workflows": "attendance, grades, schedules",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Procore",
+    "origin": "https://app.procore.com",
+    "workflows": "RFIs, submittals, daily logs, change orders",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Buildertrend",
+    "origin": "https://buildertrend.net",
+    "workflows": "schedules, change orders, client selections",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "dotloop",
+    "origin": "https://www.dotloop.com",
+    "workflows": "real estate loops, forms, signatures",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "AppFolio",
+    "origin": "https://acme.appfolio.com",
+    "workflows": "properties, leases, work orders, rent",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Buildium",
+    "origin": "https://acme.managebuilding.com",
+    "workflows": "leases, tenant requests, accounting",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Avalara",
+    "origin": "https://admin.avalara.com",
+    "workflows": "tax returns, exemption certificates, nexus",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Gusto Accountant",
+    "origin": "https://app.gusto.com",
+    "workflows": "client payroll review, filings",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Bill.com",
+    "origin": "https://app.bill.com",
+    "workflows": "payables, approvals, vendor payments",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Benchling",
+    "origin": "https://benchling.com",
+    "workflows": "notebook entries, samples, requests",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Veeva Vault",
+    "origin": "https://acme.veevavault.com",
+    "workflows": "documents, workflows, approvals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "USPTO Patent Center",
+    "origin": "https://patentcenter.uspto.gov",
+    "workflows": "applications, filings, fees",
+    "tier": "B",
+    "status": "to_build"
+   }
+  ]
+ },
+ "产业运营": {
+  "existing": [
+   "Shopify",
+   "Amazon Seller Central",
+   "WooCommerce",
+   "Salesforce",
+   "HubSpot",
+   "HubSpot Marketing Hub",
+   "SAP S/4HANA",
+   "ServiceNow",
+   "Zendesk",
+   "Stripe",
+   "Mailchimp",
+   "Klaviyo",
+   "Google Ads",
+   "Meta Ads Manager",
+   "Google Analytics",
+   "Amplitude",
+   "Mixpanel",
+   "Hotjar",
+   "Looker Studio",
+   "Tableau"
+  ],
+  "new": [
+   {
+    "brand": "NetSuite",
+    "origin": "https://acme.app.netsuite.com",
+    "workflows": "sales orders, POs, inventory, invoices",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Odoo",
+    "origin": "https://acme.odoo.com",
+    "workflows": "CRM, inventory, purchase, manufacturing",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Zoho CRM",
+    "origin": "https://crm.zoho.com",
+    "workflows": "leads, deals, workflows",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Pipedrive",
+    "origin": "https://acme.pipedrive.com",
+    "workflows": "deals, activities, pipelines",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Intercom",
+    "origin": "https://app.intercom.com",
+    "workflows": "conversations, tickets, macros",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Freshdesk",
+    "origin": "https://acme.freshdesk.com",
+    "workflows": "tickets, SLAs, canned responses",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Gorgias",
+    "origin": "https://acme.gorgias.com",
+    "workflows": "tickets, macros, Shopify actions",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "ShipStation",
+    "origin": "https://ship.shipstation.com",
+    "workflows": "orders, labels, batches, returns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Shippo",
+    "origin": "https://apps.goshippo.com",
+    "workflows": "shipments, labels, returns",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Flexport",
+    "origin": "https://app.flexport.com",
+    "workflows": "shipments, bookings, customs docs",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Faire",
+    "origin": "https://www.faire.com",
+    "workflows": "wholesale orders, retailers, payouts",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Square Dashboard",
+    "origin": "https://squareup.com",
+    "workflows": "items, orders, refunds, payouts",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Toast",
+    "origin": "https://www.toasttab.com",
+    "workflows": "menus, orders, labor, refunds",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Etsy Shop Manager",
+    "origin": "https://www.etsy.com",
+    "workflows": "listings, orders, cases",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "eBay Seller Hub",
+    "origin": "https://www.ebay.com",
+    "workflows": "listings, orders, returns, promotions",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Walmart Seller Center",
+    "origin": "https://seller.walmart.com",
+    "workflows": "items, orders, returns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Printful",
+    "origin": "https://www.printful.com",
+    "workflows": "products, orders, stores",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Yotpo",
+    "origin": "https://reviews.yotpo.com",
+    "workflows": "reviews moderation, loyalty",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Gong",
+    "origin": "https://app.gong.io",
+    "workflows": "calls, deals, scorecards",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Outreach",
+    "origin": "https://web.outreach.io",
+    "workflows": "sequences, prospects, tasks",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Apollo.io",
+    "origin": "https://app.apollo.io",
+    "workflows": "contacts, lists, sequences",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Marketo",
+    "origin": "https://app.marketo.com",
+    "workflows": "programs, lists, smart campaigns",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Semrush",
+    "origin": "https://www.semrush.com",
+    "workflows": "projects, position tracking, site audit",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Google Merchant Center",
+    "origin": "https://merchants.google.com",
+    "workflows": "products, feeds, issues",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Google Search Console",
+    "origin": "https://search.google.com",
+    "workflows": "properties, URL inspection, sitemaps",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Hootsuite",
+    "origin": "https://hootsuite.com",
+    "workflows": "scheduled posts, approvals, streams",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Buffer",
+    "origin": "https://publish.buffer.com",
+    "workflows": "queues, drafts, campaigns",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "ServiceTitan",
+    "origin": "https://go.servicetitan.com",
+    "workflows": "jobs, dispatch, invoices",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Cin7",
+    "origin": "https://go.cin7.com",
+    "workflows": "stock, purchase orders, transfers",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Coupa",
+    "origin": "https://acme.coupahost.com",
+    "workflows": "requisitions, POs, invoices approvals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "SAP Ariba",
+    "origin": "https://service.ariba.com",
+    "workflows": "sourcing events, contracts, POs",
+    "tier": "B",
+    "status": "to_build"
+   }
+  ]
+ },
+ "数字技术": {
+  "existing": [
+   "GitHub",
+   "GitLab",
+   "Jira",
+   "Linear",
+   "CircleCI",
+   "Vercel",
+   "Cloudflare",
+   "AWS Console",
+   "Microsoft Azure",
+   "Datadog",
+   "Sentry",
+   "Postman",
+   "Weights & Biases"
+  ],
+  "new": [
+   {
+    "brand": "Bitbucket",
+    "origin": "https://bitbucket.org",
+    "workflows": "repos, PRs, pipelines",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Azure DevOps",
+    "origin": "https://dev.azure.com",
+    "workflows": "boards, repos, pipelines, releases",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Jenkins",
+    "origin": "https://ci.acme.dev",
+    "workflows": "jobs, builds, credentials",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Netlify",
+    "origin": "https://app.netlify.com",
+    "workflows": "sites, deploys, env vars, forms",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Heroku",
+    "origin": "https://dashboard.heroku.com",
+    "workflows": "apps, dynos, add-ons, releases",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "DigitalOcean",
+    "origin": "https://cloud.digitalocean.com",
+    "workflows": "droplets, DNS, snapshots",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Google Cloud Console",
+    "origin": "https://console.cloud.google.com",
+    "workflows": "IAM, VMs, buckets, billing",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Firebase",
+    "origin": "https://console.firebase.google.com",
+    "workflows": "auth users, Firestore, rules, hosting",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Supabase",
+    "origin": "https://supabase.com",
+    "workflows": "tables, auth, storage, policies",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "MongoDB Atlas",
+    "origin": "https://cloud.mongodb.com",
+    "workflows": "clusters, users, network access",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Snowflake",
+    "origin": "https://app.snowflake.com",
+    "workflows": "warehouses, worksheets, roles",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Databricks",
+    "origin": "https://acme.cloud.databricks.com",
+    "workflows": "notebooks, jobs, clusters",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "PagerDuty",
+    "origin": "https://acme.pagerduty.com",
+    "workflows": "incidents, schedules, escalation policies",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Grafana",
+    "origin": "https://acme.grafana.net",
+    "workflows": "dashboards, alerts, contact points",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "New Relic",
+    "origin": "https://one.newrelic.com",
+    "workflows": "alerts, dashboards, entities",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Splunk",
+    "origin": "https://acme.splunkcloud.com",
+    "workflows": "searches, alerts, dashboards",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Docker Hub",
+    "origin": "https://hub.docker.com",
+    "workflows": "repositories, tags, teams",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "npm",
+    "origin": "https://www.npmjs.com",
+    "workflows": "packages, access tokens, orgs",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Hugging Face",
+    "origin": "https://huggingface.co",
+    "workflows": "models, datasets, spaces, access",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Kaggle",
+    "origin": "https://www.kaggle.com",
+    "workflows": "competitions, notebooks, datasets",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Terraform Cloud",
+    "origin": "https://app.terraform.io",
+    "workflows": "workspaces, runs, variables",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Auth0",
+    "origin": "https://manage.auth0.com",
+    "workflows": "applications, users, rules",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Twilio Console",
+    "origin": "https://console.twilio.com",
+    "workflows": "numbers, messaging, logs",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "SendGrid",
+    "origin": "https://app.sendgrid.com",
+    "workflows": "templates, senders, suppressions",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Contentful",
+    "origin": "https://app.contentful.com",
+    "workflows": "content models, entries, environments",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Atlassian Statuspage",
+    "origin": "https://manage.statuspage.io",
+    "workflows": "incidents, components, subscribers",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "LaunchDarkly",
+    "origin": "https://app.launchdarkly.com",
+    "workflows": "feature flags, targeting, environments",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Retool",
+    "origin": "https://acme.retool.com",
+    "workflows": "apps, resources, permissions",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Zapier",
+    "origin": "https://zapier.com",
+    "workflows": "zaps, task history, connections",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Figma",
+    "origin": "https://www.figma.com",
+    "workflows": "files, comments, components, sharing",
+    "tier": "A",
+    "status": "to_build"
+   }
+  ]
+ },
+ "公共事务": {
+  "existing": [
+   "DS-160 (CEAC)",
+   "CalFile (FTB)"
+  ],
+  "new": [
+   {
+    "brand": "NYC311",
+    "origin": "https://portal.311.nyc.gov",
+    "workflows": "service requests, case status, agency routing",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "California DMV",
+    "origin": "https://www.dmv.ca.gov",
+    "workflows": "appointments, registration renewal, address change",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "IRS Online Account",
+    "origin": "https://sa.www4.irs.gov",
+    "workflows": "balances, payment plans, notices, transcripts",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "myUSCIS",
+    "origin": "https://my.uscis.gov",
+    "workflows": "case status, forms, address change",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "my Social Security",
+    "origin": "https://secure.ssa.gov",
+    "workflows": "benefit statements, direct deposit, letters",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Medicare.gov",
+    "origin": "https://www.medicare.gov",
+    "workflows": "plan compare, claims, enrollment",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "HealthCare.gov",
+    "origin": "https://www.healthcare.gov",
+    "workflows": "applications, plan selection, income updates",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Recreation.gov",
+    "origin": "https://www.recreation.gov",
+    "workflows": "campsite/permit reservations, lotteries, cancellations",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Passport (travel.state.gov)",
+    "origin": "https://passportstatus.state.gov",
+    "workflows": "application status, renewal",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Trusted Traveler Programs",
+    "origin": "https://ttp.dhs.gov",
+    "workflows": "Global Entry applications, interviews",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "StudentAid.gov",
+    "origin": "https://studentaid.gov",
+    "workflows": "FAFSA, loans, repayment plans",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Vote.gov / voter registration",
+    "origin": "https://registertovote.ca.gov",
+    "workflows": "registration, ballot status",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Benefits.gov",
+    "origin": "https://www.benefits.gov",
+    "workflows": "eligibility screener, saved benefits",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "State unemployment (EDD)",
+    "origin": "https://myedd.edd.ca.gov",
+    "workflows": "claims, certifications, payments",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "SNAP / CalFresh (BenefitsCal)",
+    "origin": "https://benefitscal.com",
+    "workflows": "applications, documents, renewals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Accela Citizen Access",
+    "origin": "https://aca-prod.accela.com",
+    "workflows": "building permits, inspections, fees",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Odyssey eFile",
+    "origin": "https://california.tylertech.cloud",
+    "workflows": "court e-filing, case lookup, hearings",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Jury duty portal",
+    "origin": "https://jury.lacourt.org",
+    "workflows": "summons response, postponements",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "BiblioCommons",
+    "origin": "https://sfpl.bibliocommons.com",
+    "workflows": "holds, renewals, fines, events",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "City parking tickets",
+    "origin": "https://www.sfmta.com",
+    "workflows": "citations, payments, contests",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "County property tax",
+    "origin": "https://ttc.lacounty.gov",
+    "workflows": "bills, payments, exemptions",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Secretary of State business filings",
+    "origin": "https://bizfileonline.sos.ca.gov",
+    "workflows": "entity filings, statements of information",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "FOIA.gov",
+    "origin": "https://www.foia.gov",
+    "workflows": "requests, tracking, appeals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Regulations.gov",
+    "origin": "https://www.regulations.gov",
+    "workflows": "dockets, public comments",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "USPS",
+    "origin": "https://www.usps.com",
+    "workflows": "change of address, hold mail, package claims, PO boxes",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "FEMA DisasterAssistance.gov",
+    "origin": "https://www.disasterassistance.gov",
+    "workflows": "applications, documents, inspections",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "VA.gov",
+    "origin": "https://www.va.gov",
+    "workflows": "claims, appointments, prescriptions, payments",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "Grants.gov",
+    "origin": "https://www.grants.gov",
+    "workflows": "opportunities, workspaces, submissions",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "SAM.gov",
+    "origin": "https://sam.gov",
+    "workflows": "entity registration, contract opportunities",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "School district enrollment",
+    "origin": "https://enroll.sfusd.edu",
+    "workflows": "applications, documents, placement",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "E-ZPass",
+    "origin": "https://www.e-zpassny.com",
+    "workflows": "tolls, vehicles, disputes, payments",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Clipper",
+    "origin": "https://www.clippercard.com",
+    "workflows": "cards, autoload, transit benefits",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "CDPH vital records",
+    "origin": "https://www.cdph.ca.gov",
+    "workflows": "birth/death certificate orders",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "City recreation (ActiveNet)",
+    "origin": "https://anc.apm.activecommunities.com",
+    "workflows": "class registration, facility rentals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Utility (PG&E)",
+    "origin": "https://m.pge.com",
+    "workflows": "billing, payment plans, outage reports, service start/stop",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "National Park Service pass",
+    "origin": "https://www.nps.gov",
+    "workflows": "passes, timed entry",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "Login.gov",
+    "origin": "https://secure.login.gov",
+    "workflows": "identity, connected accounts",
+    "tier": "A",
+    "status": "to_build"
+   },
+   {
+    "brand": "MySBA",
+    "origin": "https://my.sba.gov",
+    "workflows": "loan applications, certifications, documents",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "TSA PreCheck",
+    "origin": "https://universalenroll.dhs.gov",
+    "workflows": "enrollment, appointments, renewals",
+    "tier": "B",
+    "status": "to_build"
+   },
+   {
+    "brand": "OSHA online complaint",
+    "origin": "https://www.osha.gov",
+    "workflows": "complaints, inspection status",
+    "tier": "B",
+    "status": "to_build"
+   }
+  ]
+ }
+}

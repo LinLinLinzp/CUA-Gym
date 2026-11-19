@@ -1,0 +1,32 @@
+{
+  "task_id": "cua-hard/larkspur-map-flatfile",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。主杠杆为 L13（文件往返）：F 类检查（共 76 权重）全部基于智能体在 Seller Central 上传的文件内容——取 amazon_seller 状态中本次新增的 inventoryFileUploads[] 的最后一条，按其 url（/files/<sid>/<storedName>）读取 /var/lib/cua/files/amazon_seller/<sid>/<storedName>。若无新增上传、文件不存在，或首行按制表符切分后不包含全部 6 个列名，则所有 F 类检查与 O1 记 0。“不应改动”通过 S1 中的扣分实现，空操作得 0。无封顶项、无主观项。基础设施异常（状态文件缺失/不可解析、上传记录指向的文件在磁盘上缺失以外的读取错误）记为 invalid。",
+  "numeric_rule": "价格按美元比较，容差 0.005；上传文件中价格需为两位小数（F0 检查格式，其余检查按数值比较）。数量按整数字符串比较，去除首尾空白；FBA 行数量必须为空串。生效判断：effective_date ≤ 2026-11-27（黑色星期五，含当日）为本次生效。行按 sku 列匹配；重复 sku 计为多余行。行顺序不限，行尾 CRLF/LF 均可。",
+  "common": {"type": "客观要求", "implementation": "tests/verifier.py:evaluate", "evidence": "/var/lib/cua/state/{amazon_seller,shopify}/{initial,current}.json、/var/lib/cua/files/amazon_seller/<sid>/<storedName>、/workspace/output/larkspur_price_quantity.txt；真值见 expected.json", "score_mode": "partial", "coverage": "设计阶段，夹具按本规则估算"},
+  "checkpoints": [
+    {"id": "F0.upload_format", "weight": 6, "core": true, "requirement": "以要求的格式上传 Price & Quantity 文件", "rule": "存在本次新增上传；文件首行按 \\t 切分恰为 [sku, price, minimum-seller-allowed-price, maximum-seller-allowed-price, quantity, fulfillment-channel]（顺序一致），且每个数据行恰好 6 个制表符分隔字段、价格字段均为两位小数；全部满足得 1，否则 0", "trap": "报表列名是 seller-sku 等 9 列，直接改改再上传或存成逗号分隔会不合格"},
+    {"id": "F1.row_set", "weight": 8, "core": true, "requirement": "文件只含 Larkspur 的亚马逊 listing（FBA 与自发货、在售与不在售），不含停产品和其他供应商", "rule": "期望 SKU 集合 E 共 14 个：LK-MUG-SPK、LK-MUG-SPK-FBA、LK-BWL-NST3、LK-VSE-RIB-SG、LK-VSE-RIB-CH、LK-PLT-DIN4-FBA、LK-PCH-LG、LK-PCH-LG-FBA、LK-CND-HLD2、LK-TRY-SRV、LK-TRY-SRV-FBA、LK-CRF-GLS、LK-BTR-DSH-FBA、LK-SLT-CEL。完全一致得 1；否则 max(0,(命中数−2×多余数)/14)", "trap": "LK-SPN-RST 在 rev2 中标记 DISCONTINUED 必须排除；LK-SLT-CEL 为 Inactive，只下载 Active Listings 报表会漏掉；Northwind 的 NW-VSE-RIB-SG/NW-CRF-1L 是近似品名的非目标；LK-OIL-CRT 不在亚马逊上不得凭空出行"},
+    {"id": "F2.effective_rows", "weight": 22, "core": true, "requirement": "本次生效行按规则定价，最低价=新 MAP、最高价=MSRP", "rule": "9 个生效行（LK-MUG-SPK 27.00/27.00/32.00、LK-MUG-SPK-FBA 27.00/27.00/32.00、LK-BWL-NST3 64.99/59.00/72.00、LK-VSE-RIB-SG 48.00/48.00/58.00、LK-VSE-RIB-CH 48.00/48.00/58.00、LK-PLT-DIN4-FBA 74.99/70.00/84.00、LK-CRF-GLS 36.00/36.00/44.00、LK-BTR-DSH-FBA 24.99/22.00/28.00、LK-SLT-CEL 16.99/15.00/19.00，依次为 price/min/max）三项全对计一行；得分 = 全对行数/9", "trap": "rev2 把花瓶 MAP 46→48、玻璃盖水瓶 34→36；price 取 max(现价, MAP)，直接写 MAP 会把 BWL/PLT/BTR/SLT 降价；LK-PLT-DIN4 生效日恰为 11-27（含当日）"},
+    {"id": "F4.deferred_rows", "weight": 12, "core": true, "requirement": "尚未生效的行沿用报表中的现价与上下限", "rule": "5 个未生效行（LK-PCH-LG 与 LK-PCH-LG-FBA 54.99/50.00/64.00、LK-CND-HLD2 28.99/26.00/36.00、LK-TRY-SRV 与 LK-TRY-SRV-FBA 42.99/38.00/48.00）price/min/max 全对计一行；得分 = 全对行数/5", "trap": "PCH 生效日 11-28 仅晚一天；CND 的生效日在 rev2 中由 11-20 改为 12-01；min/max 现值只在下载的报表里"},
+    {"id": "F5.fbm_quantity", "weight": 12, "core": true, "requirement": "自发货行数量 = Shopify 该 SKU 库存 − 2，下限 0，渠道 DEFAULT", "rule": "9 个 FBM 行期望数量：LK-MUG-SPK 44、LK-BWL-NST3 10、LK-VSE-RIB-SG 7、LK-VSE-RIB-CH 0、LK-PCH-LG 4、LK-CND-HLD2 28、LK-TRY-SRV 13、LK-CRF-GLS 16、LK-SLT-CEL 0；数量与 fulfillment-channel=DEFAULT 均正确计一行；得分 = 正确行数/9", "trap": "库存以 Shopify 为准而非亚马逊报表数量；已归档的旧模具花瓶 LK-VSE-RIB-SG-23（库存 14）不是目标；CH 库存 1 需取 0 而非 −1"},
+    {"id": "F6.fba_rows", "weight": 10, "core": true, "requirement": "FBA 行数量留空并保持 AMAZON_NA", "rule": "5 个 FBA 行（LK-MUG-SPK-FBA、LK-PLT-DIN4-FBA、LK-PCH-LG-FBA、LK-TRY-SRV-FBA、LK-BTR-DSH-FBA）quantity 为空且 fulfillment-channel=AMAZON_NA 计一行；得分 = 正确行数/5", "trap": "报表里 FBA 行带有数量（118、35 等），照抄或填 Shopify 库存都会把 FBA 转成自发货"},
+    {"id": "F7.upload_type", "weight": 2, "requirement": "以 Price & Quantity 文件类型上传文本文件", "rule": "该上传记录 fileType == \"price_quantity\" 且 fileName 以 .txt 或 .tsv 结尾"},
+    {"id": "S1.shopify_map_raises", "weight": 24, "requirement": "Shopify 上本次生效且低于新 MAP 的 Larkspur 变体提到恰好 MAP，其余不动", "rule": "目标 7 个变体：LK-MUG-SPK 27.00、LK-BWL-NST3 59.00、LK-VSE-RIB-SG 48.00、LK-VSE-RIB-CH 48.00、LK-PLT-DIN4 70.00、LK-CRF-GLS 36.00、LK-OIL-CRT 20.00。其余所有变体（含 LK-PCH-LG、LK-CND-HLD2、LK-TRY-SRV、LK-SPN-RST、LK-BTR-DSH、LK-SLT-CEL、归档的 LK-VSE-RIB-SG-23 及全部非 Larkspur 商品）价格须与种子一致。得分 = max(0,(目标正确数 − 被改动的受保护变体数)/7)", "trap": "未生效的 PCH/CND/TRY 与停产的 SPN 现价都低于 MAP，容易被顺手提价；LK-OIL-CRT 不在亚马逊但仍要在 Shopify 提价"},
+    {"id": "O1.local_copy", "weight": 4, "requirement": "本地保留与上传内容一致的副本", "rule": "/workspace/output/larkspur_price_quantity.txt 存在，规范化行尾并去除首尾空行后与上传文件内容完全一致，且 F0 得 1", "evidence": "/workspace/output/larkspur_price_quantity.txt"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.0（参考终态：上传正确的 14 行文件，Shopify 提价 7 个变体）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.23（用第一版表、忽略生效日、price 直接等于 MAP、所有行填 Shopify 库存且不减 2、包含停产品、用 Active 报表漏掉 Inactive 行，Shopify 按 v1 全部提价）",
+    "format_comma": "≈0.24（内容全对但存成逗号分隔，F 类全 0，仅 Shopify 部分得分）",
+    "slip_v1_sheet": "≈0.72（仅漏看 rev2 更正）",
+    "slip_fba_quantity": "≈0.90（仅 FBA 行填了数量）",
+    "slip_effective_dates": "≈0.78（仅忽略生效日期截止）",
+    "slip_price_lowered": "≈0.90（仅把 price 直接设为 MAP，造成降价）"
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "task_id": "cua-hard/after-the-last-tram",
+  "task_version": "0.1.2",
+  "verifier_version": "0.1.2",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "满分 100 权重，各项二值计分。按初态与终态比较，发布和改期同时以持久事件核验。报告在相关操作完成后发送，每篇事实与实际状态一致才给对应报告分。空操作为 0。",
+  "numeric_rule": "按 UTC 比较 ISO 8601 时间。19 November 2026 19:30 CET 等于 2026-11-19T18:30:00Z。即时发布时间应在 2026-11-18T15:00:00Z 至 2026-11-19T18:30:00Z（含起点，不含终点）。报告可使用等价的日期时间表达和标点，标题须能明确对应文章。",
+  "common": {
+    "type": "客观要求",
+    "implementation": "tests/verifier.py:evaluate",
+    "evidence": "/var/lib/cua/state/{substack,microsoft_word_for_the_web,mattermost}/{initial,current}.json",
+    "score_mode": "partial",
+    "coverage": "独立 verifier 实现 11 项检查"
+  },
+  "checkpoints": [
+    {
+      "id": "S1.web_only",
+      "weight": 10,
+      "requirement": "保留公开的纯网页配图作品",
+      "rule": "post-map 整条记录与初态相同，仍 published、everyone、sendByEmailAndApp=false 且 deliveryAt=null；须同时满足 M1 和 M2 的报告内容条件。",
+      "trap": "网页已上线，插画许可只允许网页；更改配送开关也不能补发。"
+    },
+    {
+      "id": "S2.embargo_slot",
+      "weight": 15,
+      "requirement": "将采访保留在修订后的预约档",
+      "rule": "post-night 保持 scheduled，scheduledAt=2026-11-19T18:30:00Z；初态 scheduledAt=2026-11-19T17:30:00Z。须存在对应新改期事件，且未提前发布采访。",
+      "trap": "旧制作单与现有排期一致，但签字审批延后了一小时。"
+    },
+    {
+      "id": "S3.embargo_queued",
+      "weight": 8,
+      "requirement": "保留采访的公开预约配送",
+      "rule": "满足 S2，且 post-night 的 audience=everyone、sendByEmailAndApp=true、publishedAt 和 deliveryAt 均为空。",
+      "trap": "预约配送与已配送是两种状态。"
+    },
+    {
+      "id": "S4.approved_live",
+      "weight": 14,
+      "requirement": "即时发布获批的正式照片文章",
+      "rule": "原记录 post-depot 从 draft 变为 published，scheduledAt=null，publishedAt 在给定窗口内。须有与该有效发布时间一致的新发布事件。",
+      "trap": "保存稿件或停在确认页都未发布，版式样张也不属于正式文章。"
+    },
+    {
+      "id": "S5.approved_audience",
+      "weight": 7,
+      "requirement": "按授权限制受众",
+      "rule": "满足 S4，且 post-depot.audience=paid。发布事件的 audience 同时为 paid。",
+      "trap": "初始草稿为 everyone。"
+    },
+    {
+      "id": "S6.approved_delivery",
+      "weight": 12,
+      "requirement": "正式照片文章发布时通过邮件和应用配送",
+      "rule": "满足 S4，且 post-depot.sendByEmailAndApp=true，deliveryAt 非空且与 publishedAt 为同一时刻。发布事件的配送时间与终态一致。",
+      "trap": "勾选配送、保存草稿或仅网页发布均不构成已送达。"
+    },
+    {
+      "id": "M1.thread_update",
+      "weight": 8,
+      "requirement": "在原发布交接线程发送一条更新",
+      "rule": "Mattermost 恰好新增 1 条消息，含已删除者；该消息未删除，作者 usr-inez，channelId=ch-editorial，rootId=post-tram-release，正文非空。初态该线程的三条消息保留。发送时间须不早于本轮对应文章的发布、改期或取消排期事件。",
+      "trap": "频道新消息、艺术交接线程和未发送草稿均不算。"
+    },
+    {
+      "id": "M2.report_web",
+      "weight": 5,
+      "requirement": "区分纯网页作品",
+      "rule": "满足 M1，且回复中 A Map of the Last Stops 明确为网页已发布且邮件与应用均未配送；post-map 仍 published、everyone、sendByEmailAndApp=false、deliveryAt=null。"
+    },
+    {
+      "id": "M3.report_schedule",
+      "weight": 5,
+      "requirement": "区分预约和实际配送，给出正确时间",
+      "rule": "满足 M1 和 S3，且回复明确 The Night Inspector 尚未上线、仅预约于 2026-11-19T18:30:00Z 对应的带时区时刻，邮件与应用配送待预约执行。"
+    },
+    {
+      "id": "M4.report_sent",
+      "weight": 6,
+      "requirement": "确认实际配送及其受众",
+      "rule": "满足 M1、S5、S6，且回复明确 Inside the Bell Street Depot 正式篇已发布并经邮件及 Substack 应用配送给付费订阅者。不得用 layout proof 限定该标题。"
+    },
+    {
+      "id": "P1.protect_records",
+      "weight": 10,
+      "requirement": "保留文章原稿、非目标文章和编辑记录",
+      "rule": "满足 M1，且 S2、S4 中至少一项成立；Substack posts ID 集合不变，除 post-map、post-night、post-depot 外所有文章整条记录相同；这三篇的 title、subtitle、bodyHtml、slug、authorId、thumbnailPath、tags、commentPolicy 不变；Substack 其余业务集合不变（允许 events）；Word 除 documentActivity 外状态不变；Mattermost 初有 posts 和其他线程内容不变，允许正常阅读和发帖产生的派生状态。此次只有获批的正式照片文章可即时发布。",
+      "trap": "近似标题的版式样张含未获许可的文字，且同属特刊标签。"
+    }
+  ],
+  "subjective": [],
+  "subjective_note": "接受报告中能够明确表达同一事实的措辞。",
+  "fixtures": {
+    "golden": "1.00（参考终态）",
+    "nop": "0.00（初态）",
+    "naive": "0.08（误把网页稿打开配送开关，提前发布采访，误发样张，发出不实线程报告）",
+    "slip_old_embargo": "0.72（仅沿用旧排期，并据此报告）",
+    "slip_web_only_delivery": "0.85（仅误为网页稿打开配送开关，并误报该篇）",
+    "slip_saved_without_sending": "0.61（仅保存正式照片稿的设置，未发布配送，并据此报告）"
+  }
+}

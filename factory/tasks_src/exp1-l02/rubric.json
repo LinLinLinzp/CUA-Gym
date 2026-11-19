@@ -1,0 +1,35 @@
+{
+  "task_id": "cua-hard/tahoe-offsite-closeout",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。无 core/gate 项（本题杠杆为 L02，非 L01）。“不应改动/保持可报销”类检查只有在对应工作确实完成（X1–X4 中至少一项金额改对）后才得分，保证空操作为 0。主观项无。基础设施异常（站点状态文件缺失或不可解析、目标报告或费用从状态中消失）记为 invalid 并以非零退出码结束，不写 reward。",
+  "numeric_rule": "Expensify 金额以分（整数）存储，按分精确比较；CSV 与消息/邮件中的金额按美元两位小数比较，容差 0.005，正文金额用正则提取（支持 $1,723.58、1723.58、165、$165.00 等写法，比较前去掉千分位逗号）。上传回执以 receiptUrl 末尾的原始文件名（去掉 sitehost 的 8 位十六进制前缀）判定，必要时以 /var/lib/cua/files/expensify 下对应文件的 sha256 与 expected.json 比对。“今天”为 2026-11-16（UTC）。",
+  "common": {"type": "客观要求", "implementation": "tests/verifier.py:evaluate", "evidence": "/var/lib/cua/state/{expensify,airbnb,gmail}/{initial,current}.json、/var/lib/cua/files/expensify/、/workspace/output/offsite_closeout.csv", "score_mode": "partial", "coverage": "已实现，正反例夹具自测通过"},
+  "checkpoints": [
+    {"id": "X1.daniela_venmo_amount", "weight": 7, "requirement": "按回执图片更正 Daniela 的划桨板维修费", "rule": "exp_1012（rpt_101，Michael Brennan (host)）amount == 16500（原手填 18000）", "trap": "费用上的回执是 Venmo 截图 $165.00；Airbnb 线程里房东发的维修报价图是 $180.00，与手填金额一致，容易误判为正确"},
+    {"id": "X2.kofi_split_bill", "weight": 8, "requirement": "分摊账单只报本人卡上的部分", "rule": "exp_1021（rpt_102，Lone Eagle Grille）amount == 16000（原手填 39640 为整单）", "trap": "小票照片底部 SPLIT TENDER：VISA ****7731 K MENSAH $160.00 / MC ****0552 L FISCHER $186.40 / AMEX ****1009 公司卡 $50.00；Leo 的 18640 本就正确不得改动"},
+    {"id": "X3.leo_hertz_final", "weight": 7, "requirement": "以最终发票为准更正租车费", "rule": "exp_1032（rpt_103，Hertz）amount == 32418（原手填 34218）", "trap": "报告上附的是取车时的估价单（ESTIMATED TOTAL $342.18，与手填一致），最终发票 $324.18 只在 Leo 邮件附件图片中（被取代的信息 + 第二来源）"},
+    {"id": "X4.tariq_host_cash", "weight": 7, "requirement": "按房东在 Airbnb 发的现金收据更正金额", "rule": "exp_1051（rpt_105，Michael Brennan (host)）amount == 9500（原手填 12000）", "trap": "Expensify 中该费用无回执；收据照片只在 Airbnb 对话里（Late checkout $60 + Firewood $35 = $95 cash）"},
+    {"id": "X5.company_amex_flags", "weight": 8, "requirement": "公司 Amex（尾号 1009）支付的费用保留在报告上但关闭 Reimbursable", "rule": "目标集合 {exp_1013 Safeway, exp_1041 Tahoe Paddle & Oar} 的 reimbursable==false；误关集合 = 已批准目标报告中其他费用里 reimbursable 变为 false 的；得分 = (命中数 − 误关数)/2，下限 0；费用被删除视为未命中", "trap": "Fire Sign Cafe（exp_1043）回执卡号为 AMEX ****3005（个人卡），是近似干扰项，必须保持可报销；卡号只在回执图片里"},
+    {"id": "X6.reject_mei", "weight": 7, "requirement": "含非团建期间消费的报告整单驳回并给出理由", "rule": "rpt_106：status=='open' 且 isRetracted==true，且存在本次新增、authorId=='usr_001'、type=='status_change'、text 以 'Report rejected:' 开头且冒号后非空的评论；两条费用仍存在", "trap": "Sunnyside 费用手填日期 2026-11-05，但回执图片日期为 10/23/2026"},
+    {"id": "X7.reject_priya_duplicate", "weight": 7, "requirement": "已报销过的费用所在报告整单驳回", "rule": "rpt_107：同 X6 的驳回判定；两条费用仍存在", "trap": "返程机票费用手填 $159.10、日期 11/7，看似合理；其回执图与 Priya 10 月已报销报告 rpt_090 的回执是同一张往返电子客票（确认码 HQ4T7N，10/16 出票，$318.20）"},
+    {"id": "X8.approve_valid_reports", "weight": 8, "requirement": "合规的团建报告完成批准", "rule": "rpt_101–rpt_105 中 status=='approved' 的个数 / 5", "trap": "Owen 第一封邮件只认 11/4–11/6；11/13 的同线程更正把 11/3、11/7 旅行日纳入，未读到更正会把 4 份报告错误驳回"},
+    {"id": "X9.kofi_uber_receipt", "weight": 5, "requirement": "缺回执的费用在批准前附上员工邮件中的回执", "rule": "exp_1022（Uber）hasReceipt==true 且 receiptUrl 去前缀后的文件名为 IMG_4471.png（或文件 sha256 等于 expected.json.receipt_upload.correct_sha256）；上传 IMG_4466.png 得 0", "trap": "Kofi 邮件附了两张截图，第一张 IMG_4466 是 11/2 旧金山的私人行程 $22.40，只有 IMG_4471（11/7、$38.75、去机场）是对的"},
+    {"id": "X10.non_targets_untouched", "weight": 6, "requirement": "非团建报告及无需改动的费用保持原样", "rule": "非目标报告 rpt_090–rpt_095 的 status/total/isRetracted 与初始相同；其下费用 amount/reimbursable/receiptUrl 不变；目标报告中除 exp_1012/1021/1032/1051/1013/1041/1022 外的费用 amount 不变、未被删除；且 X1–X4 至少一项得分（防空操作）", "trap": "Tariq 的 'Halvorsen Freight lunch - Oct'（rpt_092）同样待 Nadia 审批、名字与 Ingrid Halvorsen 相近，但不是团建报告，不得批准或驳回；rpt_091 已批准、rpt_090 已报销"},
+    {"id": "A1.reply_host_paddleboard", "weight": 8, "requirement": "在 Airbnb 回复房东划桨板已结清的事实", "rule": "conv_201 中本次新增、senderId=='user_001' 的消息里至少一条正文提及 165（$165/165.00 均可）；任一新增消息提及 180 则得 0；另提及 Daniela 或 Venmo 为必要条件之一（缺失得 0.5）", "trap": "房东维修报价图为 $180，实际 Venmo 支付为 $165（图片在 Daniela 的 Expensify 费用上）"},
+    {"id": "G1.reply_owen_total", "weight": 7, "requirement": "向 Owen 回报本次报销总额", "rule": "本次新增、folder=='sent'、收件人含 owen@fernbrook.io 的邮件正文提及 1723.58（容差 0.005）", "trap": "总额只能由更正后的可报销费用加总得出；报告 total 字段包含不可报销的公司卡费用，直接相加会错"},
+    {"id": "C1.closeout_csv", "weight": 15, "requirement": "本地交付团建报告处理汇总", "rule": "offsite_closeout.csv 列为 report_number,employee_email,decision,reimbursable_total；每份目标报告一行，四列全对计一行；得分 = 正确行数 / max(7, 数据行数)。期望：78410231 daniela approved 229.00；78410244 kofi approved 430.35；78410257 leo approved 568.78；78410263 ingrid approved 127.55；78410278 tariq approved 367.90；78410282 mei rejected 0.00；78410296 priya rejected 0.00（邮箱均为 @fernbrook.io）", "evidence": "/workspace/output/offsite_closeout.csv"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.0（参考终态）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.08（不看任何图片：保留手填金额、不关公司卡费用、批准全部 7 份团建报告及 Halvorsen 午餐报告、上传 Kofi 邮件中的第一张截图、告诉房东 $180）",
+    "slip_hertz": "≈0.84（仅漏看 Leo 邮件中的 Hertz 最终发票）",
+    "slip_amex3005": "≈0.87（把个人 Amex 3005 的 Fire Sign Cafe 也关了可报销）",
+    "slip_host_cash": "≈0.84（未去 Airbnb 线程看房东收据，Tariq 保留 $120）",
+    "slip_duplicate": "≈0.84（未比对回执，批准了 Priya 的重复机票报告）"
+  }
+}

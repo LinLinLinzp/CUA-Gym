@@ -1,0 +1,144 @@
+{
+ "task_id": "cua-hard/checkout-rounding-rollback",
+ "task_version": "0.1.0",
+ "verifier_version": "0.1.0",
+ "reward_file": "/logs/verifier/reward.txt",
+ "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。主杠杆 L05（多跳依赖）：Sentry 事件的 release（checkout-api@4.31.0, production）→ deploys.csv 中 service=checkout-api、environment=production、release=checkout-api@4.31.0 那一行的完整 SHA → GitHub checkout-api 中该 SHA 的合并提交“Merge pull request #1287 …” → PR #1287（写的是 Closes PAY-412）→ Linear PAY-412 已取消、标为 PAY-431 的重复 → PAY-431 的负责人 Priya 与“回滚决定在 #ledger-rollouts” → Slack 线程中更正后的计划（从“正在报错的 release 所含 PR”的回滚分支开 PR，即 revert-1287-line-rounding）→ 新 PR 的编号 N 再写回 Linear、Sentry、Slack 与 JSON。每一跳的标识只出现在上一跳的输出中；标 core 的 G1、L2、K1、O2 直接依赖链条末端或中段的值，仅作说明，不调用 g.gate()/g.cap()。“不应做”类检查（G3、G4、L3、S3、K2）只有在相关工作已完成时才计分，因此空操作为 0。站点状态文件缺失或不可解析、issue-3qk / li_pay431 / li_pay412 / th_pay431 从状态中消失时记为 invalid，以非零退出码结束且不写 reward。",
+ "numeric_rule": "时钟 2026-11-18 09:40 America/Los_Angeles（17:40Z）。deploys.csv 时间为 UTC。正确行：2026-11-18T14:31:00Z,checkout-api,production,checkout-api@4.31.0,4be1c07a93d2f1e86b0c5d7a2e49f310c8ab65d1。N = current GitHub 状态中 repoId=r_api、且不在 initial 中的新 PR 里，compareBranch == 'revert-1287-line-rounding' 且 baseBranch == 'main' 的那条 PR 的 number（UI 自动分配，预期 1294，但以实际值为准）；若不存在则 N 未定义，所有依赖 N 的匹配都不得分。文本中匹配 N 用正则 (?<!\\d)N(?!\\d)（允许 #N、checkout-api#N、PR N 等写法）。 相关 id：GitHub 仓库 r_api，Priya=gh_priya，Tomasz=gh_tomasz，Sam=gh_sam；Linear PAY-431=li_pay431（In Progress 状态 id ws_pay_in_progress），PAY-412=li_pay412，Sam=lu_sam；Sentry issue-3qk，Priya=su_priya；Slack 频道 ledger-rollouts、线程 th_pay431（父消息 m_lr2），Sam=U_SAM，诱饵频道 payments（线程 th_pay412）。评论/消息的“新增”以 id 不在 initial.json 中为准。",
+ "common": {
+  "type": "客观要求",
+  "implementation": "tests/verifier.py:evaluate",
+  "evidence": "/var/lib/cua/state/{sentry,github,linear,slack}/{initial,current}.json、/workspace/output/incident_trace.json、expected.json",
+  "score_mode": "partial",
+  "coverage": "已实现，正反例夹具自测通过"
+ },
+ "checkpoints": [
+  {
+   "id": "G1.revert_pr_branch",
+   "weight": 13,
+   "core": true,
+   "requirement": "在 acme-commerce/checkout-api 新建回滚 PR：从 revert-1287-line-rounding 合入 main",
+   "rule": "N = current GitHub 状态中 repoId=r_api、且不在 initial 中的新 PR 里，compareBranch == 'revert-1287-line-rounding' 且 baseBranch == 'main' 的那条 PR 的 number（UI 自动分配，预期 1294，但以实际值为准）；若不存在则 N 未定义，所有依赖 N 的匹配都不得分。文本中匹配 N 用正则 (?<!\\d)N(?!\\d)（允许 #N、checkout-api#N、PR N 等写法）。 存在这样的 PR 得 1，否则 0。从 revert-1291-krw-rounding 或 revert-1279-tax-rounding 开的 PR 不算。",
+   "trap": "deploys.csv 中最新的 checkout-api 行是 staging 上的 4.31.1（SHA 4be1c70…，前缀与正确 SHA 4be1c07… 相近，对应 #1291）；另有 checkout-web@4.31.0、4.31.0-rc.1、staging 的 4.31.0 等近似行；#payments 里旧计划用的是 revert-1279-tax-rounding"
+  },
+  {
+   "id": "G2.reviewer_owner",
+   "weight": 8,
+   "requirement": "回滚 PR 的 reviewer 包含工单负责人 Priya（pnatarajan）",
+   "rule": "G1 的 PR 的 reviewers 中存在 userId == 'gh_priya'（状态不限）得 1；无 G1 PR 得 0。多加其他 reviewer 不扣分。",
+   "trap": "#1287 作者是 Tomasz（tkowalski），PAY-412 也分派给他；#payments 旧线程里 Tomasz 说“ping me for review”"
+  },
+  {
+   "id": "G3.revert_unmerged",
+   "weight": 6,
+   "requirement": "回滚 PR 保持 open，不合并、不关闭",
+   "rule": "G1 的 PR 的 status == 'open' 得 1；merged/closed 或无 G1 PR 得 0。",
+   "trap": "Priya 明确要求 on-call 不要合并，由她 review 后自己合并"
+  },
+  {
+   "id": "G4.no_other_pr_changes",
+   "weight": 4,
+   "requirement": "不另开其他 PR，不改动已有 PR",
+   "rule": "仅当 G1 通过才计分：所有仓库新增 PR 恰好 1 条（即 G1 那条），且 initial 中每条 PR 在 current 中逐字段不变（status、reviewers、comments 等）得 1，否则 0。",
+   "trap": "在错误分支开过 PR 后再补开正确 PR、或去合并/评论 #1287 都会失分"
+  },
+  {
+   "id": "L1.pay431_in_progress",
+   "weight": 6,
+   "requirement": "Linear PAY-431 状态改回 In Progress",
+   "rule": "issues 中 id=li_pay431 的 stateId == 'ws_pay_in_progress' 得 1（种子为 ws_pay_done）。",
+   "trap": "PR 写的是 Closes PAY-412，但 PAY-412 已以重复为由取消，真正跟踪的是 PAY-431"
+  },
+  {
+   "id": "L2.pay431_comment_pr",
+   "weight": 10,
+   "core": true,
+   "requirement": "在 PAY-431 上留言，写明回滚 PR 编号",
+   "rule": "comments 中新增、issueId=li_pay431、userId=lu_sam、body 匹配 N 的评论存在得 1，否则 0（N 未定义时 0）。",
+   "trap": "PR 编号只能在 GitHub 新建 PR 之后得到（多跳的末端依赖）"
+  },
+  {
+   "id": "L3.pay412_untouched",
+   "weight": 3,
+   "requirement": "已取消的重复工单 PAY-412 不被改动",
+   "rule": "仅当 L1 或 L2 通过才计分：li_pay412 的 stateId 仍为 ws_pay_canceled、assigneeId 仍为 lu_tomasz，且没有新增 issueId=li_pay412 的评论，得 1。",
+   "trap": "沿 PR 的 Closes PAY-412 直接操作 PAY-412"
+  },
+  {
+   "id": "S1.sentry_assign_owner",
+   "weight": 5,
+   "requirement": "把 Sentry 问题 CHECKOUT-API-3QK 分派给 Priya",
+   "rule": "issues 中 id=issue-3qk 的 assignee == 'su_priya' 得 1。",
+   "trap": "分派给 PR 作者 Tomasz（su_tomasz）或 PAY-412 的经办人不得分"
+  },
+  {
+   "id": "S2.sentry_comment",
+   "weight": 9,
+   "requirement": "在 CHECKOUT-API-3QK 下评论，写明 Linear 工单号和回滚 PR 编号",
+   "rule": "comments['issue-3qk'] 中新增评论（id 不在 initial 中），取最佳一条：含 'PAY-431'（不区分大小写）记 0.5，匹配 N 记 0.5，相加。只写 PAY-412 不得那 0.5。",
+   "trap": "工单号需经过 PAY-412→PAY-431 的重定向；PR 号需先在 GitHub 开 PR"
+  },
+  {
+   "id": "S3.sentry_unresolved",
+   "weight": 6,
+   "requirement": "CHECKOUT-API-3QK 保持 unresolved",
+   "rule": "仅当 S1 或 S2 得分 > 0 才计分：issue-3qk 的 status == 'unresolved' 得 1（resolved / ignored / archived 得 0）。",
+   "trap": "Helen 在线程中要求回滚部署后才由部署流程 resolve；#payments 旧流程是回滚后即 resolve"
+  },
+  {
+   "id": "K1.thread_reply_pr",
+   "weight": 12,
+   "core": true,
+   "requirement": "在 #ledger-rollouts 中 PAY-431 回滚计划的线程（th_pay431）里回复回滚 PR 编号",
+   "rule": "messages['ledger-rollouts'] 中新增、senderId=U_SAM 的消息：threadId == 'th_pay431' 且内容匹配 N 得 1；threadId 为 th_pay431 但不含 N 得 0.25；顶层消息（threadId 为空）含 N 得 0.5；取最高。其他频道/线程不得分。",
+   "trap": "PAY-412 说讨论在 #payments，PAY-431 的描述才指明回滚决定在 #ledger-rollouts；顶层置顶消息的关 flag 方案已被线程回复推翻"
+  },
+  {
+   "id": "K2.no_payments_post",
+   "weight": 2,
+   "requirement": "不在 #payments 发消息",
+   "rule": "仅当 K1 得分 > 0 才计分：messages['payments'] 中没有 senderId=U_SAM 的新增消息（含线程回复）得 1。",
+   "trap": "#payments 中 4.30.0 回滚的旧线程看起来像“同类事件的约定流程”"
+  },
+  {
+   "id": "O1.output_issue_release",
+   "weight": 2,
+   "requirement": "incident_trace.json 的 sentry_issue 与 release 正确",
+   "rule": "/workspace/output/incident_trace.json 为单个 JSON 对象；sentry_issue == 'CHECKOUT-API-3QK' 且 release == 'checkout-api@4.31.0'（字符串精确匹配，去首尾空白）得 1。文件缺失或不可解析则 O1–O4 全部 0。"
+  },
+  {
+   "id": "O2.output_commit_pr",
+   "weight": 8,
+   "core": true,
+   "requirement": "incident_trace.json 的 commit_sha 与 pull_request 正确",
+   "rule": "commit_sha == '4be1c07a93d2f1e86b0c5d7a2e49f310c8ab65d1'（小写、去空白后精确比较，短 SHA 不算）记 0.5；pull_request == 1287（整数或可转为整数的字符串）记 0.5。",
+   "trap": "4be1c70e…（4.31.1 staging，#1291）、7f0b2d4e…（checkout-web@4.31.0，web #882）、9d27e5b1…（rc.1，#1285）均为近似行"
+  },
+  {
+   "id": "O3.output_ticket_owner",
+   "weight": 3,
+   "requirement": "incident_trace.json 的 linear_ticket 与 owner 正确",
+   "rule": "linear_ticket == 'PAY-431'（不区分大小写）记 0.5；owner == 'Priya Natarajan'（不区分大小写、合并空白）记 0.5。",
+   "trap": "PAY-412 / Tomasz Kowalski 是 PR 表面信息"
+  },
+  {
+   "id": "O4.output_followup_pr",
+   "weight": 3,
+   "requirement": "incident_trace.json 的 followup_pr 等于实际开出的回滚 PR 编号",
+   "rule": "N 已定义且 followup_pr == N（整数或可转为整数的字符串）得 1；否则 0（含 null）。"
+  }
+ ],
+ "subjective": [],
+ "subjective_note": "无主观项：所有要求都落在 Sentry、GitHub、Linear、Slack 的持久化状态或本地 JSON 上。",
+ "fixtures": {
+  "golden": "1.0（参考终态）",
+  "nop": "0.0（未做任何操作）",
+  "naive": "≈0.10（SHA 与 #1287 找对，但沿 PR 的 PAY-412 走到 #payments 旧线程：从 revert-1279 开 PR、Tomasz 为 reviewer、改 PAY-412、Sentry 分派给 Tomasz 并 resolve、在 #payments 回复）",
+  "wrong_hop": "≈0.35（其余都对，只在部署日志一跳取了最新的 checkout-api 行 4.31.1/#1291，于是从 revert-1291-krw-rounding 开 PR——主杠杆单独的代价）",
+  "flag_plan": "≈0.29（只按置顶消息关 flag，不开 PR，不改 Linear 与分派）",
+  "slip_reviewer": "≈0.92（仅把 reviewer 设为 Tomasz）",
+  "slip_dup_ticket": "≈0.75（仅把 Linear 操作与工单号落在 PAY-412）",
+  "slip_resolved": "≈0.94（仅把 Sentry 问题 resolve）",
+  "slip_merged": "≈0.94（仅自行合并了回滚 PR）"
+ }
+}

@@ -1,0 +1,39 @@
+{
+  "task_id": "tahoe-offsite-closeout",
+  "name": "cua-hard/tahoe-offsite-closeout",
+  "version": "0.1.0",
+  "description": "Close out a team offsite's expense reports in Expensify as the approver: correct typed amounts to what the receipt images show, switch company-card items to non-reimbursable, attach an emailed receipt, reject an out-of-offsite and an already-reimbursed report, settle the host's paddleboard question on Airbnb, report the payout total to the controller in Gmail and write a per-report CSV.",
+  "keywords": [
+    "browser",
+    "cli",
+    "expense-approval",
+    "receipts",
+    "image-evidence",
+    "multi-site"
+  ],
+  "sites": [
+    "expensify",
+    "airbnb",
+    "gmail"
+  ],
+  "clock": "2026-11-16T09:30:00Z",
+  "timezone": "UTC",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "组织办公",
+    "subscenario": "团建差旅报销审核",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L02"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_hertz": [0.55, 0.95],
+    "slip_amex3005": [0.55, 0.95],
+    "slip_host_cash": [0.55, 0.95],
+    "slip_duplicate": [0.55, 0.95]
+  }
+}

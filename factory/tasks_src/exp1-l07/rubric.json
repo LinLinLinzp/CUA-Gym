@@ -1,0 +1,40 @@
+{
+  "task_id": "cua-hard/dad-visits-airbnb-settlement",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。主杠杆 L07（可重算脚本）对应 R1–R6 共 52 分，另有 C1（settlement_2026-10.csv 须为脚本对 10 月的输出）9 分依赖同一套规则。“不得改动”类检查 P1 只有在 S1–S6 至少一项得分 > 0（即 10 月工作确实做了）后才计分，保证空操作为 0。无门控、无封顶。主观项无。基础设施异常（站点状态文件缺失或不可解析、工作簿中找不到 Bookings/Settlement 工作表）记为 invalid 并以非零退出码结束，不写 reward。",
+  "numeric_rule": "金额按美元比较，容差 0.02（CSV/单元格中允许 $ 与千分位逗号，如 \"$1,223.66\"、\"1223.66\"、\"1223.7\" 按数值比）；表格单元格取 value（若为空取 computed），去首尾空格；日期以 YYYY-MM-DD 字符串精确比较；status 不区分大小写；guests 按 \";\" 拆分、去空格后按集合比较。Bookings 行按 code 列（A 列）定位，行顺序不限；同一 code 出现多行时该行判为错。邮件正文金额用 cuaverify.amounts 提取（支持 $977.06、977.06、-977.06 等写法），比较绝对值。“新增邮件”= current.emails 中 id 不在 initial.emails 内、folder 为 sent 的邮件，收件人取 to+cc（不区分大小写）。",
+  "common": {"type": "客观要求", "implementation": "tests/verifier.py:evaluate", "evidence": "/var/lib/cua/state/{google_sheets,gmail}/{initial,current}.json、/workspace/output/{settle.py,bookings.csv,settlement_2026-10.csv}；airbnb 在本任务中只读", "score_mode": "partial", "coverage": "已实现，正反例夹具自测通过"},
+  "rules_of_split": "（供核对用，脚本须实现）只统计 check_in 前 7 位 == MONTH 的行。net = total − refund。cancelled：pool = max(0, net − service_fee)，清洁费部分 = 0。confirmed 且 MONTH ≥ \"2026-10\"：清洁费部分 = cleaning_fee，三人（Emily/James/Megan）各分 1/3；pool = max(0, net − service_fee − cleaning_fee)。confirmed 且 MONTH < \"2026-10\"：pool = max(0, net − service_fee)，清洁费部分 = 0。pool 在该行 guests 中平均分配；付款人（paid_by）另承担 net − pool − 清洁费部分（即服务费；全额退款时为 0）；paid[付款人] += net。share/paid 四舍五入到分（HALF_UP），balance = paid − share。输出 person,share,paid,balance 三行，顺序 Emily、James、Megan。校验仅针对当月行：guests 或 paid_by 出现三人以外的名字、status 不是 confirmed/cancelled、四个金额列任一不是数字 → 退出码 2 且不生成 OUT_CSV；否则退出码 0。当月无行 → 三行全 0.00。规则来源：Gmail 线程 “Dad visits - how we split the Airbnbs”（8/2 James 原规则；10/1 Megan 提议清洁费三人均摊，10/1 James 同意“从 10 月入住的行程开始，8、9 月不重算”，10/2 Emily 确认）。Sheet 的 Notes 工作表只有 8 月旧规则。",
+  "checkpoints": [
+    {"id": "R1.replay_october", "weight": 9, "requirement": "脚本对 10 月正确重算（含清洁费三人均摊、取消行部分退款、James 自付行）", "rule": "用 expected.json replay.mutations[M1_october_golden]：BOOKINGS_CSV=该 CSV、MONTH=2026-10，以 agent 用户运行 /workspace/output/settle.py（cuaverify.run_replay，超时 60s）；退出码 0 且 OUT_CSV 三行（按 person 匹配）share/paid/balance 均在 0.02 内：Emily 1012.07/2916.92/1904.85，James 1572.36/595.30/-977.06，Megan 927.80/0.00/-927.80。全对 1，否则 0", "trap": "Notes 工作表只有旧规则；按旧规则得 James -1087.06、Megan -872.80"},
+    {"id": "R2.replay_september_old_rule", "weight": 9, "requirement": "生效日：9 月及以前不做清洁费均摊", "rule": "同一 CSV、MONTH=2026-09：Emily 1110.46/2181.70/1071.24，James 595.30/595.30/0.00，Megan 1071.24/0.00/-1071.24（与 Settlement 工作表已有 9 月行一致）。全对 1，否则 0", "trap": "“从 10 月入住开始”是修订生效日，脚本若对所有月份均摊清洁费则 9 月错；9/29 入住、10/2 退房的行属于 9 月"},
+    {"id": "R3.replay_november_mixed", "weight": 10, "requirement": "全额退款取消为 0、他人付款、跨月行排除", "rule": "mutations[M3_november_mixed]、MONTH=2026-11：Emily 1368.28/2300.93/932.65，James 514.11/0.00/-514.11，Megan 1254.25/835.70/-418.55。全对 1，否则 0", "trap": "James 付款的全额退款取消行：net=0，若不做 max(0,·) 下限会产生负 pool（James 与 Megan 份额各偏移 ±服务费/2）"},
+    {"id": "R4.replay_december_boundary", "weight": 9, "requirement": "按入住月份归属（跨年、月末）", "rule": "mutations[M4_december_boundary]、MONTH=2026-12：Emily 601.88/1223.66/621.78，James 1458.72/1693.26/234.54，Megan 1451.61/595.30/-856.31。11/30 入住行与 2027-01-01 入住行不计入，12/30–1/2 行计入。全对 1，否则 0"},
+    {"id": "R5.replay_invalid_person", "weight": 8, "requirement": "输入校验：当月行出现三人以外的人名时拒绝", "rule": "mutations[M5_unknown_person]（11 月一行 guests 为 \"Emily; Dad\"）、MONTH=2026-11：退出码必须为 2 且 OUT_CSV 文件不存在（运行前确保不存在）。满足 1，否则 0"},
+    {"id": "R6.replay_empty_month", "weight": 7, "requirement": "无当月行时输出全零", "rule": "golden CSV、MONTH=2027-01：退出码 0，三行 share/paid/balance 全为 0（容差 0.02），且表头恰为 person,share,paid,balance。满足 1，否则 0"},
+    {"id": "C1.settlement_csv", "weight": 9, "requirement": "本地交付 10 月结算结果", "rule": "/workspace/output/settlement_2026-10.csv 表头为 person,share,paid,balance，含 Emily/James/Megan 三行且值与 R1 的期望一致（容差 0.02）。按正确人数/3 计分（每人三个值全对才算该人正确）", "evidence": "/workspace/output/settlement_2026-10.csv"},
+    {"id": "C2.bookings_csv", "weight": 8, "requirement": "本地交付修正后的 Bookings 导出", "rule": "/workspace/output/bookings.csv 表头为 code,check_in,check_out,status,guests,paid_by,total,service_fee,cleaning_fee,refund；对 5 个关键行（HMR6D2H7QA、HMZ9L4T2WC、HMK7S3X5PB、HMJ2F8V6LN、HMV8B5Q1RE）逐行与 expected.bookings_golden 比较（10 列全对才算对），得分 = 正确行数/5；若文件含 HMF2C9D7UX 或 HMU6E3W9KF 则再乘 0.5", "evidence": "/workspace/output/bookings.csv"},
+    {"id": "S1.sheet_cancelled_stay", "weight": 3, "requirement": "已取消的 10 月行程按取消与部分退款记录", "rule": "Bookings 工作表 HMR6D2H7QA 行：status=cancelled、total 731.40、service_fee 81.65、cleaning_fee 85.00、refund 367.38，日期 2026-10-09/2026-10-11，guests Megan，paid_by Emily", "trap": "表中仍写着 confirmed 且金额空白；Airbnb 中该单 10/6 已取消，退款 367.38"},
+    {"id": "S2.sheet_shortened_stay", "weight": 3, "requirement": "改期缩短的行程按当前行程与新收据记录", "rule": "HMZ9L4T2WC 行：check_in 2026-10-16、check_out 2026-10-19、confirmed、guests James、paid_by Emily、total 1223.66、service_fee 136.60、cleaning_fee 125.00、refund 0", "trap": "表中是原始 10/16–10/20；Airbnb 10/12 改期为 3 晚，收据金额已更新（原 4 晚总额 1578.55）"},
+    {"id": "S3.sheet_missing_stay", "weight": 3, "requirement": "补录漏登的 10 月行程", "rule": "新增唯一一行 HMK7S3X5PB：2026-10-23/2026-10-26、confirmed、guests {Emily, Megan}、paid_by Emily、total 1329.24、service_fee 148.39、cleaning_fee 100.00、refund 0", "trap": "只在 Megan 11/3 的邮件中提到漏登；同期 Emily 的私人行程（HMF2C9D7UX 10/2–10/4 与 Sam、HMU6E3W9KF 房东取消全额退款）不得补录"},
+    {"id": "S4.sheet_james_receipt", "weight": 3, "requirement": "James 自订行程以更新后的收据为准", "rule": "HMJ2F8V6LN 行：2026-10-30/2026-11-01、confirmed、guests James、paid_by James、total 595.30、service_fee 66.46、cleaning_fee 90.00、refund 0", "trap": "James 10/20 邮件的 3 晚收据（total 835.70、service 93.29）被其 10/28 回复中的 2 晚收据取代"},
+    {"id": "S5.sheet_moved_stay", "weight": 2, "requirement": "改到 11 月入住的行程更新日期（从而移出 10 月）", "rule": "HMV8B5Q1RE 行：check_in 2026-11-01、check_out 2026-11-03（金额 417.22/46.58/50.00/0 若填写须正确，空白也接受）", "trap": "表中是原 10/31–11/2，Airbnb 10/27 已改到 11/1–11/3，不再属于 10 月"},
+    {"id": "S6.sheet_settlement_rows", "weight": 7, "requirement": "Settlement 工作表追加 10 月三行", "rule": "Settlement 工作表中（任意行位置，不要求紧接已有行；month 单元格按字符串去空格比较）month 为 2026-10 的行恰好 3 行（Emily/James/Megan 各 1），share/paid/balance 与 R1 期望一致（容差 0.02）。得分 = 正确人数/3；若 2026-10 行多于 3 行得 0"},
+    {"id": "E1.email_siblings", "weight": 7, "requirement": "邮件通知 James 和 Megan 各自应付金额", "rule": "存在一封新发出的邮件，收件人（to+cc）同时包含 james.carter.oak@gmail.com 与 megan.ruiz.nc@outlook.com（或分别发给两人的邮件，各自对应），正文中出现 977.06（James）与 927.80（Megan）：两人都对得 1，一人对得 0.5；已发给两人但金额都不对得 0.25", "trap": "按旧规则会写成 1087.06 / 872.80"},
+    {"id": "P1.protect_history", "weight": 3, "requirement": "不改动已结算月份与非目标记录", "rule": "前提：S1–S6 至少一项得分 > 0，否则 0。Bookings 工作表 8、9 月 7 行（HMC8A1K2Q7、HMJ4W8N2D5、HM4RT7Z9PL、HMQ2V6B8XK、HMJ7P3R9T1、HMT5K9C3MZ、HMW3N8F6JD）10 列不变，HMG3Y7M4KS 行不变；Settlement 工作表 2026-08/2026-09 的 6 行值不变；Bookings 工作表不含 HMF2C9D7UX、HMU6E3W9KF。全部满足 1，否则 0", "trap": "James 明确说 8、9 月不重算；9/29 入住行属于 9 月"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.0（参考终态）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.18（信任表格旧行：O1 仍 confirmed 无退款、O2 退房日未改、O4 用报价收据、O5 留在 10 月、漏补城堡行程；脚本按 Notes 旧规则、无下限、无校验）",
+    "slip_floor": "≈0.90（仅脚本缺 max(0,·) 下限，R3 失分）",
+    "slip_validation": "≈0.92（仅脚本不校验人名，R5 失分）",
+    "slip_effective_date": "≈0.91（清洁费均摊对所有月份生效，R2 失分）",
+    "slip_moved_stay": "≈0.75（O5 仍按 10/31 入住计入 10 月）",
+    "slip_james_quote": "≈0.90（O4 用了 James 第一封邮件的 3 晚报价；James 自付独住行的 balance 与金额无关，只影响 share/paid 与表格行）"
+  }
+}

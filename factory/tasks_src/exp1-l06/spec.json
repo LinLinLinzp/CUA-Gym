@@ -1,0 +1,41 @@
+{
+  "task_id": "january-new-hire-records",
+  "name": "cua-hard/january-new-hire-records",
+  "version": "0.1.0",
+  "description": "Finalise the January 2027 new-hire cohort for a startup's People Ops: work out each starter's agreed title, start date and salary when the recruiter's Slack notes, the Greenhouse offer form, the generated offer-letter PDFs and the DocuSign envelopes disagree; create the BambooHR records, move the applications to Hired in Greenhouse, reply to the recruiter's Slack thread with the mismatches and write a cohort CSV.",
+  "keywords": [
+    "browser",
+    "cli",
+    "hr-operations",
+    "onboarding",
+    "conflicting-sources",
+    "multi-site"
+  ],
+  "sites": [
+    "greenhouse",
+    "docusign",
+    "slack",
+    "bamboohr"
+  ],
+  "clock": "2026-12-14T09:30:00-08:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "组织办公",
+    "subscenario": "入职建档与录用条款核对",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L06"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_priya_voided": [0.55, 0.95],
+    "slip_marcus_amendment": [0.55, 0.95],
+    "slip_elena_unsigned": [0.55, 0.95],
+    "slip_leo_draft": [0.55, 0.95],
+    "slip_nadia_withdrawn": [0.55, 0.95]
+  }
+}

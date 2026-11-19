@@ -1,0 +1,28 @@
+{
+  "task_id": "ember-launch-status-audit",
+  "name": "cua-hard/ember-launch-status-audit",
+  "version": "0.1.0",
+  "description": "Launch-morning audit for a home-goods brand's Ember Collection: check every item on the local launch sheet against its real status in Shopify (products draft/archived/active, discounts scheduled/expired/active, blog post saved-but-unpublished), fix what is in the wrong state per the sheet and the QA pull in the Slack thread, send the stockist note that is still sitting in Yahoo Drafts (only live products, stockist's new address), post the real status in #ember-launch and write an audit CSV.",
+  "keywords": ["browser", "cli", "e-commerce", "product-launch", "shopify", "email", "slack", "status-audit", "multi-site"],
+  "sites": ["shopify", "yahoo_mail", "slack"],
+  "clock": "2026-11-18T10:30:00-08:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "产业运营",
+    "subscenario": "电商新品上线核查",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L15"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_fig": [0.55, 0.95],
+    "slip_charcoal": [0.55, 0.95],
+    "slip_address": [0.55, 0.95],
+    "slip_giftbox": [0.55, 0.95]
+  }
+}

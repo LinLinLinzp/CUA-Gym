@@ -1,0 +1,41 @@
+{
+  "task_id": "hartley-part-year-calfile",
+  "name": "cua-hard/hartley-part-year-calfile",
+  "version": "0.1.0",
+  "description": "Finish a joint 2024 California 540 in CalFile for a household where one spouse moved from Oregon mid-year: enter W-2s/W-2c and 1099-INTs from Gmail attachments, compute the photography income from PayPal (fees, refunds, CAD converted at Bank of Canada rates with last-published fallback), prorate interest by days, build the Schedule CA subtraction to the cent, file, pay the balance with Web Pay, pay the preparer's corrected fee on PayPal and email her the confirmation, plus a per-transaction CSV.",
+  "keywords": [
+    "browser",
+    "cli",
+    "government",
+    "tax",
+    "proration",
+    "currency-conversion",
+    "multi-site"
+  ],
+  "sites": [
+    "california_tax",
+    "gmail",
+    "paypal"
+  ],
+  "clock": "2025-04-10T09:15:00-07:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "公共事务",
+    "subscenario": "个人报税（跨州年中搬迁、副业收入）",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L12"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_move_date": [0.55, 0.95],
+    "slip_fx_fallback": [0.55, 0.95],
+    "slip_w2c": [0.55, 0.95],
+    "slip_estimates": [0.55, 0.95],
+    "slip_fee_card": [0.55, 0.95]
+  }
+}

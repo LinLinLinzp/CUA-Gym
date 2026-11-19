@@ -1,0 +1,36 @@
+{
+  "task_id": "cua-hard/filter-box-pickup",
+  "task_version": "0.1.3",
+  "verifier_version": "0.1.3",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "对各检查点分别判定，再按权重求和除以 100。以相同 ID 比较初始和当前记录。W 表示唯一新增且已提交的 Walmart 退货。T 表示 W 属于 parcel-a。F 表示 T 且唯一退货行对应 parcel-a-1 / vn-160。P 表示 T 且取件方式和地址正确。C 表示唯一新增日历事件。数量、金额、退货原因、取件和日历分别按对应记录判定。生成的 ID、退货编号、确认码、日志时间均以实际记录为准。基础设施状态文件缺失或不可解析时以非零退出码结束且不写 reward。",
+  "numeric_rule": "退款金额均为 USD，比较容差小于 0.005；日期按 ISO 8601 表示的同一时刻比较。可用窗口要求任何时间都不与 Personal 或 Work 事件重叠，恰好首尾相接允许。时区 America/Chicago。",
+  "common": {
+    "type": "客观要求",
+    "implementation": "Python verifier 比较初始和当前状态",
+    "evidence": "/var/lib/cua/state/{walmart,yahoo_mail,google_calendar}/{initial,current}.json",
+    "score_mode": "partial",
+    "coverage": "10 个检查点与 5 个终态夹具"
+  },
+  "checkpoints": [
+    {"id": "W1.order", "weight": 18, "requirement": "按箱标锁定订单", "rule": "T 成立，parcel-a 对应 2000147-835261", "trap": "旧邮件猜测 Plus，近似订单号 2000147-835621 对应 parcel-b"},
+    {"id": "W2.line", "weight": 12, "requirement": "仅退错发滤芯对应的订购商品行", "rule": "F 成立，W.lines 恰有一行，对应 parcel-a-1 / vn-160", "trap": "按订购型号选择退货商品行，保留抹布"},
+    {"id": "W3.quantity", "weight": 20, "requirement": "核对照片与已完成退货，提交剩余的错发件数", "rule": "F 成立且该行 quantity = 2", "trap": "退货前照片有三件 VN-180，Walmart 记录显示其中一件已经退回。可选上限仍为三件"},
+    {"id": "W4.estimate", "weight": 10, "requirement": "记录对应两件的部分退款", "rule": "F 成立，行 refundSubtotal = 37.00、refundTax = 2.96、refundAmount = 39.96，且 W.refundEstimate = 39.96", "trap": "误退三件会生成 59.94 美元的退款"},
+    {"id": "W5.reason", "weight": 5, "requirement": "按错发原因发起退款", "rule": "F 成立且该行 reason=wrong_item、resolution=refund"},
+    {"id": "W6.method", "weight": 8, "requirement": "为目标订单从原收货地址安排上门取件", "rule": "P 成立，W.method=scheduled_pickup，pickupAppointment.address 与初始 parcel-a.shippingAddress 相同"},
+    {"id": "W7.earliest", "weight": 15, "requirement": "预订最早的完整空闲窗口", "rule": "P 成立且 W.pickupAppointment 时间为 2026-11-19T15:00:00Z 至 2026-11-19T17:00:00Z（当地 09:00–11:00）", "trap": "周三两段均在中途发生重叠，周四 11:00 的事件与窗口首尾相接"},
+    {"id": "C1.reference", "weight": 4, "requirement": "在 Personal 登记对应订单的单个事件", "rule": "P、C 成立且 C.calendarId=c1、C.title 精确为 Walmart return pickup – 2000147-835261"},
+    {"id": "C2.window", "weight": 5, "requirement": "用完整确认时段登记一次定时事件", "rule": "P、C 成立，确认为完整起止时间，C.calendarId=c1，C.start/end 等于 Walmart 确认的 startAt/endAt，C.allDay=false，recurring 为 none 或缺省"},
+    {"id": "P1.preserve", "weight": 3, "requirement": "保留原订单、退货和日历事件", "rule": "T、C 成立，原有所有 orders、returns、events 逐条按 ID 比较原样保留，且没有新增订单"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.00（全部正确）",
+    "nop": "0.00（未执行）",
+    "naive": "0.00（沿用旧猜测选 Plus，额外退抹布，并选择首个有重叠的窗口）",
+    "slip_quantity": "0.70（误退三件，数量和金额两项为 0）",
+    "slip_window": "0.85（选了与 Work 重叠的时段，取件时段选择为 0，日历准确记录了实际确认时段）"
+  }
+}

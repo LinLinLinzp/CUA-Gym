@@ -1,0 +1,39 @@
+{
+  "task_id": "cua-hard/summit-run-of-show",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。主杠杆 L08（高级操作/拖放排序）：Trello 看板四个“日期·会场”列表的成员与顺序（B1–B4，共 48 分）是核心检查点，标 core，仅作说明，不调用 g.gate()/g.cap()。Trello 的 Move 对话框只能把卡片追加到目标列表末尾、没有位置选择，“Sort by”只能按标题或创建时间排序，二者都得不到按开始时间排列的顺序，只有拖放（或反复移出再移回）才能把卡片放到正确位置；只移对列表、不排序的 append_only 夹具约 0.49。列表与种子完全相同时该项记 0。“不应改动”类检查（B6、C5）分别以至少一个日期·会场列表完全正确、至少一项日历改动正确（C1–C4 任一得分）为前提，因此空操作为 0。站点状态文件缺失或不可解析、board-1 或其列表从状态中消失时记为 invalid，以非零退出码结束且不写 reward。",
+  "numeric_rule": "“今天”为 2026-11-18（Europe/London）。12 月伦敦为 GMT（UTC+0），日历 start/end 解析为时间点后按 UTC 比较，精确到分钟；每场 45 分钟。列表比较用 lists[<id>].cardIds，忽略 archived=true 的卡片。邮件与 CSV 文本比较：去首尾空白、转小写、去重音（NFKD 去组合符，Tomás=tomas、Inés=ines、Joaquín=joaquin）、弯引号 ’ 视同 '；CSV 时间补零（9:00 视同 09:00）。邮件中的时间接受 HH:MM、H:MM、H.MM、Ham/H am（整点）写法，且前面不能紧跟数字或冒号；日期接受星期全称或缩写（Thursday/Thu、Friday/Fri）、“3 Dec/3 December/December 3/Dec 3”及 2026-12-03 形式（周五同理）；会场接受 thames 或 mercer 关键词。",
+  "common": {"type": "客观要求", "implementation": "tests/verifier.py:evaluate", "evidence": "/var/lib/cua/state/{trello,google_calendar,yahoo_mail}/{initial,current}.json、/workspace/output/run_of_show.csv、expected.json", "score_mode": "partial", "coverage": "已实现，正反例夹具自测通过"},
+  "checkpoints": [
+    {"id": "B1.thu_thames_order", "weight": 14, "core": true, "requirement": "“Thu 3 Dec · Thames Hall”（list-2）只含该时段的场次且按开始时间从上到下排列", "rule": "期望 [card-1, card-15, card-3, card-4, card-5]（09:00 Ama、10:00 Tomás、11:15 Kowalski、14:00 Achterberg、15:30 Iyer）。act = current cardIds（去掉 archived）；act 等于种子 [card-1, card-2, card-7, card-5, card-4] 时得 0。good = act 中属于期望集合的卡片；frac = |good| / max(5, |act|)；若 good 的相对顺序与期望一致则得分 = frac，否则 0", "trap": "看板是 v2 草稿：card-7 应在 Mercer、card-3 应在 Thames、4/5 顺序颠倒（日历才是确认版）；Priya（card-2）改与 Tomás（card-15）互换，而不是她最初提议的 Clara（card-12）"},
+    {"id": "B2.thu_mercer_order", "weight": 12, "core": true, "requirement": "“Thu 3 Dec · Mercer Room”（list-3）成员与顺序正确", "rule": "期望 [card-8, card-20, card-7, card-9]（09:00 Bartek、10:00 Arjun 替补、11:15 Okonjo、15:30 Mei Lin）；种子 [card-6, card-3, card-8, card-9] 记 0；计分公式同 B1（分母 max(4,|act|)）", "trap": "替补须按 CSV 中 NLS26 的 interested 选 Arjun（71>58），而非候补排名 #1 的 Kirsten 或 NPD27 行（96）；Bartek 获批提前到 09:00 需拖到列表顶部"},
+    {"id": "B3.fri_thames_order", "weight": 10, "core": true, "requirement": "“Fri 4 Dec · Thames Hall”（list-4）成员与顺序正确", "rule": "期望 [card-10, card-11, card-12, card-13, card-14]；种子 [card-10, card-12, card-11, card-13, card-14] 记 0；计分公式同 B1（分母 max(5,|act|)）", "trap": "Nadia 与 Olu 互换的请求被 Marcus 拒绝，card-13 应保持 14:00；草稿中 11/12 顺序颠倒"},
+    {"id": "B4.fri_mercer_order", "weight": 12, "core": true, "requirement": "“Fri 4 Dec · Mercer Room”（list-5）成员与顺序正确", "rule": "期望 [card-2, card-16, card-17, card-18]（10:00 Priya、11:15 Whitfield、14:00 Menon、15:30 Demir）；种子 [card-15, card-17, card-16, card-18] 记 0；计分公式同 B1（分母 max(4,|act|)）", "trap": "Priya 须拖到列表顶部而非追加到末尾；草稿中 16/17 顺序颠倒"},
+    {"id": "B5.waitlist_pulled", "weight": 6, "requirement": "退出的演讲进 Pulled，未被选中的候补留在 Waitlist", "rule": "list-1 cardIds（去 archived）恰为 [card-19] 得 0.5；list-6 卡片集合恰为 {card-21, card-6} 得 0.5", "trap": "card-21（Ben Carver）11/5 已退出并已处理，不能重复操作；Kirsten（card-19）留在候补"},
+    {"id": "B6.board_non_targets", "weight": 3, "requirement": "不改动非目标卡片与看板", "rule": "前提：B1–B4 中至少一个列表与期望完全一致，否则 0。满足时：list-7（Production & logistics）、list-8、list-9（Partner Day 看板）、list-10、list-11（Admin 看板）的 cardIds 与种子完全相同，card-1…card-21 均存在且 archived=false，则得 1，否则 0", "trap": "Partner Day 看板上有同名的 “Postmortems Without Blame (Kirsten Holm)” 与 Priya 的 encore 卡片"},
+    {"id": "C1.priya_booking", "weight": 4, "requirement": "Priya 的日历预订改到周五 10:00 Mercer", "rule": "存在标题含 “Scaling Design Systems” 的事件：start=2026-12-04T10:00Z、end=2026-12-04T10:45Z、location 含 “mercer”（不区分大小写）", "trap": "不是 Clara 的周五 11:15 Thames"},
+    {"id": "C2.tomas_booking", "weight": 4, "requirement": "Tomás 的日历预订改到周四 10:00 Thames", "rule": "存在标题含 “Accessible Data Visualisation” 的事件：start=2026-12-03T10:00Z、end=2026-12-03T10:45Z、location 含 “thames”", "trap": "Marcus 的线程回复取代了 Priya 的 Clara 方案"},
+    {"id": "C3.replacement_booking", "weight": 5, "requirement": "Inés 的周四 10:00 Mercer 预订改给替补 Arjun 的演讲", "rule": "存在标题含 “Feature Flags” 的事件：start=2026-12-03T10:00Z、end=2026-12-03T10:45Z、location 含 “mercer”，且所有事件标题都不含 “Edge Caching”。改原事件 evt_s06 或删除后新建均可", "trap": "标题为 “Postmortems Without Blame” 记 0"},
+    {"id": "C4.bartek_booking", "weight": 4, "requirement": "Bartek 的预订提前到周四 09:00 Mercer", "rule": "存在标题含 “Instrumenting Onboarding Funnels” 的事件：start=2026-12-03T09:00Z、end=2026-12-03T09:45Z、location 含 “mercer”", "trap": ""},
+    {"id": "C5.calendar_non_targets", "weight": 3, "requirement": "不改动其余日历事件", "rule": "前提：C1–C4 至少一项得分，否则 0。满足时：expected.json calendar.unchanged_events 中的 44 个事件（其余 14 场会议、12 个场馆事件、16 个其他事件、2 个节假日）全部仍存在，且 title/start/end/location 与种子相同，则得 1，否则 0", "trap": "Nadia（evt_s13）与 Olu（evt_s11）不得互换；Clara（evt_s12）不得移动"},
+    {"id": "M1.mail_priya", "weight": 2.5, "requirement": "邮件通知 Priya 新时段", "rule": "新增的已发送邮件（folderId=sent，不在种子中）的 to 或 cc 含 priya.raman@lumenworks.in，且主题+正文同时含周五日期、10:00 与 mercer；任一封满足得 1，否则 0", "trap": "按 Clara 方案告知“周五 11:15 Thames”记 0"},
+    {"id": "M2.mail_tomas", "weight": 2.5, "requirement": "邮件通知 Tomás 新时段", "rule": "同 M1，地址 tomas.reyes@datavizlab.eu，须含周四日期、10:00 与 thames", "trap": ""},
+    {"id": "M3.mail_arjun", "weight": 2.5, "requirement": "通知替补讲者 Arjun 获得时段", "rule": "同 M1，地址 arjun.patel@flagpole.dev，须含周四日期、10:00 与 mercer", "trap": "通知 Kirsten 不得分"},
+    {"id": "M4.mail_bartek", "weight": 2.5, "requirement": "邮件通知 Bartek 新时段", "rule": "同 M1，地址 bartek.nowak@quantly.pl，须含周四日期、09:00（或 9:00/9am）与 mercer", "trap": ""},
+    {"id": "O1.run_of_show_csv", "weight": 13, "requirement": "导出最终议程 CSV", "rule": "/workspace/output/run_of_show.csv 表头（规范化后）恰为 day,room,start,end,session,speaker，否则 0。数据行规范化后与 expected.json run_of_show_rows 的 18 行比较：得分 = |数据行集合 ∩ 期望行集合| / max(18, 数据行数)。不要求行序", "trap": "时间须取日历确认版（如 card-4 为 14:00 而非草稿 15:30）；不含 Edge Caching、Growth Loops 与候补 Kirsten"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项：所有要求都落在 Trello、Google Calendar、Yahoo Mail 的持久化状态或本地 CSV 上。",
+  "fixtures": {
+    "golden": "1.0（参考终态）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.23（Priya 与 Clara 互换；替补选 Kirsten；执行被拒的 Nadia/Olu 互换；其余保持 v2 草稿；Bartek 处理正确）",
+    "append_only": "≈0.49（所有判断都正确，但卡片只用 Move 追加到列表末尾、从不调整顺序——主杠杆单独的代价）",
+    "slip_swap_partner": "≈0.74（仅按 Priya 最初的 Clara 方案互换）",
+    "slip_replacement": "≈0.86（仅替补选成 Kirsten）",
+    "slip_declined": "≈0.86（仅执行了被拒绝的 Nadia/Olu 互换）",
+    "slip_draft": "≈0.57（邮件中的变更都做对，但未按日历纠正 v2 草稿的会场与顺序）"
+  }
+}

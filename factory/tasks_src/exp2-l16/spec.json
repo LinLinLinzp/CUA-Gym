@@ -1,0 +1,29 @@
+{
+  "task_id": "reunion-rooms-like-last-year",
+  "name": "cua-hard/reunion-rooms-like-last-year",
+  "version": "0.1.0",
+  "description": "Family organiser books this year's Whitfield reunion at Lakeview Pines Lodge 'like last year': the room per household, the flexible-rate choice, the parents' accessible ground-floor room with its special request, the cost split (own room + a third of the parents' room for each sibling, only inferable from last year's PayPal amounts), the reminder offset and the 'rooms are booked' email all have to be inferred from the 2025 reunion's Booking.com, PayPal, Calendar and Yahoo records, with a 2024 per-head precedent, a cancelled booking, a sisters' weekend and an old e-mail address as nearby distractors; then four bookings, two PayPal requests, a calendar reminder, a family email and a CSV summary.",
+  "keywords": ["browser", "cli", "travel", "family", "booking", "payments", "implicit-intent", "multi-site"],
+  "sites": ["booking_com", "yahoo_mail", "google_calendar", "paypal"],
+  "clock": "2026-11-18T18:30:00+00:00",
+  "timezone": "UTC",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "生活消费",
+    "subscenario": "家庭年度聚会订房与费用分摊（照去年的做法）",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L16"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_rsvp": [0.55, 0.95],
+    "slip_split": [0.55, 0.95],
+    "slip_old_email": [0.55, 0.95],
+    "slip_parents_room": [0.55, 0.95],
+    "slip_reminder": [0.55, 0.95]
+  }
+}

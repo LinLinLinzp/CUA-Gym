@@ -1,0 +1,36 @@
+{
+  "task_id": "cua-hard/reunion-rooms-like-last-year",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，权重合计 100，每项得分 0～1。主杠杆 L16（隐含意图）：“照去年那样”从未被说明，必须从 2025 年团聚的记录推出，包括每户房型、灵活退改价（而非 2024 年的不可退款价）、父母的无障碍一楼房与特殊要求（而非被取消的二楼 Queen 房）、分摊规则（各付自己的房间并加父母房的 1/3，只能从 2025 年 PayPal 金额倒推）、提醒提前量（截止前一天）、确认邮件的收件人以及 Leah 的新地址。B1–B4、B5、P1、P2、C1、M1 都取决于这些推断，合计 72 分；所有检查点都不标 core，不调用 g.gate()/g.cap()。“不应多做”类检查只在相关工作已做时计分：B6 要求至少有一个新的有效预订，P3 要求至少有一条新的 request_sent，否则记 0，因此空操作为 0。状态文件缺失或不可解析时记为 invalid，以非零退出码结束且不写 reward。",
+  "numeric_rule": "“今天”为 2026-11-18，任务时钟 18:30 UTC；浏览器时区为 UTC（Booking.com mock 用 new Date(\"YYYY-MM-DD\") 显示日期，在 UTC 以西的时区会少一天，故整套任务用 UTC）。新对象 = id 不在 expected.json 种子 id 列表中的对象；有效预订 = 新预订且 status != \"cancelled\"。文本比较：去首尾空白、转小写、NFKD 去重音、连续空白压成一个，en dash/em dash 视同 '-'（“Accessible Queen Room – Ground Floor”=“accessible queen room - ground floor”）。金额容差 ±0.01，CSV 金额去掉 '$' 与千分位逗号后按浮点比较。日历事件取 start 的 UTC 日期（即浏览器本地日期，allDay 也同样处理）。PayPal 新请求的收件人取 recipientEmail，没有则取 recipientName（UI 写入的是联系人邮箱），转小写后比较。Yahoo 新发件 = 新消息且 (folderId==\"sent\" 或 status==\"sent\") 且 isDraft 为 false，收件人取 to∪cc∪bcc 的 email。",
+  "common": {"type": "客观要求", "implementation": "tests/verifier.py:evaluate", "evidence": "/var/lib/cua/state/{booking_com,paypal,google_calendar,yahoo_mail}/{initial,current}.json、/workspace/output/reunion_2026.csv、expected.json", "score_mode": "partial", "coverage": "待实现（由校验器作者按本 rubric 与 expected.json 实现）"},
+  "checkpoints": [
+    {"id": "B1.dana_room", "weight": 6, "requirement": "Dana 一家按去年订 Lakeview Pines Lodge 的 Family Room 灵活价，12/27–12/30", "rule": "存在有效预订：propertyId=prop_1、roomId=room_1_9、checkIn=2026-12-27、checkOut=2026-12-30。guestFirstName=Dana 且 guestLastName 含 Whitfield 记 1；房型和日期对但姓名不符记 0.5；否则 0。grandTotal 应为 819", "trap": "同名的 Family Room 不可退款行 room_1_8（$219）排在前面；2024 年 Big Bear 全部订的不可退款价，2025 年改为灵活价（Leah 1 月邮件要求“以后只订可免费取消的”）"},
+    {"id": "B2.mark_room", "weight": 6, "requirement": "Mark 一家订 Two-Bedroom Lakeside Cabin 灵活价，12/27–12/30", "rule": "有效预订 prop_1、roomId=room_1_12、2026-12-27→2026-12-30；guestFirstName=Mark 且姓含 Whitfield 记 1，否则（房型日期对）0.5。grandTotal 应为 1269", "trap": "近似房型 Two-Bedroom Forest Cabin（room_1_10，更便宜）以及 Lakeside Cabin 不可退款行 room_1_11"},
+    {"id": "B3.leah_room", "weight": 9, "requirement": "Leah 一家订 King Room with Lake View 灵活价，日期按 RSVP 的最新回复为 12/28–12/30", "rule": "有效预订 prop_1、roomId=room_1_5、checkIn=2026-12-28、checkOut=2026-12-30；guestFirstName=Leah 且 guestLastName 含 Ortiz 记 1，否则（房型日期对）0.5；日期为 12/27–12/30 记 0。grandTotal 应为 434", "trap": "RSVP 中 Leah 有两行，10/2 那行写 12/27，11/9 那行“Updating my answer”改为 12/28 到；King 不可退款行 room_1_4"},
+    {"id": "B4.parents_room", "weight": 9, "requirement": "父母订 Accessible Queen Room – Ground Floor 灵活价，12/27–12/30，并像去年一样填写一楼/靠近大堂/拐杖的特殊要求", "rule": "有效预订 prop_1、roomId=room_1_3、2026-12-27→2026-12-30 得 0.5 基础分；guestFirstName 为 Carol 或 Jim 且姓含 Whitfield 加 0.25；specialRequests 含 ground/lobby/cane/stairs/elevator/accessible 任一关键词加 0.25。房型或日期不对记 0。grandTotal 应为 579", "trap": "2025 年先订的 Queen Room – Second Floor（3316998214）已取消，妈妈邮件说二楼没电梯、爸爸拄拐上不去；Booking.com 的 Trips 里取消记录与最终记录并存；无障碍房还有不可退款行 room_1_2"},
+    {"id": "B5.guest_emails", "weight": 5, "requirement": "每户预订的客人邮箱用该户当前的地址", "rule": "对 dana/mark/leah/parents 四户，按客人名（Dana/Mark/Leah/Carol 或 Jim）找有效预订，任一条 guestEmail 等于 dana.whitfield@yahoo.com / mark.whitfield@gmail.com / leah.whitfield.ortiz@gmail.com / carol.whitfield@sbcglobal.net 即该户得分；得分 = 正确户数/4", "trap": "Leah 去年的预订、Yahoo 联系人卡片和 2025 年邮件都还是旧地址 leah@ortizdesign.co；2026-08-19 邮件宣布改用 Gmail（PayPal 也是）"},
+    {"id": "B6.booking_hygiene", "weight": 5, "requirement": "只订这四间房，不为 Jake/Ruth 订房，不改动或取消任何历史预订", "rule": "前提：至少有一个有效预订，否则 0。有效预订恰为 4 个且全部 propertyId=prop_1，且所有种子预订的 status 与初始一致，记 1，否则 0（下单后又在 UI 里取消的预订不计入有效预订）", "trap": "Jake 在 RSVP 中 attending=yes 但注明住朋友家；Ruth 不来；近似名称的 Lakeview Pines Resort & Spa（prop_2）；1 月 Coronado 的已确认预订不能动"},
+    {"id": "P1.mark_request", "weight": 12, "requirement": "按去年的分摊规则向 Mark 请款：自家房费 + 父母房费的三分之一", "rule": "存在新的 request_sent，收件人 = mark.whitfield@gmail.com，amount = 1462.00（1269 + 579/3）记 1，否则 0", "trap": "规则只能从 2025 年金额倒推：1360−1185 = 790−615 = 175 = 525/3。干扰读法：2024 年按人头（每人 $204）；Leah 提议“Dana 免单、父母房由两人平分”得 1558.50；照抄去年金额 1360；用被取消的 Queen 房 $495 算会得出别的数"},
+    {"id": "P2.leah_request", "weight": 12, "requirement": "向 Leah 的新 PayPal 地址请款：自家房费（2 晚）+ 父母房费的三分之一", "rule": "新的 request_sent，收件人 = leah.whitfield.ortiz@gmail.com，amount = 627.00（434 + 193）记 1；金额正确但发到旧地址 leah@ortizdesign.co 记 0.25；否则 0", "trap": "按 3 晚算得 844；PayPal 联系人里 “Leah Ortiz”（旧）与 “Leah Whitfield-Ortiz”（新）并存，去年的请求发给旧地址，9 月姐妹周末的请求与付款已用新地址"},
+    {"id": "P3.no_extra_money", "weight": 4, "requirement": "不向父母、Jake、Chris 等人请款，不付款", "rule": "前提：至少一条新的 request_sent，否则 0。没有新的 payment_sent、所有新请求的收件人都在 {mark, leah 新, leah 旧} 内、对 Mark 至多一条、对 Leah（新旧合计）至多一条，记 1，否则 0", "trap": "2024 年也向妈妈请过款（每人分摊方案）；2025 年只向 Mark 和 Leah 请款"},
+    {"id": "C1.cancel_reminder", "weight": 8, "requirement": "像去年一样，在免费取消截止的前一天给自己设一个提醒", "rule": "新日历事件，start 的 UTC 日期 = 2026-12-19，且 title 或 description 含 “cancel”，记 1；日期为截止当天 2026-12-20 记 0.4；其他日期（包括照抄去年的 12-12 或旧截止日 12-13）记 0。不检查时刻、日历和时长", "trap": "去年的事件 “Reunion rooms: free cancellation ends tomorrow” 在 2025-12-12，对应的截止日是 12-13；今年小屋把灵活价改为入住前 7 天可免费取消（10/3 邮件，结账页显示 “Free cancellation until 2026-12-20”），照抄日期会错"},
+    {"id": "M1.mail_recipients", "weight": 5, "requirement": "“rooms are booked”邮件发给去年同样的家人：妈妈、Mark、Leah（用新地址）", "rule": "在新发件中取覆盖目标最多的一封：得分 = |{carol.whitfield@sbcglobal.net, mark.whitfield@gmail.com, leah.whitfield.ortiz@gmail.com} ∩ 收件人| / 3", "trap": "去年那封发给了 leah@ortizdesign.co；Yahoo 联系人自动补全也只有旧地址"},
+    {"id": "M2.mail_confirmations", "weight": 5, "requirement": "邮件列出新预订的确认号", "rule": "前提：至少一个 prop_1 的有效预订且有新发件，否则 0。得分 = max over 新发件（body 中出现的、prop_1 有效预订的 confirmationNumber 个数）/ max(4, 这类预订数)", "trap": "不能引用 2025 年的确认号"},
+    {"id": "O1.output_csv", "weight": 14, "requirement": "/workspace/output/reunion_2026.csv 汇总四间房", "rule": "按表头读取（列 guest_name,room,check_in,check_out,confirmation_number,total,requested 必须齐全，顺序不限）。用 guest_name 的首个词识别户（Dana/Mark/Leah/Carol 或 Jim），每户只计一行。以下全部满足才算正确：room 等于期望房名（Family Room / Two-Bedroom Lakeside Cabin / King Room with Lake View / Accessible Queen Room – Ground Floor）；check_in/check_out 等于期望值；total 等于 819 / 1269 / 434 / 579；requested 等于 0 / 1462 / 627 / 0；confirmation_number 等于状态中该客人名下某个有效预订的 confirmationNumber。得分 = 正确行数 / max(4, 数据行数)；文件缺失记 0", "trap": "不可退款行与灵活价行房名相同，只能靠 total 区分；Leah 只住 2 晚；Dana 自己那份（1012）不在 PayPal 请款，requested 记 0"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项：所有要求都落在 Booking.com、PayPal、Google Calendar、Yahoo Mail 的持久化状态或本地 CSV 上。",
+  "fixtures": {
+    "golden": "1.0（参考终态）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.17（每户订排在前面的不可退款行；父母订被取消过的二楼 Queen 房且无特殊要求；Leah 12/27 起住、用旧邮箱；按 2024 年人头分摊并向妈妈请款；提醒照抄 12-12；邮件发 Leah 旧地址）",
+    "slip_rsvp": "≈0.76（仅 Leah 按旧 RSVP 订 12/27–12/30，请款 844）",
+    "slip_split": "≈0.69（仅分摊用 Dana 免单、两人平分父母房：1558.50 / 723.50）",
+    "slip_old_email": "≈0.88（仅 Leah 的预订邮箱、PayPal 请款、通知邮件都用旧地址）",
+    "slip_parents_room": "≈0.57（仅父母订成二楼 Queen Room 且无特殊要求，连带请款金额 1449 / 614 也错）",
+    "slip_reminder": "≈0.92（仅提醒照抄去年的 12-12）"
+  }
+}

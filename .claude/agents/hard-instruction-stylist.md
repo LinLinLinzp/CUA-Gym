@@ -1,0 +1,1 @@
+../../factory/agents/hard-instruction-stylist.md

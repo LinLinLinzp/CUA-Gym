@@ -1,0 +1,35 @@
+{
+  "task_id": "cua-hard/harborlight-validation-retry",
+  "task_version": "0.1.2",
+  "verifier_version": "0.1.2",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "总权重 100，各项二元计分，相加后除以 100。B1–B6 均须先满足 B1 的前提：在目标原有运行上追加至少一个重试组，且原有组仍在。C2–C5 只对满足 C1 的同一条新增评论计分。空操作 0 分。站点状态缺失或无法解析时按基础设施异常处理。",
+  "numeric_rule": "编号、次数、秒数均为整数精确比较。新增 ID 和时间从当前状态读取，与黄金夹具中的占位值无关。状态值按枚举比较，评论的状态词忽略大小写。历史记录比较忽略集合的数组顺序，但保留尝试和日志行的原有次序。",
+  "common": {
+    "type": "客观要求", "implementation": "tests/verifier.py:evaluate",
+    "evidence": "/var/lib/cua/state/{bitbucket,mattermost,microsoft_excel_for_the_web,clickup}/{initial,current}.json",
+    "score_mode": "partial", "coverage": "独立校验器与五个夹具覆盖"
+  },
+  "checkpoints": [
+    {"id":"B1.approved_build","weight":15,"requirement":"在获批的历史验证运行上执行失败步骤重试","rule":"原有 run-manifest-validator-482 存在且追加至少 1 个原生 retries 记录，历史组保留。该运行仍为 manifest-validator 的 #482，release/nov-18，commitId=cmt-manifest-validator-7，commitHash、definitionId 和 definitionSnapshot 与初始一致。","trap":"Mattermost 根帖为预览批次；#484 分支错误；#487 与 #482 的短 SHA 完全相同但完整 SHA 不同。"},
+    {"id":"B2.one_retry_group","weight":15,"requirement":"只重试唯一获批的失败步骤一次","rule":"恰新增 1 个 retries 组，number=1，stepIds 恰为 [step-manifest-validator-482-validate]，createdBy=usr-jules-moreno，status=successful，durationSeconds=23。","trap":"整个流水线重跑会产生新构建号，原运行不会出现此重试组。"},
+    {"id":"B3.new_attempt","weight":15,"requirement":"验证步骤产生实际的新完成尝试和收据","rule":"指定步骤恰追加 1 个 attempt，number=2，retryId 指向 B2 指定的组，createdBy=usr-jules-moreno，status=successful，durationSeconds=23，logSections 中含完整行 Validation receipt: MV-482-Z9K2。原运行 status=successful，durationSeconds=31。"},
+    {"id":"B4.preserve_attempts","weight":8,"requirement":"保留成功步骤和原始失败证据","rule":"目标运行 steps ID 集合不变，非指定步骤对象完全相同，指定步骤原有 attempt 1 对象完整保留。"},
+    {"id":"B5.preserve_other_builds","weight":8,"requirement":"保留其他流水线运行且不创建新构建","rule":"pipelineRuns ID 集合与初始相同，除 #482 指定运行外所有记录与初始完全相同。","trap":"预览库也存在相同构建号；另一个失败运行可有效重试，但其状态不得改变。"},
+    {"id":"B6.preserve_sources","weight":5,"requirement":"保留配置、源材料与工作项字段","rule":"Bitbucket 除 pipelineRuns 外的全部种子字段不变，获批运行的 variables 与初始记录一致；Excel cells、sheets、tables、filters、sorts、shares、shareLinks 不变且 workbooks 除 lastOpenedAt、activeSheetId 外不变，允许 workbook.open 和 sheet.select 操作；Mattermost posts、pins、files 不变，允许读取游标更新；ClickUp tasks 及所有初始 comments 对象不变。"},
+    {"id":"C1.comment_destination","weight":6,"requirement":"在登记的既有 ClickUp 工作项留一条独立活动评论","rule":"ClickUp 全站恰新增 1 条评论，parentType=task，parentId=rv-73mqd，replyToId 为空，authorId=usr-jules-moreno，正文非空。","trap":"同名审计副本 rv-73mdq 不接收收据，预览工作项 rv-41xkj 也不接收。"},
+    {"id":"C2.batch","weight":3,"requirement":"评论准确标记客户批次","rule":"包含完整批次标识 HBL-7116-Q，且不包含 HBL-7116-O。"},
+    {"id":"C3.attempt_link","weight":3,"requirement":"评论指向返回的步骤尝试","rule":"链接的 scheme=https，host=bitbucket.org，path=/copperline-engineering/manifest-validator/pipelines/results/482，查询 step=step-manifest-validator-482-validate 且 attempt=2。允许 sid 和其他无关参数及任意参数顺序。要求实际存在 B3 的尝试。"},
+    {"id":"C4.attempt_summary","weight":2,"requirement":"评论写明验证步骤、尝试序号及结果","rule":"包含 Validate manifest bundle，并明确说明第 2 次尝试成功。忽略大小写，接受 successful、passed、succeeded 等自然措辞。若明确说明第 2 次尝试失败，其他运行的成功表述不得计分。"},
+    {"id":"C5.actual_receipt","weight":20,"requirement":"评论引用重试日志中新生成的验证收据","rule":"要求 B3，且评论包含原始完整行 Validation receipt: MV-482-Z9K2。","trap":"首次失败日志也有格式相同的收据占位行 MV-482-PENDING，只有第 2 次尝试返回正式收据。"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden":"1.00（目标重试及登记工作项证据均正确）",
+    "nop":"0.00（原样）",
+    "naive":"0.00（根帖预览批次、最新失败构建、旧收据及预览工作项）",
+    "slip_old_receipt":"0.80（其他均正确，仅抄到首次失败日志的占位收据）",
+    "slip_mirror_ticket":"0.66（其他均正确，仅将评论发到审计副本）"
+  }
+}

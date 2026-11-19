@@ -1,0 +1,120 @@
+{
+ "task_id": "cua-hard/lsfs-december-programme",
+ "task_version": "0.1.0",
+ "verifier_version": "0.1.0",
+ "reward_file": "/logs/verifier/reward.txt",
+ "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。“不应新建/不应改动”类检查（G5、G6、C4、C5）只有在对应站点至少完成一项正确放映（G1–G3 或 C1–C3）后才得分，保证空操作为 0。主观项无。基础设施异常（站点状态文件缺失或不可解析、种子 issue/事件/帖子整体缺失）记为 invalid 并以非零退出码结束，不写 reward。",
+ "numeric_rule": "费用按英镑数值比较，容差 0.005（文本中支持 £130、GBP 130.00、130 等写法）；票数为提名帖顶层评论的净票数（upvotes−downvotes），重复提名相加；日历时间以存储的 UTC ISO 字符串比较，12 月伦敦为 GMT（UTC+0），允许 ±1 分钟；“今天”为 2026-11-18（Europe/London）；两年禁映期按上次放映日期 +2 年，当日起可再放。",
+ "common": {
+  "type": "客观要求",
+  "implementation": "tests/verifier.py:evaluate",
+  "evidence": "/var/lib/cua/state/{reddit,gitlab,google_calendar}/{initial,current}.json、/workspace/output/december_programme.csv",
+  "score_mode": "partial",
+  "coverage": "已实现，正反例夹具自测通过"
+ },
+ "checkpoints": [
+  {
+   "id": "G1.issue_paris",
+   "weight": 7,
+   "requirement": "为 12 月 3 日的放映在 lsfs-programme 看板新建 Paris, Texas 的放映 issue",
+   "rule": "GitLab 状态中新增（id 不在种子中）且 projectId=1 的 issue，标题同时包含 “Paris, Texas”（忽略大小写，逗号可省略）与 “2026-12-03”",
+   "trap": "Paris, Texas 被提名两次（27 与 21），按维基规则合并为 48 票后才排第一；不合并会排到 Solaris（44）之后"
+  },
+  {
+   "id": "G2.issue_solaris",
+   "weight": 7,
+   "requirement": "为 12 月 10 日的放映新建 Solaris 的放映 issue",
+   "rule": "新增 projectId=1 的 issue，标题同时包含 “Solaris” 与 “2026-12-10”",
+   "trap": "同 G1：合并重复提名后 Solaris 为第二名"
+  },
+  {
+   "id": "G3.issue_redshoes",
+   "weight": 8,
+   "requirement": "第三场改为 12 月 19 日（周六）下午场，放映 The Red Shoes",
+   "rule": "新增 projectId=1 的 issue，标题同时包含 “Red Shoes” 与 “2026-12-19”",
+   "trap": "置顶帖：12/17 场地取消改 12/19 14:30；Marta 回复要求下午场只能放 U/PG；Totoro 2025-06-19 放过（两年内）被排除；Red Shoes 上次放映 2024-11-28 只在维基历史页，已满两年可再放"
+  },
+  {
+   "id": "G4.issue_fees",
+   "weight": 6,
+   "requirement": "放映 issue 描述写明发行商报价金额",
+   "rule": "对三部目标影片分别查找“标题含片名且含正确日期”的新 issue，描述中出现对应费用数字（Paris, Texas 130、Solaris 140、The Red Shoes 110，可带 .00 / £ / GBP）；得分 = 命中数/3",
+   "trap": "报价表里 Solaris 有 1972（Tarkovsky，PG，140.00）与 2002（Soderbergh，12A，85.00）两行，提名明确是 Tarkovsky 版"
+  },
+  {
+   "id": "G5.issue_labels",
+   "weight": 4,
+   "requirement": "放映 issue 带 screening 标签",
+   "rule": "新增 projectId=1 的 issue 中带 “screening” 标签的比例；仅当 G1–G3 至少一项得分时计分，否则 0"
+  },
+  {
+   "id": "G6.issue_no_extras",
+   "weight": 4,
+   "requirement": "不为未入选影片或已取消日期建 issue，不改动既有 issue",
+   "rule": "新增 issue 标题/描述均不含未入选提名片名（Aftersun、Stalker、Portrait of a Lady on Fire、My Neighbour Totoro、The Umbrellas of Cherbourg、Paddington 2、Wings of Desire、Possession）且标题不含 “2026-12-17”；种子中所有 issue 的 title/status/labels/description 不变且未被删除；仅当 G1–G3 至少一项得分时计分，满足得 1 否则 0",
+   "trap": "维基场地页和日历仍显示 12/17 档期（已过时）"
+  },
+  {
+   "id": "C1.event_paris",
+   "weight": 7,
+   "requirement": "日历新增 12 月 3 日 Paris, Texas 放映",
+   "rule": "Google Calendar 新增（id 不在种子中）事件，标题含 “Paris, Texas”（逗号可省略），start 为 2026-12-03T19:30:00Z（Europe/London 19:30，允许 ±1 分钟）"
+  },
+  {
+   "id": "C2.event_solaris",
+   "weight": 7,
+   "requirement": "日历新增 12 月 10 日 Solaris 放映",
+   "rule": "新增事件，标题含 “Solaris”，start 为 2026-12-10T19:30:00Z（±1 分钟）"
+  },
+  {
+   "id": "C3.event_redshoes",
+   "weight": 8,
+   "requirement": "日历新增 12 月 19 日下午 The Red Shoes 放映",
+   "rule": "新增事件，标题含 “Red Shoes”，start 为 2026-12-19T14:30:00Z（伦敦 14:30，±1 分钟）",
+   "trap": "放映开始时间为 14:30（门 14:00），不是晚场惯例 19:30，也不是 12/17"
+  },
+  {
+   "id": "C4.event_calendar_location",
+   "weight": 5,
+   "requirement": "放映事件按 11 月惯例记在 Lantern Street FS 日历并写地点",
+   "rule": "在 C1–C3 命中的事件中，calendarId=“c2” 且 location 含 “St Brigid” 的比例；C1–C3 全不命中则 0"
+  },
+  {
+   "id": "C5.no_wrong_events",
+   "weight": 4,
+   "requirement": "不为未入选影片或 12/17 新建事件，不误删误改其它日程",
+   "rule": "新增事件标题不含未入选提名片名，且没有新增事件的 start 落在 2026-12-17（伦敦时间）；种子事件中除三个 “St Brigid's Hall hold (LSFS)”（12/3、12/10、12/17）外全部存在且 title/start/end/calendarId 不变（三个 hold 可保留、修改或删除）；仅当 C1–C3 至少一项得分时计分，满足得 1 否则 0"
+  },
+  {
+   "id": "R1.announcement_films",
+   "weight": 12,
+   "requirement": "在 r/LanternStreetFilms 发布 12 月节目单帖并带 Programme 标签",
+   "rule": "reddit 状态中新增 subredditId=“s_lsfs”、userId=“u_hannah” 的帖子（取最佳一篇，标题+正文合并匹配）；命中片名数 c：Paris, Texas、Red Shoes、Solaris（且帖子不含 “2002”/“Soderbergh”）；错误片名数 w：出现的未入选提名片名个数；得分 = c / max(3, c+w)；flairId≠“f_prog” 时乘 0.5"
+  },
+  {
+   "id": "R2.announcement_dates",
+   "weight": 5,
+   "requirement": "节目单帖写明改期后的周六下午场",
+   "rule": "同一帖子（R1 选中的帖子）文本匹配 19 日（如 “19 Dec”“19th December”“December 19”“2026-12-19”“19/12”）且匹配 14:30 / 2:30pm / 2.30 pm 之一，满足得 1；无帖子得 0"
+  },
+  {
+   "id": "O1.programme_csv",
+   "weight": 16,
+   "requirement": "输出 /workspace/output/december_programme.csv",
+   "rule": "表头 date,start_time,film,year,certificate,votes,licence_fee_gbp；行完全正确需 7 列全部匹配：(2026-12-03,19:30,Paris, Texas,1984,15,48,130.00)、(2026-12-10,19:30,Solaris,1972,PG,44,140.00)、(2026-12-19,14:30,The Red Shoes,1948,U,22,110.00)；片名忽略大小写与标点空白，votes 按整数，费用按数值（容差 0.005）；得分 = 正确行数 / max(3, 总行数)；文件缺失或缺列得 0",
+   "trap": "votes 必须是合并后的 48；Solaris 取 1972/PG/140.00 而非 2002/12A/85.00"
+  }
+ ],
+ "subjective": [],
+ "subjective_note": "无主观项。",
+ "fixtures": {
+  "golden": "1.0（参考终态）",
+  "nop": "0.0（未做任何操作）",
+  "naive": "≈0.04（不合并重复提名、按维基旧档期 12/17 晚场、Solaris 取 2002 行、第三场放 Portrait of a Lady on Fire）",
+  "slip_merge": "≈0.57（仅漏合并 Paris, Texas 重复提名，前两场顺序颠倒）",
+  "slip_move": "≈0.60（仅漏看场地改期，第三场仍在 12/17 晚场放 Portrait）",
+  "slip_repeat": "≈0.65（仅漏查两年禁映，下午场放 My Neighbour Totoro）",
+  "slip_boundary": "≈0.65（误把 The Red Shoes 当作两年内放过而排除，下午场放 Paddington 2）",
+  "slip_solaris": "≈0.89（仅把 Solaris 匹配到 2002 版报价行）"
+ }
+}

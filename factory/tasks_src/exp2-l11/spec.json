@@ -1,0 +1,27 @@
+{
+  "task_id": "psyc3150-late-resubmission-grading",
+  "name": "cua-hard/psyc3150-late-resubmission-grading",
+  "version": "0.1.0",
+  "description": "As TA for PSYC 3150, post the remaining Lab Report 3 scores and the Lab Report 2 resubmission scores in the Canvas gradebook by applying the long course-policy PDF (late penalty per started day, 15-minute grace, latest attempt, TA promises void, 48-hour SAS flexible deadlines counted from the end of the window and never retroactive, Dean-verified absence waiver, 5-day cut-off, 85% resubmission cap, one resubmission per term, higher-of rule, 7-day window) to UTC submission times from a CSV export and to the approvals and letters in Gmail, then sync the TA tracker in Google Sheets and write a grade-entry CSV.",
+  "keywords": ["browser", "cli", "education", "grading", "policy-document", "time-zones", "multi-site"],
+  "sites": ["canvas_lms", "gmail", "google_sheets"],
+  "clock": "2026-11-18T09:30:00-06:00",
+  "timezone": "America/Chicago",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "专业事务",
+    "subscenario": "助教按课程政策 PDF 登记迟交与重交作业成绩",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L11"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_ta_extension": [0.55, 0.95],
+    "slip_accommodation_window": [0.55, 0.95],
+    "slip_term_cap": [0.55, 0.95]
+  }
+}

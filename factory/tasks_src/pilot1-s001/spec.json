@@ -1,0 +1,37 @@
+{
+  "task_id": "birthday-gifts-abroad",
+  "name": "cua-hard/birthday-gifts-abroad",
+  "version": "0.1.0",
+  "description": "Order this year's remaining family birthday presents on Amazon, shipped to each relative in the US with the right card and fallbacks, add time-zone-correct call reminders to Google Calendar, and log the orders locally.",
+  "keywords": [
+    "browser",
+    "cli",
+    "shopping",
+    "calendar",
+    "time-zones",
+    "multi-site"
+  ],
+  "sites": [
+    "amazon",
+    "google_calendar"
+  ],
+  "clock": "2026-11-18T10:15:00+00:00",
+  "timezone": "Europe/London",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "生活消费",
+    "subscenario": "跨国家庭礼物代购与日程",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_kate_address": [0.55, 0.95],
+    "slip_timezone": [0.55, 0.95],
+    "slip_mom_duplicate": [0.55, 0.95],
+    "slip_dad_budget": [0.55, 0.95]
+  }
+}

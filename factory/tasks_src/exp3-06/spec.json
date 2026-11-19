@@ -1,0 +1,28 @@
+{
+  "additive_scoring": true,
+  "task_id": "exp3-06",
+  "name": "cua-hard/harborlight-validation-retry",
+  "version": "0.1.2",
+  "description": "Trace a customer handoff to its approved historical validation build, retry the failed check, and attach the resulting receipt to the existing work item.",
+  "keywords": ["browser", "multi-site", "release-operations", "pipeline-retry"],
+  "sites": ["bitbucket", "mattermost", "microsoft_excel_for_the_web", "clickup"],
+  "clock": "2026-11-18T10:20:00-05:00",
+  "timezone": "America/New_York",
+  "locale": "en-US",
+  "hide_browser_debug": true,
+  "metadata": {
+    "scenario": "数字技术",
+    "subscenario": "发布验证",
+    "operation_difficulty": 2,
+    "tool_type": 1,
+    "difficulty": 2,
+    "levers": ["L05"]
+  },
+  "fixture_expectations": {
+    "golden": [1, 1],
+    "nop": [0, 0],
+    "naive": [0, 0.35],
+    "slip_old_receipt": [0.8, 0.8],
+    "slip_mirror_ticket": [0.66, 0.66]
+  }
+}

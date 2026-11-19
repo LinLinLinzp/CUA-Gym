@@ -1,0 +1,31 @@
+{
+  "task_id": "q4-renewal-closeout",
+  "name": "cua-hard/q4-renewal-closeout",
+  "version": "0.1.1",
+  "additive_scoring": true,
+  "description": "Close out an account manager's Q4 FY27 renewals across Salesforce, DocuSign, Yahoo Mail and Google Calendar: book Closed Won only for fully executed envelopes at the annual fee of the executed quote version (local CPQ export), close a written non-renewal as Closed Lost and void its envelope, file executed envelopes, book 45-minute kickoffs at the agreed UK time without clashes (adding the VP for large renewals), and write a close-out CSV.",
+  "keywords": ["browser", "cli", "renewals", "salesforce", "docusign", "calendar", "email", "multi-site"],
+  "sites": ["salesforce", "yahoo_mail", "google_calendar", "docusign"],
+  "clock": "2026-12-14T09:15:00+00:00",
+  "timezone": "Europe/London",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "产业运营",
+    "subscenario": "客户续约结单",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": []
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.2867, 0.2867],
+    "slip_timezone": [0.9311, 0.9311],
+    "slip_reschedule": [0.9311, 0.9311],
+    "slip_conflict": [0.9311, 0.9311],
+    "slip_amendment": [0.91, 0.91],
+    "slip_harbor": [0.8911, 0.8911],
+    "slip_tcv": [0.9111, 0.9111]
+  }
+}

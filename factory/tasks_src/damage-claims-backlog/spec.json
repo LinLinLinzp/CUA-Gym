@@ -1,0 +1,46 @@
+{
+  "task_id": "damage-claims-backlog",
+  "name": "cua-hard/damage-claims-backlog",
+  "version": "0.1.0",
+  "description": "Work through a backlog of shipping-damage claims across Gmail, Slack and Shopify under an amended refund policy, and log the decisions locally.",
+  "keywords": [
+    "browser",
+    "cli",
+    "e-commerce",
+    "customer-support",
+    "multi-site"
+  ],
+  "sites": [
+    "gmail",
+    "slack",
+    "shopify"
+  ],
+  "clock": "2026-03-16T09:30:00-07:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "产业运营",
+    "subscenario": "电商售后",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4
+  },
+  "fixture_expectations": {
+    "golden": [
+      1.0,
+      1.0
+    ],
+    "nop": [
+      0.0,
+      0.0
+    ],
+    "naive": [
+      0.0,
+      0.35
+    ],
+    "one_slip": [
+      0.6,
+      0.95
+    ]
+  }
+}

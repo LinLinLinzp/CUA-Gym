@@ -1,0 +1,28 @@
+{
+  "task_id": "refund-queue-before-payout",
+  "name": "cua-hard/refund-queue-before-payout",
+  "version": "0.1.0",
+  "description": "Clear a coffee-gear shop's Zendesk refund queue: reconcile each request against Stripe charges and disputes, the warehouse returns log and the bookkeeper's latest refund rules and approvals in Yahoo Mail, issue each irreversible Stripe refund correctly the first time, answer and file the tickets, request missing approval by email and log the decisions locally.",
+  "keywords": ["browser", "cli", "e-commerce", "customer-support", "payments", "refunds", "multi-site"],
+  "sites": ["stripe_dashboard", "zendesk", "yahoo_mail"],
+  "clock": "2026-11-18T09:40:00-08:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "产业运营",
+    "subscenario": "电商售后退款",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L09"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_approval": [0.55, 0.95],
+    "slip_restock": [0.55, 0.95],
+    "slip_dispute": [0.55, 0.95],
+    "slip_correction": [0.55, 0.95]
+  }
+}

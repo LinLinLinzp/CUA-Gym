@@ -1,0 +1,35 @@
+{
+  "task_id": "cua-hard/hotfix-release-followups",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。core=true 的 6 项（K1–K6，共 56 分）由动态触发（L14）的后续消息驱动：只有对应触发消息已出现在 Slack #checkout-release（按 expected.json 中的固定 messageId 判定）时才可能得分，否则该项为 0；本题不使用 g.gate()，core 仅作统计标记。“不得做”类检查（S3、S4）只有在本次至少合并了一个种子中为 open 的 checkout-web MR（!10/!12/!13/!15 之一）后才计分，保证空操作为 0。基础设施异常（任一站点状态缺失或不可解析、CHK 工单或 MR 从状态中消失）记为 invalid，以非零退出码结束且不写 reward。",
+  "numeric_rule": "工单键按正则 CHK-\\d+ 匹配（大小写不敏感）；MR 状态取 gitlab mergeRequests[].status；新增 wiki 内容 = current 中“Rollback runbook”（projectId 1）页面内容里不在种子内容中的行；digest 命中 = 出现完整 sha256:<hex> 或该 hex 的任意≥12 位前缀（不区分大小写）；Slack 时间比较用 ISO 时间戳（UTC）。种子 digest 与正确回滚目标见 expected.json（rollback_target、wrong_digests）。",
+  "common": {"type": "客观要求", "implementation": "tests/verifier.py:evaluate", "evidence": "/var/lib/cua/state/{jira,gitlab,slack}/{initial,current}.json、/workspace/output/release_manifest.csv、tests/expected.json", "score_mode": "partial", "coverage": "待 verifier 作者实现；夹具 golden/nop/naive/slip_* 由 world.py 生成"},
+  "checkpoints": [
+    {"id": "K1.qa_fail_415", "weight": 14, "core": true, "requirement": "QA 判定 CHK-415 不通过后不合并并顺延到下一个热修复", "rule": "前提：slack messages.checkout-release 中存在 messageId=trg_qa_415（CHK-415 进入 In Review 才会触发）。!12 状态仍为 open 得 0.6；CHK-415 状态为 In Progress、labels 含 hotfix-4.12.2 且不含 hotfix-4.12.1 得 0.4。", "trap": "CHK-415 的最新流水线 #4827 是绿的（旧的 #4824 lint 失败），看起来可以发；Marta 的 FAIL 结论只在推进到 In Review 后才出现"},
+    {"id": "K2.qa_gate_merges", "weight": 6, "core": true, "requirement": "只合并 QA 已通过的 MR", "rule": "!10 为 merged 且存在 trg_qa_412 得 0.5；!15 为 merged 且存在 trg_qa_423 得 0.5。", "trap": "跳过 In Review 直接合并则不会收到 QA 结论"},
+    {"id": "K3.flag_step", "weight": 10, "core": true, "requirement": "按 Ines 的追加要求在发布工单上加开关步骤", "rule": "前提：存在 trg_ines_flag（!15 合并后触发）。CHK-430 新增（不在种子 st_430_1..4 中）的 subtask 标题含 klarna_redirect_v2 得 1；否则 CHK-430 上 u1 新增评论含 klarna_redirect_v2 得 0.5。", "trap": "请求在合并之后才到达，且要求写到 CHK-430 而不是 CHK-423"},
+    {"id": "K4.rollback_section", "weight": 12, "core": true, "requirement": "按 Sam 的要求在 Rollback runbook 中补 4.12.1 回滚段落，回滚目标为当前生产实际运行的镜像", "rule": "前提：存在 trg_sam_rollback（创建 v4.12.1 release 后触发）。新增 wiki 内容含“4.12.1”且命中 rollback_target.digest（v4.12.0 @ 11/14 重建镜像 sha256:39102015…）得 1；含“4.12.1”但未命中得 0.3；新增内容命中 wrong_digests 任一则最高 0.3。", "trap": "deploy_history.csv 中 v4.12.0 有三个 digest：11/10 首发、11/14 打补丁重建、11/17 失败已回滚；生产当前运行的是 11/14 那个；Rollback runbook 里旧段落用的 v4.11.3 也是干扰"},
+    {"id": "K5.rollback_flag", "weight": 6, "core": true, "requirement": "回滚计划中写明回滚前需关闭的开关", "rule": "前提同 K4。新增 wiki 内容含 klarna_redirect_v2 得 1。", "trap": "该要求来自 Ines 的动态消息，Sam 的请求里只说“any flags”"},
+    {"id": "K6.announce_after_approval", "weight": 8, "core": true, "requirement": "在 SRE 批准生产部署后才在 #releases 发布公告", "rule": "前提：存在 trg_sam_approve（Rollback runbook 含 4.12.1 后触发）。#releases 中 U01 新增且含“4.12.1”的消息，时间戳晚于 trg_sam_approve 得 1；若同时存在早于批准的此类消息得 0.5；无批准或无公告得 0。", "trap": "公告是流程最后一步，过早发布会被扣分"},
+    {"id": "S1.merge_412", "weight": 6, "requirement": "合并 CHK-412 针对 release/4.12 的 MR，不动同名的 main 移植 MR", "rule": "!10 为 merged 得 1；若 !11 也被合并则乘 0.5；!10 未合并得 0。", "trap": "!11 标题与 !10 完全相同但目标分支为 main，Ravi 在 CHK-412 评论中说由他自己合并"},
+    {"id": "S2.scope_423", "weight": 6, "requirement": "把 Lena 在线程中追加的 CHK-423 纳入范围", "rule": "CHK-423 labels 含 hotfix-4.12.1 得 0.5；!15 为 merged 得 0.5。", "trap": "追加范围只在 #checkout-release 置顶消息的线程回复里"},
+    {"id": "S3.defer_419", "weight": 5, "requirement": "流水线失败的 CHK-419 不发，顺延到 4.12.2", "rule": "门控：本次至少合并 !10/!12/!13/!15 之一。!13 仍为 open 得 0.4；CHK-419 labels 含 hotfix-4.12.2 且不含 hotfix-4.12.1 得 0.4；CHK-419 状态不是 Done 得 0.2。", "trap": "Theo 在 CHK-419 的评论说“CI should be green shortly”，但最新流水线 #4831 unit-tests 失败"},
+    {"id": "S4.non_targets", "weight": 3, "requirement": "保护非目标", "rule": "门控同 S3。!14 仍为 open、!11 仍为 open、CHK-421 的 status 与 labels 与种子一致，各 1/3。", "trap": "!14（CHK-421）错误地指向 release/4.12，Theo 在线程中说明属于 4.13"},
+    {"id": "S5.release", "weight": 7, "requirement": "在 checkout-web 创建 v4.12.1 release，描述列出实际发出的工单", "rule": "gitlab releases 中 projectId=1 且 tagName=v4.12.1 的新记录恰好 1 条，否则 0；得分 = 描述中命中 {CHK-412, CHK-417, CHK-423} 的个数/3，若描述含 CHK-415/CHK-419/CHK-421 任一则乘 0.5。", "trap": "CHK-417 早已合并（!9），容易漏列"},
+    {"id": "S6.jira_done", "weight": 5, "requirement": "发出的工单与发布工单置为 Done", "rule": "CHK-412、CHK-417、CHK-423、CHK-430 状态为 Done 各 +0.25；CHK-415、CHK-419 为 Done 各 −0.25；下限 0。"},
+    {"id": "S7.announcement_content", "weight": 5, "requirement": "公告列出实际发出的工单", "rule": "取 #releases 中 U01 新增且含“4.12.1”的最后一条消息：命中 {CHK-412, CHK-417, CHK-423} 个数/3，含 CHK-415/CHK-419/CHK-421 任一则乘 0.5；无此消息得 0。"},
+    {"id": "S8.manifest", "weight": 7, "requirement": "本地交付发布清单", "rule": "/workspace/output/release_manifest.csv，表头 ticket,merge_request,decision；行与 expected.json manifest 完全一致（ticket 大小写不敏感，merge_request 形如 !10，decision ∈ shipped/deferred）计 1 行；得分 = 正确行数/max(5, 数据行数)。", "evidence": "/workspace/output/release_manifest.csv"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.0（参考终态，含全部 8 条触发消息中的 6 条及其处理）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.10（不读线程、不走 QA 直接把 412/415/419 置 Done、合并 !10–!13、release 与公告列 412/415/419、不补回滚段落、立即公告、清单全标 shipped）",
+    "slip_qa415": "≈0.92（QA 结论到达前就合并了 !12，其余正确）",
+    "slip_flag": "≈0.84（忽略 Ines 的开关请求：CHK-430 无新步骤，回滚段落写 flags none）",
+    "slip_digest": "≈0.92（回滚目标用了 11/10 的 v4.12.0 首发 digest）"
+  }
+}

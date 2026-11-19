@@ -1,0 +1,142 @@
+{
+ "task_id": "cua-hard/refund-queue-before-payout",
+ "task_version": "0.1.0",
+ "verifier_version": "0.1.0",
+ "reward_file": "/logs/verifier/reward.txt",
+ "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。Stripe 退款只增不减（L09）：每个 charge 的“新增退款”= current.refunds 中 charge 匹配且 id 不在 initial.refunds 中的记录，判定看全部提交历史而非最终 amount_refunded——退错再补、分多笔凑数都无法洗白（多笔凑对只得 0.5）。标 core 的检查点承载主杠杆，不设 gate。“不应退款/不应改动”类检查（S5–S9、Z5）只有在 S1–S4 至少一项得分 > 0 时才得分，保证空操作为 0。基础设施异常（任一站点 current.json 缺失或不可解析、seed 中目标 charge/工单/dispute 在状态中消失）记为 invalid，以非零退出码结束，不写 reward。",
+ "numeric_rule": "Stripe 金额为整数美分，严格相等；CSV refund_amount 去掉 $ 与千分位后按数值比较，容差 0.005；邮件/评论中的金额按正则匹配（如 649(\\.00)? 前加可选 $，且前后不是数字）。邮箱比较忽略大小写。重新上架费 15%：189.00×0.85=160.65。charge id 一律取自 expected.json（truth.*.charge、refund_targets、no_refund_charges、protected_charges）。新增评论/邮件 = id 不在 initial 中的记录。",
+ "common": {
+  "type": "客观要求",
+  "implementation": "tests/verifier.py:evaluate",
+  "evidence": "/var/lib/cua/state/{stripe_dashboard,zendesk,yahoo_mail}/{initial,current}.json、/workspace/output/refund_queue.csv、expected.json",
+  "score_mode": "partial",
+  "coverage": "覆盖全部 9 张退款工单的 Stripe 结果、争议证据、审批邮件、工单回复与状态、重复工单、非目标保护与本地汇总"
+ },
+ "checkpoints": [
+  {
+   "id": "S1.hannah_refund",
+   "weight": 9,
+   "core": true,
+   "requirement": "Hannah Lowell（#4412，KC-48213）只退研磨机 189.00",
+   "rule": "KC-48213 对应 charge 上新增 refund 恰 1 笔且金额 18900 分 → 1；新增多笔且合计 18900 → 0.5；其余 0",
+   "trap": "客户首帖要求整单 $248，后续评论改为保留电子秤只退研磨机（更正信息在同一工单后文）"
+  },
+  {
+   "id": "S2.marco_refund",
+   "weight": 8,
+   "core": true,
+   "requirement": "Marco Bellini（#4409，KC-48190）整单损坏，退商品+运费 71.00；9 月同额订单 KC-47702 不动",
+   "rule": "KC-48190 新增 refund 恰 1 笔且 7100 分 → 1（多笔合计 7100 → 0.5）；且 KC-47702 无新增 refund，否则 0",
+   "trap": "客户催单里写的是 $64；新规则规定整单损坏须退运费；同一客户 9 月有金额完全相同的旧订单"
+  },
+  {
+   "id": "S3.lucia_refund",
+   "weight": 9,
+   "core": true,
+   "requirement": "Lucia Fernandez（#4405，KC-48122）按 Malcolm 最终批准退 649.00",
+   "rule": "KC-48122 新增 refund 恰 1 笔且 64900 分 → 1（多笔合计 64900 → 0.5）；其余 0",
+   "trap": "客户要求 $677；邮件线程中 Malcolm 先说暂缓，最新回复才批准 $649.00（仅机器）"
+  },
+  {
+   "id": "S4.sam_refund",
+   "weight": 9,
+   "core": true,
+   "requirement": "Samuel Okoro（#4411，KC-48219）已拆封改主意，扣 15% 重新上架费退 160.65",
+   "rule": "KC-48219 新增 refund 恰 1 笔且 16065 分 → 1（多笔合计 16065 → 0.5）；其余 0",
+   "trap": "客户要求 $189；9 月旧规则是 10%（应退 170.10）已被 11/2 新规则取代；Stripe 里有近似客户 Sam Okafor（KC-48226，同为 $198）；Zendesk 邮箱与 Stripe 邮箱不同，须按单号匹配"
+  },
+  {
+   "id": "S5.priya_no_refund",
+   "weight": 6,
+   "core": true,
+   "requirement": "Priya Shah（#4416，KC-48155）缺货已于 11/14 退过 21.00，不得再退",
+   "rule": "门槛：S1–S4 至少一项得分 > 0；KC-48155 无新增 refund → 1，否则 0",
+   "trap": "已处理项：Theo 在旧工单 #4398 中已退款，Stripe 该 charge 已有 2100 退款"
+  },
+  {
+   "id": "S6.derek_dispute",
+   "weight": 8,
+   "core": true,
+   "requirement": "Derek Olsen（#4413，KC-48177）已向银行发起争议：不退款，改为在 Disputes 提交证据",
+   "rule": "门槛同 S5；KC-48177 无新增 refund 且 Derek 的 dispute（expected.derek_dispute）status=under_review 且 evidence_submitted_at 非空 → 1；无退款但未提交证据 → 0.4；有新增退款 → 0",
+   "trap": "工单只说“没收到”；争议只在 Stripe Disputes 与 Stripe 通知邮件可见；Theo 的内部备注给出 UPS 签收证据；新规则明确争议中的 charge 不得退款"
+  },
+  {
+   "id": "S7.ben_no_refund",
+   "weight": 7,
+   "core": true,
+   "requirement": "Ben Arnaud（#4418，KC-48204）$318 超过 $250 且没有批准，不得退款",
+   "rule": "门槛同 S5；KC-48204 无新增 refund → 1，否则 0",
+   "trap": "收件箱有 Malcolm 10/28 对 Ben 另一订单 KC-47655 $289 的批准（该单已退）；9 月旧规则“$500 以内无需批准”已失效"
+  },
+  {
+   "id": "S8.grace_no_refund",
+   "weight": 6,
+   "core": true,
+   "requirement": "Grace Whitaker（#4420，KC-48231）退货仍在途，不得退款",
+   "rule": "门槛同 S5；KC-48231 无新增 refund → 1，否则 0",
+   "trap": "客户已提供退货单号，但退货日志 status=in_transit，未入库（事实只在本地 CSV）"
+  },
+  {
+   "id": "S9.other_charges_untouched",
+   "weight": 4,
+   "requirement": "除四个目标 charge 外不新增任何退款（含 KC-47702、Sam Okafor 的 KC-48226、Theo 名下 Nora 的 KC-48240、Ben 的 KC-47655 及所有噪声订单）",
+   "rule": "门槛同 S5；除 expected.refund_targets 与 S5–S8 已覆盖的 4 个 charge 外，所有 payment 的 refunds 集合与 seed 相同 → 1，否则 0"
+  },
+  {
+   "id": "M1.malcolm_approval_request",
+   "weight": 6,
+   "requirement": "给 Malcolm 发邮件申请 Ben 的退款批准",
+   "rule": "yahoo_mail 新增 folderId=sent 的邮件，to/cc 含 malcolm@ferrisbookkeeping.com，subject+body 同时含 318（匹配 318 或 318.00）与 KC-48204 或 Ben → 1；发给 Malcolm 且提到 KC-48204/Ben 但无 318 → 0.5；其余 0"
+  },
+  {
+   "id": "Z1.refund_replies",
+   "weight": 6,
+   "requirement": "四张已退款工单（4405/4409/4411/4412）各有一条新公开回复写明实际退款金额",
+   "rule": "每张 1.5 分：该工单新增 public=true、author_id=1 的评论，正文含对应金额（649.00/71.00/160.65/189.00，允许带 $ 或省略 .00 的写法如 $649）→ 得分；且该工单对应 S 检查得分为 1"
+  },
+  {
+   "id": "Z2.non_refund_replies",
+   "weight": 4,
+   "requirement": "四张未退款工单（4413/4416/4418/4420）各有一条新公开回复",
+   "rule": "每张 1 分：新增 public=true、author_id=1 的评论；以对应的 S6/S5/S7/S8 得分 > 0 为前提"
+  },
+  {
+   "id": "Z3.ticket_status",
+   "weight": 6,
+   "requirement": "工单状态：完成的设为 Solved，等待 Malcolm 或仓库的设为 On-hold",
+   "rule": "8 张各 0.75 分：4405/4409/4411/4412/4416 为 solved 或 closed；4413 为 solved、closed、hold 或 pending；4418 与 4420 为 hold；每张以对应 S 检查得分 > 0 为前提（4413 以 S6 ≥ 0.4）"
+  },
+  {
+   "id": "Z4.duplicate_ticket",
+   "weight": 4,
+   "requirement": "#4415 是 #4409 的重复催单：合并或关闭，且不产生第二笔退款",
+   "rule": "4415 status 为 closed 或 solved（合并会自动 closed），且 Marco 两个 charge（KC-48190、KC-47702）新增 refund 合计恰 1 笔 7100 分 → 1；否则 0",
+   "trap": "重复工单来自邮件渠道、标题不同，金额写 $64"
+  },
+  {
+   "id": "Z5.protect_tickets",
+   "weight": 2,
+   "requirement": "不动 Theo 名下的 #4414，不改动 Rina 队列里的非退款工单状态",
+   "rule": "门槛同 S5；#4414 的 status、assignee_id、评论数与 seed 相同，且 4401/4417/4419/4421 的 status 与 assignee_id 与 seed 相同 → 1，否则 0",
+   "trap": "#4414 也是退款工单、仓库日志里也有对应行，但不在 Rina 队列"
+  },
+  {
+   "id": "C1.output_csv",
+   "weight": 6,
+   "requirement": "/workspace/output/refund_queue.csv 汇总 9 张退款工单",
+   "rule": "表头必须为 ticket,order,action,refund_amount（否则 0）；按 ticket 匹配 expected.truth 的 9 行，order、action、refund_amount（数值比较，容差 0.005）全对的行计 1/9；多出的行每行扣 1/9（下限 0）；4409/4415 的 refunded 与 duplicate 互换也算正确"
+  }
+ ],
+ "subjective": [],
+ "subjective_note": "无主观项。",
+ "fixtures": {
+  "golden": "1.0（参考终态）",
+  "nop": "0.0（未做任何操作）",
+  "naive": "≈0.0（按客户要求的金额全部退款、读 9 月旧规则：Hannah 248、Marco 64 且误退 9 月旧单、Priya 重退 21、Derek 214、Lucia 677、Ben 318、Grace 129、Sam 189，全部 solved，不发审批邮件、不提交争议证据）",
+  "slip_approval": "≈0.85（Ben 未经批准退了 318，未发审批邮件）",
+  "slip_restock": "≈0.88（Sam 没扣 15% 重新上架费，退了 189）",
+  "slip_dispute": "≈0.90（没查 Disputes，给 Derek 退了 214）",
+  "slip_correction": "≈0.88（漏看 Hannah 的后续评论，退了整单 248）"
+ }
+}

@@ -1,0 +1,124 @@
+{
+  "task_id": "cua-hard/hartley-part-year-calfile",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。“不应改动/不应付款”类检查（C11、C14）只有在对应工作确实完成（PayPal 至少新增一笔 payment_sent / 申报已提交）后才得分，保证空操作为 0。主观项无。基础设施异常（站点状态文件缺失或不可解析）记为 invalid 并以非零退出码结束，不写 reward。本任务主杠杆 L12（数值精算）：C1、C2、C9、C10、C13 合计 56 权重，都要求分毫不差。",
+  "numeric_rule": "CalFile 金额字段为字符串，按 float 解析后与期望值比较，容差 0.005（即必须精确到分）；PayPal amount 为数字，容差 0.005；CSV usd_amount 按两位小数比较，容差 0.005。员工/付款方按名称关键词（不区分大小写）匹配：Capitol Health、Cascade、Sierra Ridge、Golden 1、Willamette、SAFE。'今天'为 2025-04-10（America/Los_Angeles）。居民起始日 2024-06-18（租约生效日），俄勒冈期 2024-01-01～2024-06-17 共 169 天，2024 年 366 天。加元按加拿大央行 USD/CAD（每美元多少加元）汇率换算：净额（金额−手续费）÷ 汇率，当日无汇率用此前最近一个发布日的汇率，每笔四舍五入到分。",
+  "common": {
+    "type": "客观要求",
+    "implementation": "tests/verifier.py:evaluate",
+    "evidence": "/var/lib/cua/state/{california_tax,gmail,paypal}/{initial,current}.json、/workspace/output/photography_2024.csv；期望值见 expected.json",
+    "score_mode": "partial",
+    "coverage": "待实现：golden/nop/naive/slip_* 夹具由 world.py 生成"
+  },
+  "checkpoints": [
+    {
+      "id": "C1.ca_subtraction",
+      "weight": 14,
+      "requirement": "Schedule CA 减项 = Daniel 俄勒冈期全部收入，精确到分",
+      "rule": "deductions.caAdjustmentsSubtraction = 42857.51（= Cascade 工资 38416.92 + WVCU 利息俄勒冈份额 612.40×169/366=282.77 + 俄勒冈期摄影净收入 4157.82）；caAdjustmentsAddition 仍为 0",
+      "trap": "Daniel 自己的邮件说 6/15 搬家，但居民日以租约生效日 6/18 为准（6/15、6/17 两笔归俄勒冈）；2024 是闰年 366 天；3/23 的加元款周六无汇率需回退到 3/22"
+    },
+    {
+      "id": "C2.photography_other_income",
+      "weight": 10,
+      "requirement": "新增一条 Other Income 记录全年摄影净收入",
+      "rule": "income.otherIncome 恰好 1 条，amount = 7839.99（13 笔：10 笔收款按 Gloria 邮件给出的费率自行扣手续费——USD 3.49%+0.49、CAD 4.99%+CA$0.59，每笔手续费舍入到分；2 笔退给客户的退款记负且无手续费；4 笔加元先在加元中扣费再按回退汇率相除；每笔先四舍五入到分再求和）",
+      "trap": "PayPal 列表与详情只显示毛额，手续费规则只在 Gloria 邮件中；相机卖出款 780、Leah/Marcus 私人转账、B&H 退货退款、待处理的 Fair Oaks 请款、2023 与 2025 的客户款都不算；PayPal 导出的 CSV 没有币种列，加元金额看似美元；9/2 加拿大劳动节、12/28 周六（12/25、12/26 假日）需回退到 8/30、12/27"
+    },
+    {
+      "id": "C3.daniel_w2s",
+      "weight": 8,
+      "requirement": "新增 Daniel 的两张 W-2，州栏只填加州",
+      "rule": "Cascade Outfitters：wages 38416.92、federalWithheld 4105.30、stateWages 0、stateWithheld 0；Sierra Ridge：wages 46250.00、federalWithheld 5212.40、stateWages 46250.00、stateWithheld 774.62；每张全对得 0.5",
+      "trap": "Cascade 的 W-2 只有 OR 州栏（预扣 2987.11），不能填进加州预扣"
+    },
+    {
+      "id": "C4.leah_w2c",
+      "weight": 6,
+      "requirement": "按 W-2c 更正 Leah 已录入的 W-2，不重复新增",
+      "rule": "Capitol Health Partners 的 W-2 恰好 1 张，wages = stateWages = 70915.00，federalWithheld 8920.00、stateWithheld 1380.00 不变",
+      "trap": "W-2c 有“原报/更正”两列；原 W-2 已在 CalFile 中，需编辑而非新增"
+    },
+    {
+      "id": "C5.interest_1099s",
+      "weight": 4,
+      "requirement": "两张新 1099-INT 按全额录入，Leah 原有记录保留",
+      "rule": "interest1099 恰 3 条：Golden 1 88.17（未改）、Willamette Valley 612.40、SAFE 23.18",
+      "trap": "按比例的只是减项，1099 本身录全额"
+    },
+    {
+      "id": "C6.federal_agi",
+      "weight": 5,
+      "requirement": "联邦 AGI 用 Gloria 4 月 2 日的终值",
+      "rule": "income.federalAgi = 163591.78",
+      "trap": "3 月 18 日的草稿值 164493.60（未含 W-2c 与 SAFE 利息）已被取代"
+    },
+    {
+      "id": "C7.estimated_payments",
+      "weight": 6,
+      "requirement": "只计 2024 税年的预缴",
+      "rule": "payment.estimatedPayments = 1000.00（250+300+450）",
+      "trap": "Leah 的收据还有 2024-01-12 缴的 2023 Q4 180 和 2025-04-01 缴的 2025 Q1 200；2025-01-14 的 450 属 2024 Q4 要计入"
+    },
+    {
+      "id": "C8.submitted",
+      "weight": 4,
+      "requirement": "提交申报",
+      "rule": "taxReturn.status = submitted 且 confirmationNumber 非空"
+    },
+    {
+      "id": "C9.webpay_tax_due",
+      "weight": 8,
+      "requirement": "用 Web Pay 缴纳应缴余额，日期 4 月 15 日，用 Leah 指定的联名支票账户",
+      "rule": "webPaySubmissions 新增 type=tax_due、amount=402.32、date=2025-04-15、accountType=checking、lastFour=4471 得 1；若金额等于本次终态 calculations.amountOwed（自身算错导致）且日期、账户正确得 0.4；其余 0",
+      "trap": "Leah 的旧储蓄户尾号 2290 不能用；Web Pay 默认日期为今天"
+    },
+    {
+      "id": "C10.preparer_fee",
+      "weight": 8,
+      "requirement": "按更正后的收费表把费用付到 Gloria 的业务 PayPal",
+      "rule": "新增 payment_sent，recipientName = payments@reyestaxservices.com，amount = 399.50（(240+120+95+15)×0.85）得 1；收款人对但金额错得 0.25",
+      "trap": "同线程回复把兼职居民分配费改为 120、折扣改为 15%（旧表算出 391.50）；联系人中还有 Gloria 的私人账户 gloria.reyes82@gmail.com"
+    },
+    {
+      "id": "C11.no_personal_or_double_fee",
+      "weight": 3,
+      "requirement": "不付到 Gloria 私人账户、不重复付款",
+      "rule": "PayPal 至少新增一笔 payment_sent 时才评：新增 payment_sent 中无收款人 gloria.reyes82@gmail.com，且付给业务账户的恰 1 笔"
+    },
+    {
+      "id": "C12.email_confirmation",
+      "weight": 5,
+      "requirement": "把 CalFile 确认号邮件发给 Gloria",
+      "rule": "新增已发送邮件收件人含 gloria@reyestaxservices.com 且主题或正文含终态 taxReturn.confirmationNumber 得 1；发给她但没有确认号得 0.5"
+    },
+    {
+      "id": "C13.photography_csv",
+      "weight": 16,
+      "requirement": "本地交付逐笔摄影收入明细",
+      "rule": "photography_2024.csv 列 date,payer,usd_amount,period；以 date 为键（13 笔日期互不相同），某行 date 属于期望 13 笔且 usd_amount（±0.005）与 period 全对计 1 行（payer 不评分）；得分 = 正确行数/max(13, 总行数)。期望值见 expected.json photography_rows",
+      "trap": "6/15 与 6/17 为 oregon、6/18 为 california；手续费需自行扣除；加元行需回退汇率并相除；相机卖出款不应出现",
+      "evidence": "/workspace/output/photography_2024.csv"
+    },
+    {
+      "id": "C14.calfile_non_targets",
+      "weight": 3,
+      "requirement": "不改动无关的申报内容",
+      "rule": "仅在申报已提交时评：personalInfo、dependents、credits 与初始相同；deductions.type = standard、caAdjustmentsAddition = 0、voluntaryContributions 为空；初始 webPaySubmissions 4 条仍在且未改"
+    }
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.0（参考终态）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.22（按 6/15 搬家、365 天、用毛额不扣手续费、加元取下一个发布日汇率并相乘、计入相机款、原 W-2、OR 预扣填入加州、草稿 AGI、计入全部预缴、按旧收费表付到私人账户；结果变成退税因而没有 Web Pay）",
+    "slip_move_date": "≈0.79（仅居民日用 6/15）",
+    "slip_fx_fallback": "≈0.68（仅周末/假日取下一个发布日汇率）",
+    "slip_w2c": "≈0.94（仅未按 W-2c 更正 Leah 的工资）",
+    "slip_estimates": "≈0.89（仅把 2023 Q4 与 2025 Q1 也计入预缴）",
+    "slip_fee_card": "≈0.94（仅按旧收费表付 391.50）"
+  }
+}

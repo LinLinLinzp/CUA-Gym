@@ -1,0 +1,22 @@
+[
+ {
+  "site": "youtube",
+  "feature": "Per-video publishing state in the data model. Add to every videos[] entry: visibility ('public'|'unlisted'|'private', default 'public'), publishAt (ISO8601|null; when set and in the future relative to the page clock the video is Scheduled and becomes public at that time), isPremiere (bool, default false) with premiereAt (ISO8601|null), and uploadStatus ('processed'|'draft', default 'processed'; a draft has its details unfinished and was never published). Derived effective status, computed against the in-page Date (the task clock): draft > private > scheduled (publishAt > now) > premiere-upcoming (isPremiere && premiereAt > now) > unlisted > public. Seed arrays must keep these fields; deepMergeWithDefaults/array normalizers must not drop them.",
+  "why": "Lever L15 (status illusion) needs launch-week videos that look published elsewhere (Notion tracker says Published, a Slack message says 'it's up', a notification says 'uploaded') but are really scheduled, private, unlisted, unfinished drafts or upcoming premieres. Today a video has only uploadDate; visibility is written by UploadPage.addUploadedVideo but never read anywhere, and there is no schedule/premiere/draft concept at all."
+ },
+ {
+  "site": "youtube",
+  "feature": "YouTube Studio channel-content page for the signed-in user (e.g. route /studio/videos, reachable from the avatar menu 'YouTube Studio' and the sidebar 'Your videos'). A table of the current user's videos (channelId == user.userId), including non-public ones, with columns Video (thumbnail+title+description snippet), Visibility (Public / Unlisted / Private / Scheduled / Draft), Date (e.g. 'Published Nov 16, 2026', 'Scheduled Nov 21, 2026, 9:00 AM', 'Premieres Nov 19, 2026, 6:00 PM', 'Uploaded Nov 17, 2026' for drafts), Views, Comments, Likes. Draft rows show an 'Edit draft' button instead of stats. Filter chips or a tab for Videos/Shorts/Live are optional; a visibility filter is nice-to-have.",
+  "why": "The channel manager's ground truth for 'is this really live' is Studio. Without it the true state of each launch video cannot be read from the UI, so the Notion status column and the X promotion decision cannot be derived honestly."
+ },
+ {
+  "site": "youtube",
+  "feature": "Public surfaces honour the effective status. HomePage, ChannelPage (Videos/Home tabs), SearchPage, SubscriptionsPage, TrendingPage and the watch-page suggestions list only effective-public videos; ChannelPage additionally shows an 'Upcoming' shelf for upcoming premieres with 'Premieres <date time>' instead of view count. Watch page /watch/:id: for the channel owner viewing a non-public own video show a visibility chip under the title ('Private', 'Unlisted', 'Scheduled for <date time>', 'Draft'); for an upcoming premiere show the premiere waiting room ('Premieres <date time>', countdown, no views, player not playable); unlisted videos open normally by direct link but are not listed anywhere. Home/Channel cards must also stop showing 'Today' for future uploadDate values.",
+  "why": "L15 traps rely on deceptive-but-visible signals: a scheduled video whose thumbnail appears on the owner's channel or that opens fine by link, an unlisted video reachable from a pasted link, a premiere whose watch page exists. The real UI distinguishes these with chips/labels; today every video is listed and playable everywhere and future dates render as 'Today'."
+ },
+ {
+  "site": "youtube",
+  "feature": "Edit visibility from Studio. A video details page (e.g. /studio/video/:id) or row 'Visibility' dropdown that lets the owner set Public / Unlisted / Private, or Schedule with a date+time picker, then Save; persists videos[i].visibility and videos[i].publishAt (null when made public now; publishing a draft sets uploadStatus 'processed' and uploadDate to now). Observable change: videos[i].visibility / publishAt / uploadStatus.",
+  "why": "The task should include one YouTube write tied to the lever: a video the Slack thread says must go public at launch but that was left Unlisted (to be made Public), while a different one is correctly held as Scheduled and must not be touched. Without an edit path YouTube is read-only and the scheduled-vs-public decision cannot be persisted on the primary site."
+ }
+]

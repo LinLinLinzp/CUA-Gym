@@ -1,0 +1,37 @@
+[
+  {
+    "site": "docusign",
+    "feature": "Reopen a draft envelope for editing from the UI (Edit/Continue button on the draft EnvelopeDetail page; Drafts-list row click for status=draft opens /prepare/:id)",
+    "why": "ui_probe 2026-11-18: in Agreements > Drafts, clicking 'Halvorsen ... Catering Agreement' opens /agreements/detail/env_hb_catering, which offers only Void and Download. The task's core work is fixing Theo's seeded drafts (document, client signer, vendor signer, message) before sending, and /prepare/:id is reachable only by typing the URL by hand."
+  },
+  {
+    "site": "docusign",
+    "feature": "Lock sent envelopes. PrepareEnvelope must refuse (redirect to detail or read-only with a banner like 'This envelope has been sent. Void it and send a new one, or use Correct to change recipients.') when status != 'draft'; the store's updateEnvelope must ignore documents/recipients/fields/subject/message changes for non-draft envelopes; the Send button must not appear for non-drafts",
+    "why": "ui_probe 2026-11-18: /prepare/env_hb_shuttle (status 'delivered', sent by Theo) opened the full wizard with Send enabled. Changing the message to 'PROBE EDIT AFTER SEND (January 21-23, 2027)' landed in server state, and the status stayed 'delivered'. Lever L09 needs sending to be irreversible: the old shuttle envelope's wrong dates must only be fixable by void plus a new envelope, and a careless early send must leave a permanent record."
+  },
+  {
+    "site": "docusign",
+    "feature": "Immutable send snapshot. sendEnvelope writes envelope.sentSnapshot = {sentAt, subject, message, documents:[{id,name,fileSize,storedName}], recipients:[{id,name,email,role,routingOrder}]} once (never overwritten) and copies it into the history 'sent' event as `snapshot`. correctEnvelope's 'corrected' history event records `before` and `after` recipient arrays. voidEnvelope stores envelope.voidReason",
+    "why": "ui_probe 2026-11-18: sending env_hb_photo through the wizard set status/sentAt and appended history {action:'sent', details:'Envelope sent to 2 recipient(s)'} with no snapshot. Correct overwrote recipients ('Jonah Reyes' became 'Jonah Reyes X') and logged only 'Envelope corrected - recipients updated'. Void kept the reason only inside history details. Without a snapshot, 'send to Greg, then Correct to Priya' looks the same as a correct first send, so the core L09 checks (C1-C3, C5, C9 in rubric.json) cannot be verified."
+  },
+  {
+    "site": "docusign",
+    "feature": "History/audit actor from state.user. createEnvelope/sendEnvelope/voidEnvelope/correctEnvelope/resendEnvelope history and auditLog entries use state.user.name/email instead of the hardcoded 'Sarah Chen <sarah.chen@acmecorp.com>'; the Home 'My DocuSign ID' signature placeholder uses state.user.name",
+    "why": "ui_probe 2026-11-18: with seed user Nadia Okafor <nadia.brightlineevents@yahoo.com>, the sent, voided and corrected events written through the UI all had actorName 'Sarah Chen'. The Home card's signature preview also reads 'Sarah Chen'. The task tells apart Theo's earlier send from the agent's actions by actor, and the wrong name breaks the persona."
+  },
+  {
+    "site": "docusign",
+    "feature": "'Send an Envelope' starts with no documents. Home handleSendEnvelope/createEnvelope should not inject the placeholder picsum 'Document.pdf'; the wizard should open on step 1 when documents is empty",
+    "why": "ui_probe 2026-11-18: Home > Start > Send an Envelope created an envelope with a 1-page 'Document.pdf' already attached and jumped to step 2 (Add Recipients). An agent building the replacement shuttle envelope can easily send that junk file next to, or instead of, the v2 PDF, which fails C5 for a reason unrelated to the task. The file can be deleted by hand, but it is a UI artifact."
+  },
+  {
+    "site": "docusign",
+    "feature": "Render PDF documents (uploaded data: URLs and /files/... URLs with fileType 'pdf') in the Prepare 'Place Fields' canvas and the SigningRoom via <iframe>/<object> or pdf.js, instead of <img src=fileUrl>",
+    "why": "ui_probe 2026-11-18: after uploading /workspace/downloads/Pacific_Shuttle_Agreement_HBLS27_v2.pdf (stored correctly: name kept, fileSize 2443, contentType application/pdf), step 3 showed a broken <img alt='Document'> on a blank page. The agent cannot see which contract version is on the envelope before the irreversible send, and checking the attached version is the point of the task."
+  },
+  {
+    "site": "airtable",
+    "feature": "Date-only fields shown in local time. Cell.jsx renders `new Date(value).toLocaleDateString()` for 'YYYY-MM-DD'; parse date-only values as local dates (e.g. new Date(y, m-1, d)) or format the string directly",
+    "why": "ui_probe 2026-11-18 (browser TZ America/Los_Angeles): Deposit Due stored as '2026-11-20' displays as 11/19/2026 and '2026-12-01' as 11/30/2026. The stored value is right (the editor is <input type=date>), but an agent that enters Dec 8 for the reissued shuttle contract sees 12/7/2026 and may 'fix' it to Dec 9, failing A3 because of a UI bug."
+  }
+]

@@ -1,0 +1,164 @@
+{
+ "task_id": "cua-hard/psyc3150-late-resubmission-grading",
+ "task_version": "0.1.0",
+ "verifier_version": "0.1.0",
+ "reward_file": "/logs/verifier/reward.txt",
+ "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。“保持原分”类检查（K10、K11、S4）必须同时在 Sheets 中填入正确的 Final 才得分，P1“不改动”检查只有在至少 5 名 Lab 3 学生的 Canvas 分数正确后才判定，保证空操作为 0。主观项无。基础设施异常（站点状态文件缺失或不可解析）记为 invalid 并以非零退出码结束，不写 reward。本任务主杠杆 L11（长文条款）：K1–K11 合计 64 权重，每项都取决于课程政策 PDF 第 7、9、10、11、12、14 节中的具体条款。",
+ "numeric_rule": "分数按 float 比较，容差 0.01（允许半分，如 42.5）。学生以 Canvas user_id / SIS ID 定位（见 expected.json students）。'今天'为 2026-11-18（America/Chicago）。所有截止为美国中部时间 23:59：Lab 3 截止 2026-11-06 23:59 CST = 2026-11-07T05:59Z；Lab 2 成绩发布公告 2026-10-30T21:10Z，重交窗口截至 2026-11-07T05:59Z。迟交天数 = ceil((提交时间−截止)/24 小时)，提交在截止后 15 分钟内视为 0；每天扣 50×10% = 5 分，迟交超过 120 小时记 0；重交封顶 42.5；以导出 CSV 中最大 attempt 的时间为提交时间。",
+ "common": {
+  "type": "客观要求",
+  "implementation": "tests/verifier.py:evaluate",
+  "evidence": "/var/lib/cua/state/{canvas_lms,gmail,google_sheets}/{initial,current}.json、/workspace/output/grade_entries.csv；期望值见 expected.json（lab3_todo / lab2_resub / lab3_kevin_done / sheets 行号与列）",
+  "score_mode": "partial",
+  "coverage": "golden/nop/naive/slip_* 夹具由 world.py 生成"
+ },
+ "checkpoints": [
+  {
+   "id": "K1.grace_period",
+   "weight": 6,
+   "requirement": "Marcus Lee（LS2211376，user 105）Lab 3 按 15 分钟宽限视为按时",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 41（rubric 41，提交 2026-11-07T06:09Z，距截止 05:59Z 仅 10 分钟，政策 14.3）",
+   "trap": "提交时间晚于截止且本人邮件称“过了午夜几分钟”，不读 14.3 会扣 1 天得 36"
+  },
+  {
+   "id": "K2.latest_attempt",
+   "weight": 6,
+   "requirement": "Diego Alvarez（LS2210388，user 102）按最后一次提交计迟交",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 37（rubric 42；导出 CSV 中 attempt 2 = 2026-11-07T19:20Z，迟 13.4 小时 → 1 天 → −5；政策 14.2）",
+   "trap": "attempt 1（11-06 21:10Z）按时；只看第一次提交会给 42"
+  },
+  {
+   "id": "K3.ta_extension_void",
+   "weight": 6,
+   "requirement": "Ben Fischer（LS2211052，user 103）Kevin 口头“周末交”无效，按原截止扣分",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 29（rubric 39，提交 2026-11-08T22:00Z，迟 40 小时 → 2 天 → −10；政策 9.3 TA 无权延期）",
+   "trap": "Kevin 在邮件串中回复“take the weekend”，照做会给 39"
+  },
+  {
+   "id": "K4.accommodation_within_window",
+   "weight": 5,
+   "requirement": "Grace Okonkwo（LS2210644，user 106）SAS 灵活截止 48 小时内提交，不扣分",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 48（SAS 信 2026-09-14 签发；截止顺延到 2026-11-09T05:59Z；提交 11-08T23:30Z 在窗口内；政策 11.2）",
+   "trap": "SAS 信本身只写“flexible deadlines per syllabus”，48 小时只在 PDF 11.2 中"
+  },
+  {
+   "id": "K5.accommodation_after_window",
+   "weight": 6,
+   "requirement": "Liam Novak（LS2211190，user 107）超出 48 小时窗口后从窗口结束起算迟交",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 38（SAS 信 2026-09-21；窗口结束 2026-11-09T05:59Z；提交 11-09T20:00Z 迟 14 小时 → 1 天 → −5；政策 11.3）",
+   "trap": "把有 SAS 信当作全额豁免会给 43"
+  },
+  {
+   "id": "K6.accommodation_not_retroactive",
+   "weight": 6,
+   "requirement": "Sofia Brandt（LS2211134，user 115）SAS 信晚于截止签发，不追溯",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 35（SAS 信 2026-11-10 签发，晚于 11-06 截止；提交 2026-11-08T03:00Z 迟 21 小时 → 1 天 → −5；政策 11.4）",
+   "trap": "教授转发 SAS 信并说“FYI for grading”，不读 11.4 会给 40"
+  },
+  {
+   "id": "K7.dean_verified_waiver",
+   "weight": 6,
+   "requirement": "Owen Park（LS2210735，user 108）教务长核实缺席期内到期，免迟交罚分",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 37（缺席期 11-04～11-08 覆盖 11-06 截止；提交 2026-11-10T17:00Z ≤ 期末后 7 天；政策 12.2）",
+   "trap": "通知写明“本身不豁免学业”，若照常计 4 天会得 17；若用 5 天上限之外的逻辑也错"
+  },
+  {
+   "id": "K8.five_day_cutoff",
+   "weight": 6,
+   "requirement": "Ethan Moore（LS2211423，user 109）迟交超过 5 天（120 小时）不予接收",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 0（提交 2026-11-13T15:00Z，迟 153 小时；政策 7.3）",
+   "trap": "按每天 −5 线性扣会得 6"
+  },
+  {
+   "id": "K9.resub_cap",
+   "weight": 6,
+   "requirement": "Hannah Cho（LS2210921，user 104）Lab 2 重交分按 85% 封顶",
+   "rule": "Canvas 中 assignment_id=3102（Lab Report 2: Experimental Design）对应 submission.score = 42.5（原 31，重交 rubric 46，封顶 50×0.85=42.5；政策 10.3）",
+   "trap": "syllabus 摘要未提封顶，直接录 46"
+  },
+  {
+   "id": "K10.resub_once_per_term",
+   "weight": 6,
+   "requirement": "Priya Shah（LS2210958，user 118）本学期已用过重交机会，Lab 2 重交不计",
+   "rule": "Canvas 中 assignment_id=3102（Lab Report 2: Experimental Design）对应 submission.score 仍 = 29（与初始一致）且 Sheets「Lab 2 Resubmissions」表 Priya 行 E 列 Final = 29；两者都满足才得分（单看 Canvas 未改等同空操作）",
+   "trap": "她的 Lab 1 重交已于 2026-10-09 评分，记录只在 Sheets「Resubmissions Used」表；在窗口内且有 rubric 分 44，易被录为 42.5 或 44"
+  },
+  {
+   "id": "K11.resub_higher_of",
+   "weight": 5,
+   "requirement": "Julia Santos（LS2211065，user 119）重交封顶后低于原分，保留原分",
+   "rule": "Canvas 中 assignment_id=3102（Lab Report 2: Experimental Design）对应 submission.score 仍 = 44 且 Sheets Lab 2 Resubmissions 表 Julia 行 Final = 44；两者都满足才得分",
+   "trap": "重交 rubric 48 → 封顶 42.5 < 原 44，政策 10.5 取较高者；录 48 或 42.5 均错"
+  },
+  {
+   "id": "S1.utc_boundary",
+   "weight": 4,
+   "requirement": "Lena Vogel（LS2210862，user 110）UTC 次日实为当地按时",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 45（提交 2026-11-07T04:48Z = 11-06 22:48 CST，早于截止）",
+   "trap": "CSV 日期为 11-07 看似迟交，扣 1 天得 40"
+  },
+  {
+   "id": "S2.instructor_extension",
+   "weight": 4,
+   "requirement": "Tomás Herrera（LS2210493，user 114）教授批准延期至 11-08 23:59",
+   "rule": "Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 46（延期截止 2026-11-09T05:59Z，提交 11-09T03:15Z 按时）",
+   "trap": "按原截止会扣 2 天得 36"
+  },
+  {
+   "id": "S3.corrected_extension",
+   "weight": 5,
+   "requirement": "两位 Aisha：延期属于 Aisha Rahman 而非 Aisha Bello（教授更正邮件）",
+   "rule": "各 0.5 分：Aisha Rahman（user 113）Canvas 中 assignment_id=3103（Lab Report 3: Survey Methods）对应 user_id 的 submission.score（按 float 比较） = 47（延期至 2026-11-10T05:59Z，提交 11-10T02:40Z 按时）；Aisha Bello（user 101）= 34（无延期，提交 2026-11-08T16:05Z 迟 34 小时 → 2 天）",
+   "trap": "第一封邮件写的是 Bello，同一邮件串的后续回复更正为 Rahman"
+  },
+  {
+   "id": "S4.resub_window_closed",
+   "weight": 4,
+   "requirement": "Kofi Mensah（LS2210602，user 120）重交晚于 7 天窗口，不计",
+   "rule": "Canvas 中 assignment_id=3102（Lab Report 2: Experimental Design）对应 submission.score 仍 = 33 且 Sheets Lab 2 Resubmissions 表 Kofi 行 Final = 33；两者都满足才得分",
+   "trap": "成绩于 2026-10-30（公告时间 21:10Z）发布，窗口至 11-06 23:59 CST = 2026-11-07T05:59Z；重交 11-09T15:00Z 已过，rubric 40 不应录入"
+  },
+  {
+   "id": "S5.plain_rows",
+   "weight": 5,
+   "requirement": "无例外的普通行正确录入",
+   "rule": "按比例：Lab 3 中 Chloe Martin 38、Isaac Turner 33、Samir Haddad 49、Nadia Petrova 36、Hannah Cho 35（迟 32.5 小时 → 2 天）；Lab 2 中 Marcus Lee 41、Ryan Doyle 39；得分 = 正确数/7"
+  },
+  {
+   "id": "T1.lab3_sheet_sync",
+   "weight": 5,
+   "requirement": "Sheets「Lab 3」表 17 个待办行回填",
+   "rule": "按比例（正确行/17）：每行 F 列 Days late 为整数且等于 expected.json lab3_todo.days_late（Ethan Moore 接受 ≥6 的整数，其余必须相等，Owen Park/Grace Okonkwo/Lena Vogel/Tomás Herrera/Aisha Rahman/Marcus Lee 为 0），G 列 Final 等于期望 final（数值比较），H 列为 Y（不区分大小写）；三列都对该行才算对",
+   "trap": "Days late 是实际计入的天数，例外豁免后为 0"
+  },
+  {
+   "id": "T2.lab2r_sheet_sync",
+   "weight": 3,
+   "requirement": "Sheets「Lab 2 Resubmissions」表 6 行回填",
+   "rule": "按比例（正确行/6）：E 列 Final = 期望值（Hannah 42.5、Marcus 41、Priya 29、Julia 44、Kofi 33、Ryan 39），F 列 = Y"
+  },
+  {
+   "id": "D1.grade_entries_csv",
+   "weight": 4,
+   "requirement": "/workspace/output/grade_entries.csv",
+   "rule": "表头 sis_id,assignment,final_score；23 行期望（17 行 lab3 + 6 行 lab2_resub，值同上）；得分 = 正确行数/max(23, 实际行数)；final_score 按 float 比较；文件缺失得 0"
+  },
+  {
+   "id": "P1.protect_non_targets",
+   "weight": 2,
+   "requirement": "不改动 Kevin 已录入的成绩与其他作业",
+   "rule": "仅当 Lab 3 中至少 5 个待办学生的 Canvas 分数正确时才判定：Kevin 已录入的 7 名学生（Priya Shah 42、Julia Santos 46、Kofi Mensah 35、Ryan Doyle 40、Emily Zhao 44、Jacob Wright 39、Maya Lindgren 47）的 Lab 3 score 不变；Lab 1、Quiz 1–4、Midterm 及 PSYC 7200 等其他作业的所有 score 不变；Sheets Lab 3 表这 7 行的 F–I 列不变；全部满足得满分，否则 0",
+   "trap": "Kevin 已录行看起来也“未扣分”，但都是按时提交（UTC 日期为 11-07 的 Kofi 02:55Z、Jacob 05:31Z 实为 11-06 当晚）"
+  }
+ ],
+ "subjective": [],
+ "subjective_note": "无主观项。",
+ "fixtures": {
+  "golden": "1.0（参考终态）",
+  "nop": "0.0（未做任何操作）",
+  "naive": "≈0.21（只看 syllabus 摘要和每个邮件串的第一封：不用宽限、按第一次提交、认可 Kevin 的口头延期、SAS 信视为全额豁免且追溯、不认教务长豁免、不设 5 天上限、重交不封顶不查已用次数不取较高者不看窗口、延期给了 Aisha Bello、把 UTC 日期当本地日期）",
+  "slip_ta_extension": "≈0.935（仅认可 Kevin 的“周末交”，Ben Fischer 记 39）",
+  "slip_accommodation_window": "≈0.935（仅把 Liam Novak 的 SAS 信当作全额豁免，记 43）",
+  "slip_term_cap": "≈0.933（仅漏查 Resubmissions Used，Priya Shah Lab 2 录为封顶后的 42.5）"
+ }
+}

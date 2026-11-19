@@ -1,0 +1,36 @@
+{
+  "task_id": "cua-hard/ember-launch-status-audit",
+  "task_version": "0.1.0",
+  "verifier_version": "0.1.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。主杠杆 L15（状态错觉）相关检查点（标注 lever=L15）合计 76 权重。“不得改动/保持原状”类检查只有在对应修复工作已完成后才得分（见各项 rule 中的前置条件），保证空操作为 0。无封顶项、无主观项。基础设施异常（任一站点 initial/current 状态缺失或不可解析、seed 中的 Ember 商品或折扣记录从 initial 中缺失）记为 invalid 并以非零退出码结束，不写 reward。",
+  "numeric_rule": "“现在”= 2026-11-18 10:30 America/Los_Angeles（spec.clock）。真实状态读最终 current.json：商品看 products[i].status（active 才算 live），折扣看 discounts[i].status（active 才算 live），博客看 blogPosts[i].published（true 才算 live）。文本比较一律去首尾空白、大小写不敏感；邮箱地址比较小写。",
+  "common": {"type": "客观要求", "implementation": "tests/verifier.py:evaluate", "evidence": "/var/lib/cua/state/{shopify,yahoo_mail,slack}/{initial,current}.json、/workspace/output/launch_audit.csv、expected.json", "score_mode": "partial", "coverage": "待实现（verifier 由另一位作者编写）；夹具 golden/nop/naive/slip_* 已由 world.py 生成"},
+  "checkpoints": [
+    {"id": "S1.amber_activated", "weight": 8, "lever": "L15", "requirement": "上线日应在售却仍是草稿的商品要改为上架", "rule": "products 中 id=prod_emb_amb（SKU EMB-CND-AMB，Ember Candle – Amber Hearth）status == active", "trap": "Theo 的邮件和 Slack 都说“全部已上线”，Shopify 实际为 draft"},
+    {"id": "S2.ember_charcoal_activated", "weight": 8, "lever": "L15", "requirement": "被误归档的上线商品要恢复上架，且认准 SKU", "rule": "id=prod_emb_chr（SKU EMB-THR-CHR，Ember Wool Throw – Charcoal）status == active", "trap": "近似商品 Wool Throw – Charcoal（HH-THR-CHR，常规款）是 active，商品列表按标题看会误以为已上线；Ember 款实际为 archived，SKU 只在商品详情的变体里可见"},
+    {"id": "S3.gift_box_hidden", "weight": 8, "lever": "L15", "requirement": "上线日期未到的商品不得提前在售", "rule": "id=prod_emb_gft（EMB-GFT-BOX）status == draft（archived 不得分）", "trap": "Theo 的邮件与线程都声称礼盒“隐藏到 12/1”，实际已被批量上架为 active（今天甚至已有一单 #2284）；上线日期 2026-12-01 只在本地清单里"},
+    {"id": "S4.ember15_active", "weight": 8, "lever": "L15", "requirement": "上线折扣码今天必须生效", "rule": "disc_ember15（EMBER15）status == active 得 1；若原记录已删除、另建了 code=EMBER15、type=percentage、value=15、status=active 且 startsAt ≤ 现在的新记录得 0.75（丢失了仅限 Ember 系列的适用范围）；若原记录仍非 active 同时又新建了 active 的 EMBER15（重复码）得 0.5；否则 0", "trap": "EMBER15 显示为 scheduled、开始日期误设为 Nov 25；Theo 说“EMBER15 is up”"},
+    {"id": "S5.blog_published", "weight": 7, "lever": "L15", "requirement": "上线博文要真正发布", "rule": "blogPosts 中 id=blog_ember_meet（handle meet-the-ember-collection）published == true，且 blog_ember_first（A first look at Ember，已发布的旧预告）未被改动", "trap": "Priya 说“Blog post is up”，实际只是保存为 Draft；已发布的 11/10 预告文章外观相近"},
+    {"id": "S6.fig_stays_draft", "weight": 6, "requirement": "已被 QA 撤下的商品不得上架", "rule": "前置：S1、S2、S3 至少一项得分 > 0。prod_emb_fig（EMB-CND-FIG）status == draft", "trap": "本地清单写 go_live 2026-11-18 且未更新；撤下决定只在 #ember-launch 置顶清单的线程回复里（Marcus 11/17 17:12 PT：燃烧测试失败，保持 draft 至 12 月初）"},
+    {"id": "S7.vip_stays_expired", "weight": 5, "requirement": "按计划已结束的折扣码不得重新启用", "rule": "前置：S4 得分 > 0。disc_embervip（EMBERVIP）status == expired", "trap": "Priya 和 Theo 在 Slack 说 EMBERVIP 今天还在用；清单与 Shopify 均显示 11/17 结束；修 EMBER15 时容易顺手点 Activate"},
+    {"id": "S8.non_targets_untouched", "weight": 5, "requirement": "非清单对象保持原状", "rule": "前置：S1～S5 至少一项得 1。检查：prod_hh_thr_chr 仍为 active；所有非 Ember 商品 status 与 initial 相同且无商品被删除；折扣 disc_emberstaff、disc_bf26（scheduled 的 BLACKFRIDAY26）、disc_hearth10、disc_ship150、disc_bf25、disc_linen 存在且 status 不变；除 blog_ember_meet 外的博文 published 不变。每处违规扣 0.25，下限 0", "trap": "BLACKFRIDAY26 也是 scheduled，属于看似需要“修正”的非目标"},
+    {"id": "Y1.stockist_note_sent", "weight": 8, "lever": "L15", "requirement": "上线通知必须真正寄出给两家经销商", "rule": "“新发送邮件”= yahoo_mail current.messages 中 status == sent 且（id 不在 initial 中，或 initial 中同 id 为 draft）的记录。新发送邮件的 to/cc/bcc 合计覆盖 hello@junipermarket.com，且覆盖 purchasing@ashbyhome.co 或 buying@ashbyandco.com 之一，得 1；只覆盖一家得 0.5", "trap": "通知其实一直在 Drafts（msg_draft_stockist）；Sent 里 11/10 的预告邮件看起来像“已发过”；Nadia 自己在 Slack 说“going out tonight”"},
+    {"id": "Y2.ashby_new_address", "weight": 6, "requirement": "使用经销商更新后的收件地址", "rule": "前置：Y1 > 0。新发送邮件中至少一封收件人含 purchasing@ashbyhome.co，且没有任何一封发往 buying@ashbyandco.com", "trap": "草稿与通讯录仍是旧地址；更换地址的通知在 Stockists 文件夹 Jordan Ashby 11/16 的邮件里"},
+    {"id": "Y3.note_lists_only_live", "weight": 9, "lever": "L15", "requirement": "通知只列今天真正可购买的 Ember 商品", "rule": "前置：Y1 > 0。每封发往经销商地址的新发送邮件正文均包含 Cedar、Amber、Rust、Charcoal、Mug（大小写不敏感），且不匹配正则 \\bfig\\b（大小写不敏感）", "trap": "草稿写于 QA 撤下之前，仍列着 Fig & Clove"},
+    {"id": "Y4.no_duplicate_note", "weight": 2, "requirement": "不重复发送", "rule": "前置：Y1 > 0。每个经销商地址（hello@junipermarket.com、purchasing@ashbyhome.co、buying@ashbyandco.com）在新发送邮件中至多出现一次"},
+    {"id": "K1.slack_status_lines", "weight": 9, "lever": "L15", "requirement": "在 #ember-launch 发布真实状态", "rule": "取 slack current.messages['ember-launch'] 中 initial 没有的消息（含线程回复），逐行匹配 ^\\s*[-*•]?\\s*`?([A-Za-z0-9-]+)`?\\s*[:：\\-–—]\\s*(not live|live)\\b（大小写不敏感），ref 与清单 11 个 ref 对应，同一 ref 以最后出现为准。某 ref 计为正确 ⇔ 报告值等于期望值（live：EMB-CND-CED、EMB-CND-AMB、EMB-THR-RST、EMB-THR-CHR、EMB-MUG-SET、EMBER15、EMBERSHIP、meet-the-ember-collection；not live：EMB-CND-FIG、EMB-GFT-BOX、EMBERVIP）且该对象在最终状态中的真实 live 与期望值一致。得分 = 正确 ref 数 / 11", "trap": "照抄团队口径会把 Fig & Clove、EMBERVIP 报成 live；只报不修则真实状态与报告不符"},
+    {"id": "C1.audit_csv", "weight": 11, "lever": "L15", "requirement": "本地交付核查表", "rule": "/workspace/output/launch_audit.csv 表头为 ref,found_status,fixed_to,live。期望行：EMB-CND-CED,active,,yes；EMB-CND-FIG,draft,,no；EMB-CND-AMB,draft,active,yes；EMB-THR-RST,active,,yes；EMB-THR-CHR,archived,active,yes；EMB-MUG-SET,active,,yes；EMB-GFT-BOX,active,draft,no；EMBER15,scheduled,active,yes；EMBERSHIP,active,,yes；EMBERVIP,expired,,no；meet-the-ember-collection,draft,published,yes。一行正确 ⇔ 三列均与期望相同，且 fixed_to 非空时该对象最终状态确为 fixed_to。得分 = 正确行数 / max(11, 数据行数)；表头不符或文件缺失得 0", "evidence": "/workspace/output/launch_audit.csv", "trap": "found_status 必须是 Shopify 中看到的真实原状态，而不是邮件/Slack 声称的状态"}
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.0（参考终态）",
+    "nop": "0.0（未做任何操作）",
+    "naive": "≈0.17（相信 Theo 与 Slack 的“已上线”说法：Shopify 不做修改，原样发出草稿（含 Fig & Clove、旧地址），状态与 CSV 照抄声称状态）",
+    "slip_fig": "≈0.83（漏看线程里的 QA 撤下：上架 Fig & Clove 并在通知中保留）",
+    "slip_charcoal": "≈0.90（把常规款 Wool Throw – Charcoal 当成 Ember 款，未恢复 EMB-THR-CHR）",
+    "slip_address": "≈0.94（通知发往 Ashby 已停用的旧地址）",
+    "slip_giftbox": "≈0.90（相信礼盒“已隐藏”，未发现其为 active）"
+  }
+}

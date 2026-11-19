@@ -1,0 +1,42 @@
+{
+  "task_id": "dad-visits-airbnb-settlement",
+  "name": "cua-hard/dad-visits-airbnb-settlement",
+  "version": "0.1.0",
+  "description": "Settle October's family Airbnb stays: reconcile the Bookings sheet against Airbnb trips/receipts and the siblings' emails (cancellation with partial refund, shortened and moved stays, a missing stay, a superseded receipt), apply the split rules from a Gmail thread including an October amendment, record the Settlement rows, email the siblings, and hand over a rerunnable settle.py that is replayed on hidden months.",
+  "keywords": [
+    "browser",
+    "cli",
+    "personal-finance",
+    "travel",
+    "rerunnable-script",
+    "conflicting-sources",
+    "multi-site"
+  ],
+  "sites": [
+    "airbnb",
+    "google_sheets",
+    "gmail"
+  ],
+  "clock": "2026-11-18T09:00:00-08:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "生活消费",
+    "subscenario": "家庭民宿分摊月结与可重跑结算脚本",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "slot_id": "exp1-l07",
+    "levers": ["L07"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_floor": [0.55, 0.95],
+    "slip_validation": [0.55, 0.95],
+    "slip_effective_date": [0.55, 0.95],
+    "slip_moved_stay": [0.55, 0.95],
+    "slip_james_quote": [0.55, 0.95]
+  }
+}

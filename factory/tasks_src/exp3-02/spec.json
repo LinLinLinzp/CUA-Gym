@@ -1,0 +1,58 @@
+{
+  "additive_scoring": true,
+  "task_id": "exp3-02",
+  "name": "cua-hard/after-the-last-tram",
+  "version": "0.1.2",
+  "description": "Reconcile a Substack special issue against editorial approvals in Word and close the original Mattermost release thread.",
+  "keywords": [
+    "browser",
+    "publishing",
+    "editorial",
+    "multi-site"
+  ],
+  "sites": [
+    "substack",
+    "microsoft_word_for_the_web",
+    "mattermost"
+  ],
+  "clock": "2026-11-18T15:00:00Z",
+  "timezone": "UTC",
+  "locale": "en-US",
+  "hide_browser_debug": true,
+  "metadata": {
+    "scenario": "文化内容",
+    "subscenario": "特刊发布核对",
+    "operation_difficulty": 2,
+    "tool_type": 1,
+    "difficulty": 2,
+    "levers": [
+      "L15"
+    ]
+  },
+  "fixture_expectations": {
+    "golden": [
+      1,
+      1
+    ],
+    "nop": [
+      0,
+      0
+    ],
+    "naive": [
+      0,
+      0.35
+    ],
+    "slip_old_embargo": [
+      0.55,
+      0.95
+    ],
+    "slip_web_only_delivery": [
+      0.55,
+      0.95
+    ],
+    "slip_saved_without_sending": [
+      0.55,
+      0.95
+    ]
+  }
+}

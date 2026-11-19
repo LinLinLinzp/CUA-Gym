@@ -1,0 +1,133 @@
+{
+ "task_id": "cua-hard/birthday-gifts-abroad",
+ "task_version": "0.1.0",
+ "verifier_version": "0.1.0",
+ "reward_file": "/logs/verifier/reward.txt",
+ "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。“不应下单/不应改动”类检查（A6、A7、A9、B5）只有在对应工作确实完成后才得分：A6/A7/A9 需至少有一笔新订单的商品与收件地址都正确，B5 需至少一条新 Call 事件时间正确，保证空操作为 0。无封顶项。主观项无。基础设施异常（站点状态文件缺失或不可解析、种子订单或种子事件整体消失）记为 invalid 并以非零退出码结束，不写 reward。",
+ "numeric_rule": "“新订单”= current.orders 中 id 不在 initial.orders 里的订单（状态为 Cancelled 的新订单视为未下单）。地址按 shippingAddress.street 去首尾空白、忽略大小写比较；付款按 paymentMethod.last4 比较。日历时间把 start/end 解析为 UTC 瞬时值比较，容差 ±1 分钟；“新 Call 事件”= current.events 中 id 不在 initial.events 里、标题以 “call” 开头（忽略大小写）的事件。CSV 金额按两位小数比较，容差 0.01；order_id 不区分大小写（Orders 页显示为 ORD-…，状态中为 ord-…）；order_total 应等于对应订单 total 四舍五入到分。窗口为 2026-11-18 至 2026-12-31（含），时区 Europe/London；收件人当地时区：丹佛 America/Denver、波特兰 America/Los_Angeles、萨拉索塔与哥伦布 America/New_York。",
+ "common": {
+  "type": "客观要求",
+  "implementation": "tests/verifier.py:evaluate",
+  "evidence": "/var/lib/cua/state/{amazon,google_calendar}/{initial,current}.json、/workspace/output/birthday_gifts.csv",
+  "score_mode": "partial",
+  "coverage": "已实现，正反例夹具自测通过"
+ },
+ "checkpoints": [
+  {
+   "id": "A1.kate_item",
+   "weight": 6,
+   "requirement": "为 Kate 买清单上指定的绿色 Kindle",
+   "rule": "存在一笔新订单含 B09TMF6742 数量 1；任何新订单都不含 B09TMN58KL（黑色，愿望单里）、B09SWV1FSS（Signature 绿色）、B09WRSHHJS（Kids 版）",
+   "trap": "愿望单里有同价的黑色 Paperwhite，搜索结果中还有绿色 Signature 版和 Kids 版"
+  },
+  {
+   "id": "A2.kate_address",
+   "weight": 7,
+   "requirement": "Kate 的礼物寄到她的新家",
+   "rule": "含 B09TMF6742 的新订单 shippingAddress.street = 4471 Tennyson St（不是 1820 Larimer St Apt 5B）",
+   "trap": "账户里有两个 “Kate Carter” 地址；她 11 月刚搬家，新地址只出现在日历的 “Kate's housewarming” 事件里，旧地址还被 10 月的订单用过"
+  },
+  {
+   "id": "A3.twins",
+   "weight": 8,
+   "requirement": "双胞胎每人一套同款 LEGO，一笔订单",
+   "rule": "存在一笔新订单含 B0BBS6KGN1 数量 2，寄往 3316 SE Taylor St；新订单中 B0BBS6KGN1 总数恰为 2；不含 B0CFVZJ2PQ",
+   "trap": "清单一行对应两个孩子，备注写明 one each；单价 39.99 ≤ 45 指每件上限"
+  },
+  {
+   "id": "A4.grandma",
+   "weight": 7,
+   "requirement": "首选相框缺货时改买备选",
+   "rule": "存在一笔新订单含 B0C1S6Z5QK 数量 1，寄往 455 Bayfront Dr Unit 304；新订单中不含 B0BNQK9T3Z（Aura Carver Mat）或 B08FMQ4M1S（Skylight）",
+   "trap": "Aura Carver（炭灰色）显示 Currently unavailable，但同名的 Carver Mat 有货且价格看上去接近"
+  },
+  {
+   "id": "A5.dad",
+   "weight": 8,
+   "requirement": "首选超出最高价时改买备选",
+   "rule": "存在一笔新订单含 B07XXSYLHN 数量 1，寄往 2817 Northwest Blvd；任何新订单都不含 B0CGV2XGRL（MEATER Pro，现价 99.95 > 80）或 B07H9SQB4B（MEATER Plus，不在清单上）",
+   "trap": "清单备注里的 “$79.95 in September” 是旧价；同品牌的 MEATER Plus 恰好 79.95"
+  },
+  {
+   "id": "A6.mom_not_reordered",
+   "weight": 6,
+   "requirement": "妈妈的礼物上周已下单，不要重复",
+   "rule": "门槛：A1～A5 中至少一项的商品与地址都正确。新订单中不含 B07NQRM6ML 或 B08KTZ8249",
+   "trap": "妈妈在窗口内且排在清单第一行；已下单记录（ord-1794511320000，Shipped）只在 Orders 页可见"
+  },
+  {
+   "id": "A7.out_of_scope",
+   "weight": 5,
+   "requirement": "窗口外或不在清单上的人不下单",
+   "rule": "门槛同 A6。新订单中不含 B0BSL5P5BH、B0B7HS6Y4H、B00U26V4VQ、B07Q2M6NSM，且没有寄往 77 Bedford Ave Apt 3R 或 1104 E 6th St 的新订单",
+   "trap": "Jess 的生日是 1 月 1 日（窗口外）；Tom 的生日已过；Hannah 的生日在窗口内但她不在清单上"
+  },
+  {
+   "id": "A8.payment",
+   "weight": 6,
+   "requirement": "用个人有效的 Visa 付款",
+   "rule": "得分 = 新订单中 paymentMethod.last4 = 4417 的比例（没有新订单为 0）",
+   "trap": "默认卡是公司 Amex 1007；另一张 Visa 2290 已于 09/26 过期"
+  },
+  {
+   "id": "A9.cart_protected",
+   "weight": 6,
+   "requirement": "Emily 自己的线缆和笔记本不随礼物下单也不删除",
+   "rule": "门槛同 A6。新订单中不含 B0BWJMR6V6、B015NBTAOW；且 current.cart ∪ current.savedForLater 中 B0BWJMR6V6 数量 2、B015NBTAOW 数量 1 仍在",
+   "trap": "结账会把整个购物车一起下单（Buy Now 也一样），必须先 Save for later 或下单后恢复"
+  },
+  {
+   "id": "B1.call_kate",
+   "weight": 6,
+   "requirement": "Kate 生日当天丹佛时间 19:00 的通话提醒",
+   "rule": "存在新事件，标题含 kate，start = 2026-12-04T02:00:00Z，end = start + 30 分钟",
+   "trap": "美国晚上 7 点在伦敦已是次日凌晨；Kate 在 Mountain Time"
+  },
+  {
+   "id": "B2.call_twins",
+   "weight": 6,
+   "requirement": "双胞胎生日当天波特兰时间 19:00 的通话提醒",
+   "rule": "存在新事件，标题含 leo 或 max，start = 2026-12-10T03:00:00Z，时长 30 分钟",
+   "trap": "Pacific Time，伦敦日期跨到 12 月 10 日"
+  },
+  {
+   "id": "B3.call_grandma",
+   "weight": 5,
+   "requirement": "外婆生日当天萨拉索塔时间 19:00 的通话提醒",
+   "rule": "存在新事件，标题含 grandma 或 ruth，start = 2026-12-21T00:00:00Z，时长 30 分钟",
+   "trap": "Eastern Time，伦敦日期跨到 12 月 21 日"
+  },
+  {
+   "id": "B4.call_dad",
+   "weight": 5,
+   "requirement": "爸爸生日当天哥伦布时间 19:00 的通话提醒",
+   "rule": "存在新事件，标题含 dad，start = 2026-12-28T00:00:00Z，时长 30 分钟",
+   "trap": "Eastern Time，伦敦日期跨到 12 月 28 日"
+  },
+  {
+   "id": "B5.calendar_clean",
+   "weight": 5,
+   "requirement": "不重复已有提醒，不给窗口外或不在清单上的人加提醒，不改动已有事件",
+   "rule": "门槛：B1～B4 至少一项通过。新 Call 事件中没有标题含 mom、tom、jess、hannah 的；每个目标的新 Call 事件不超过 1 条；initial 中所有事件在 current 中仍存在且 title/start/end/calendarId 未变",
+   "trap": "“Call Mom”（11 月 25 日 00:00 伦敦时间）上周已经建好"
+  },
+  {
+   "id": "C1.csv",
+   "weight": 14,
+   "requirement": "/workspace/output/birthday_gifts.csv 记录窗口内每个人的订单",
+   "rule": "表头恰为 recipient,order_id,asin,quantity,order_total；得分 = 正确行数 / max(5, 数据行数)。正确行：recipient 为 Mom / Kate / Leo & Max / Grandma Ruth / Dad 之一（不区分大小写），order_id 在 current.orders 中存在且该订单含该 asin 和 quantity，order_total 与该订单 total 相差 ≤ 0.01；期望 Mom→ord-1794511320000,B07NQRM6ML,1,140.35；Kate→B09TMF6742,1,161.99；Leo & Max→B0BBS6KGN1,2,86.38；Grandma Ruth→B0C1S6Z5QK,1,140.39；Dad→B07XXSYLHN,1,48.60（后四行 order_id 为实际新订单号，且必须是新订单）",
+   "trap": "妈妈虽未重新下单也要写一行，使用上周已有订单号；多写 Jess/Tom 行会稀释得分"
+  }
+ ],
+ "subjective": [],
+ "subjective_note": "无主观项。",
+ "fixtures": {
+  "golden": "1.0（参考终态）",
+  "nop": "0.0（未做任何操作）",
+  "naive": "≈0.00（买黑色 Kindle 寄旧地址、个人物品随第一单下单、用默认 Amex、LEGO 只买 1 套、买有货的 Carver Mat、买超价 MEATER Pro、重复给妈妈下单、给 Jess 下单、提醒按伦敦 19:00 建在生日当天并重复建 Call Mom、Call Jess）",
+  "slip_kate_address": "≈0.93（仅把 Kate 的礼物寄到旧地址）",
+  "slip_timezone": "≈0.73（提醒都建在生日当天伦敦 19:00；B5 因门槛不满足同时失分）",
+  "slip_mom_duplicate": "≈0.86（没发现妈妈已下单和已有提醒，重复下单并重复建 Call Mom）",
+  "slip_dad_budget": "≈0.89（按备注旧价买了 MEATER Pro）"
+ }
+}

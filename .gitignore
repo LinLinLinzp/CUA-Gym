@@ -37,3 +37,8 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+materials/
+factory/build/
+factory/.venv/
+factory/tasks_src/*/.qc/

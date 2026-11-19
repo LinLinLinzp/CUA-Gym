@@ -1,0 +1,27 @@
+{
+  "task_id": "hotfix-release-followups",
+  "name": "cua-hard/hotfix-release-followups",
+  "version": "0.1.0",
+  "description": "Shepherd checkout-web hotfix 4.12.1 through Jira, GitLab and Slack: settle scope from a Slack thread, gate merges on QA verdicts that arrive after tickets move to In Review, react to a feature-flag request and an SRE rollback-plan request (digest taken from a local deploy history), announce only after deploy approval, and write a release manifest CSV.",
+  "keywords": ["browser", "cli", "release-management", "jira", "gitlab", "dynamic-world", "multi-site"],
+  "sites": ["jira", "gitlab", "slack"],
+  "clock": "2026-11-18T09:30:00-05:00",
+  "timezone": "America/New_York",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "数字技术",
+    "subscenario": "发布管理与热修复",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L14"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_qa415": [0.55, 0.95],
+    "slip_flag": [0.55, 0.95],
+    "slip_digest": [0.55, 0.95]
+  }
+}

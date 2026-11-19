@@ -1,0 +1,143 @@
+{
+  "task_id": "cua-hard/harbor-iteration-handoff",
+  "task_version": "0.1.1",
+  "verifier_version": "0.1.1",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "按 100 权重线性相加，每项只取 0 或 1。core 是 L16 业务检查点的标签。保护项按各自规则门控，故无操作得 0。缺失或无法解析的站点快照为基础设施异常，不写 reward。",
+  "numeric_rule": "截止为 2026-11-18 09:00 UTC，含该分钟的 09:00 记录。字符串严格区分大小写，比较 Excel 原始 input。生成的记录 ID 和审计时间不作为业务得分条件。",
+  "common": {
+    "type": "客观要求",
+    "implementation": "tests/verifier.py:evaluate",
+    "evidence": "/var/lib/cua/state/{clickup,microsoft_excel_for_the_web,mattermost}/{initial,current}.json",
+    "score_mode": "partial",
+    "coverage": "独立 verifier 及本地 Harbor Oracle、NOP、reset 已验证"
+  },
+  "checkpoints": [
+    {
+      "id": "CU.201",
+      "weight": 8,
+      "core": true,
+      "requirement": "在 ClickUp 更新原任务 HBR-201",
+      "rule": "唯一原任务 id=HBR-201 的 status='accepted'，sprintId='harbor-24'，listId='checkout'，未删除、未归档。sprintHistory 为 [harbor-24] 加上目标 Sprint（仅滚动时追加 harbor-25）。两字段均正确才得 1。",
+      "trap": "采用较晚发布的沙盒模板会写成 closed 和 Closed"
+    },
+    {
+      "id": "XL.201",
+      "weight": 7,
+      "core": true,
+      "requirement": "更新 HBR-201 的客服交接账册",
+      "rule": "wb-harbor-release 的 h24-handoff 中 A3='HBR-201'，C3 的字面 input='Accepted'，D3 的字面 input='Harbor 24'，两格均为字符串常量且全对得 1。",
+      "trap": "采用较晚发布的沙盒模板会写成 closed 和 Closed"
+    },
+    {
+      "id": "CU.202",
+      "weight": 8,
+      "core": true,
+      "requirement": "在 ClickUp 更新原任务 HBR-202",
+      "rule": "唯一原任务 id=HBR-202 的 status='accepted'，sprintId='harbor-24'，listId='checkout'，未删除、未归档。sprintHistory 为 [harbor-24] 加上目标 Sprint（仅滚动时追加 harbor-25）。两字段均正确才得 1。",
+      "trap": "恰在 09:00 UTC 通过，建议项不构成阻塞"
+    },
+    {
+      "id": "XL.202",
+      "weight": 7,
+      "core": true,
+      "requirement": "更新 HBR-202 的客服交接账册",
+      "rule": "wb-harbor-release 的 h24-handoff 中 A7='HBR-202'，C7 的字面 input='Accepted'，D7 的字面 input='Harbor 24'，两格均为字符串常量且全对得 1。",
+      "trap": "恰在 09:00 UTC 通过，建议项不构成阻塞"
+    },
+    {
+      "id": "CU.203",
+      "weight": 8,
+      "core": true,
+      "requirement": "在 ClickUp 更新原任务 HBR-203",
+      "rule": "唯一原任务 id=HBR-203 的 status='ready to resume'，sprintId='harbor-25'，listId='checkout'，未删除、未归档。sprintHistory 为 [harbor-24] 加上目标 Sprint（仅滚动时追加 harbor-25）。两字段均正确才得 1。",
+      "trap": "普通未完成项按生产惯例进入下一轮"
+    },
+    {
+      "id": "XL.203",
+      "weight": 7,
+      "core": true,
+      "requirement": "更新 HBR-203 的客服交接账册",
+      "rule": "wb-harbor-release 的 h24-handoff 中 A5='HBR-203'，C5 的字面 input='Continued'，D5 的字面 input='Harbor 25'，两格均为字符串常量且全对得 1。",
+      "trap": "普通未完成项按生产惯例进入下一轮"
+    },
+    {
+      "id": "CU.204",
+      "weight": 8,
+      "core": true,
+      "requirement": "在 ClickUp 更新原任务 HBR-204",
+      "rule": "唯一原任务 id=HBR-204 的 status='ready to resume'，sprintId='harbor-25'，listId='checkout'，未删除、未归档。sprintHistory 为 [harbor-24] 加上目标 Sprint（仅滚动时追加 harbor-25）。两字段均正确才得 1。",
+      "trap": "实施未完成不构成验收阻塞"
+    },
+    {
+      "id": "XL.204",
+      "weight": 7,
+      "core": true,
+      "requirement": "更新 HBR-204 的客服交接账册",
+      "rule": "wb-harbor-release 的 h24-handoff 中 A8='HBR-204'，C8 的字面 input='Continued'，D8 的字面 input='Harbor 25'，两格均为字符串常量且全对得 1。",
+      "trap": "实施未完成不构成验收阻塞"
+    },
+    {
+      "id": "CU.205",
+      "weight": 8,
+      "core": true,
+      "requirement": "在 ClickUp 更新原任务 HBR-205",
+      "rule": "唯一原任务 id=HBR-205 的 status='qa hold'，sprintId='harbor-24'，listId='checkout'，未删除、未归档。sprintHistory 为 [harbor-24] 加上目标 Sprint（仅滚动时追加 harbor-25）。两字段均正确才得 1。",
+      "trap": "截止前重新打开阻塞，旧 Pass 已失效，HBR-920 名称相同"
+    },
+    {
+      "id": "XL.205",
+      "weight": 7,
+      "core": true,
+      "requirement": "更新 HBR-205 的客服交接账册",
+      "rule": "wb-harbor-release 的 h24-handoff 中 A2='HBR-205'，C2 的字面 input='Held'，D2 的字面 input='Harbor 24'，两格均为字符串常量且全对得 1。",
+      "trap": "截止前重新打开阻塞，旧 Pass 已失效，HBR-920 名称相同"
+    },
+    {
+      "id": "CU.206",
+      "weight": 8,
+      "core": true,
+      "requirement": "在 ClickUp 更新原任务 HBR-206",
+      "rule": "唯一原任务 id=HBR-206 的 status='qa hold'，sprintId='harbor-24'，listId='checkout'，未删除、未归档。sprintHistory 为 [harbor-24] 加上目标 Sprint（仅滚动时追加 harbor-25）。两字段均正确才得 1。",
+      "trap": "09:12 的 Pass 在截止后"
+    },
+    {
+      "id": "XL.206",
+      "weight": 7,
+      "core": true,
+      "requirement": "更新 HBR-206 的客服交接账册",
+      "rule": "wb-harbor-release 的 h24-handoff 中 A4='HBR-206'，C4 的字面 input='Held'，D4 的字面 input='Harbor 24'，两格均为字符串常量且全对得 1。",
+      "trap": "09:12 的 Pass 在截止后"
+    },
+    {
+      "id": "P.clickup",
+      "weight": 6,
+      "requirement": "保护其他任务和 Sprint，保留目标任务身份及内容",
+      "rule": "至少 1 项 CU 和至少 1 项 XL 得 1 才检查。tasks 的 ID 集合及条数与初始完全一致，6 个目标以外的任务记录完全不变，目标仅可改变 status、sprintId、sprintHistory、updatedAt、dateClosed、closedBy。sprints 完全不变。全部满足得 1。",
+      "trap": "HBR-207 已交接，HBR-920 是沙盒同名任务，HBR-182 无本轮待办行"
+    },
+    {
+      "id": "P.excel",
+      "weight": 3,
+      "requirement": "保护 Excel 原始 QA 证据、已有交接和其他记录",
+      "rule": "至少 1 项 CU 和至少 1 项 XL 得 1 才检查。工作簿 wb-harbor-release 与四张原工作表均保持 active，身份和名称不变。按 workbookId、sheetId、address 比较所有 cells，除 h24-handoff 的 C2:D5 和 C7:D8 外保持原样。工作表实体除浏览引起的元数据外不变。全部满足得 1。",
+      "trap": "第 6 行已交接，第 9 行是沙盒"
+    },
+    {
+      "id": "P.mattermost",
+      "weight": 1,
+      "requirement": "保留交接原始讨论",
+      "rule": "至少 1 项 CU 和至少 1 项 XL 得 1 才检查。posts、threads 和 pins 与初始完全相同。忽略频道与线程的已读游标。全部满足得 1。"
+    }
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "1.00，参考终态",
+    "nop": "0.00，无操作",
+    "naive": "0.00，沿用沙盒、漏掉边界 Pass 和 reopened 更新、接纳截止后的 Pass、误改同名任务及已交接项",
+    "slip_reopened": "0.85，仅采用 HBR-205 旧 Pass",
+    "slip_cutoff": "0.85，仅采用 HBR-206 截止后 Pass",
+    "slip_duplicate": "0.76，仅把 HBR-205 交接结果记到 HBR-920"
+  }
+}

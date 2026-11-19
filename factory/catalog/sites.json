@@ -1,0 +1,1765 @@
+{
+ "_doc": "Regenerate catalog/sites.json from the table below plus build/certify.json.\n\nrole:     scenario = counts toward the 7-scenario pool and de-duplication;\n          common   = shared tool (mail/chat/docs/calendar) reusable across tasks.\nstatus:   ready        English, static certification passed, brand restored\n          needs_brand  UI still shows an invented brand (fix in hub before use)\n          needs_sync   UI changes never reach the server (excluded until fixed)\n          dyn_fail     failed dynamic certification in the task runtime (fix before use)\n          zh           Chinese UI; batch is English-first, kept for later\norigin_group: sites sharing an origin can't appear in the same task.",
+ "sites": {
+  "gmail": {
+   "hub": "gmail_mock",
+   "brand": "Gmail",
+   "origins": [
+    "https://mail.google.com"
+   ],
+   "home": "https://mail.google.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "outlook_web": {
+   "hub": "outlook_web_mock",
+   "brand": "Outlook",
+   "origins": [
+    "https://outlook.office.com"
+   ],
+   "home": "https://outlook.office.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "slack": {
+   "hub": "slack_mock",
+   "brand": "Slack",
+   "origins": [
+    "https://app.slack.com"
+   ],
+   "home": "https://app.slack.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "microsoft_teams": {
+   "hub": "microsoft_teams_mock",
+   "brand": "Microsoft Teams",
+   "origins": [
+    "https://teams.microsoft.com"
+   ],
+   "home": "https://teams.microsoft.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "google_calendar": {
+   "hub": "google_calendar_mock",
+   "brand": "Google Calendar",
+   "origins": [
+    "https://calendar.google.com"
+   ],
+   "home": "https://calendar.google.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "google_drive": {
+   "hub": "google_drive_mock",
+   "brand": "Google Drive",
+   "origins": [
+    "https://drive.google.com"
+   ],
+   "home": "https://drive.google.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "google_docs": {
+   "hub": "google_docs_mock",
+   "brand": "Google Docs",
+   "origins": [
+    "https://docs.google.com"
+   ],
+   "home": "https://docs.google.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "google_sheets": {
+   "hub": "google_sheets_mock",
+   "brand": "Google Sheets",
+   "origins": [
+    "https://sheets.google.com"
+   ],
+   "home": "https://sheets.google.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "notion": {
+   "hub": "notion_mock",
+   "brand": "Notion",
+   "origins": [
+    "https://www.notion.so"
+   ],
+   "home": "https://www.notion.so/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "zoom_web": {
+   "hub": "zoom_web_mock",
+   "brand": "Zoom",
+   "origins": [
+    "https://app.zoom.us"
+   ],
+   "home": "https://app.zoom.us/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "amazon": {
+   "hub": "amazon_mock",
+   "brand": "Amazon",
+   "origins": [
+    "https://www.amazon.com"
+   ],
+   "home": "https://www.amazon.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "ready"
+  },
+  "instacart": {
+   "hub": "instacart_mock",
+   "brand": "Instacart",
+   "origins": [
+    "https://www.instacart.com"
+   ],
+   "home": "https://www.instacart.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "ready"
+  },
+  "uber_eats": {
+   "hub": "uber_eats_mock",
+   "brand": "Uber Eats",
+   "origins": [
+    "https://www.ubereats.com"
+   ],
+   "home": "https://www.ubereats.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "booking_com": {
+   "hub": "booking_com_mock",
+   "brand": "Booking.com",
+   "origins": [
+    "https://www.booking.com"
+   ],
+   "home": "https://www.booking.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "ready"
+  },
+  "expedia": {
+   "hub": "expedia_mock",
+   "brand": "Expedia",
+   "origins": [
+    "https://www.expedia.com"
+   ],
+   "home": "https://www.expedia.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "needs_brand"
+  },
+  "google_flights": {
+   "hub": "google_flights_mock",
+   "brand": "Google Flights",
+   "origins": [
+    "https://www.google.com"
+   ],
+   "home": "https://www.google.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "tripadvisor": {
+   "hub": "tripadvisor_mock",
+   "brand": "Tripadvisor",
+   "origins": [
+    "https://www.tripadvisor.com"
+   ],
+   "home": "https://www.tripadvisor.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "ready"
+  },
+  "zillow": {
+   "hub": "zillow_mock",
+   "brand": "Zillow",
+   "origins": [
+    "https://www.zillow.com"
+   ],
+   "home": "https://www.zillow.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "ready"
+  },
+  "ebay": {
+   "hub": "ebay_mock",
+   "brand": "eBay",
+   "origins": [
+    "https://www.ebay.com"
+   ],
+   "home": "https://www.ebay.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "ready"
+  },
+  "paypal": {
+   "hub": "paypal_mock",
+   "brand": "PayPal",
+   "origins": [
+    "https://www.paypal.com"
+   ],
+   "home": "https://www.paypal.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "ready"
+  },
+  "robinhood": {
+   "hub": "robinhood_mock",
+   "brand": "Robinhood",
+   "origins": [
+    "https://robinhood.com"
+   ],
+   "home": "https://robinhood.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "coinbase": {
+   "hub": "coinbase_mock",
+   "brand": "Coinbase",
+   "origins": [
+    "https://www.coinbase.com"
+   ],
+   "home": "https://www.coinbase.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "tradingview": {
+   "hub": "TradingView_mock",
+   "brand": "TradingView",
+   "origins": [
+    "https://www.tradingview.com"
+   ],
+   "home": "https://www.tradingview.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "epic_health": {
+   "hub": "epic-health_mock",
+   "brand": "MyChart",
+   "origins": [
+    "https://mychart.epic.com"
+   ],
+   "home": "https://mychart.epic.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "status": "needs_sync"
+  },
+  "12306": {
+   "hub": "12306_mock",
+   "brand": "12306",
+   "origins": [
+    "https://www.12306.cn"
+   ],
+   "home": "https://www.12306.cn/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "youtube": {
+   "hub": "youtube_mock",
+   "brand": "YouTube",
+   "origins": [
+    "https://www.youtube.com"
+   ],
+   "home": "https://www.youtube.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "reddit": {
+   "hub": "reddit_mock",
+   "brand": "Reddit",
+   "origins": [
+    "https://www.reddit.com"
+   ],
+   "home": "https://www.reddit.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "twitter": {
+   "hub": "twitter_mock",
+   "brand": "X",
+   "origins": [
+    "https://x.com"
+   ],
+   "home": "https://x.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "instagram": {
+   "hub": "instagram_mock",
+   "brand": "Instagram",
+   "origins": [
+    "https://www.instagram.com"
+   ],
+   "home": "https://www.instagram.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "pinterest": {
+   "hub": "pinterest_mock",
+   "brand": "Pinterest",
+   "origins": [
+    "https://www.pinterest.com"
+   ],
+   "home": "https://www.pinterest.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "facebook": {
+   "hub": "facebook_mock",
+   "brand": "Facebook",
+   "origins": [
+    "https://www.facebook.com"
+   ],
+   "home": "https://www.facebook.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "linkedin": {
+   "hub": "linkedin_mock",
+   "brand": "LinkedIn",
+   "origins": [
+    "https://www.linkedin.com"
+   ],
+   "home": "https://www.linkedin.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "discord": {
+   "hub": "discord_mock",
+   "brand": "Discord",
+   "origins": [
+    "https://discord.com"
+   ],
+   "home": "https://discord.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "canva": {
+   "hub": "canva_mock",
+   "brand": "Canva",
+   "origins": [
+    "https://www.canva.com"
+   ],
+   "home": "https://www.canva.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "ready"
+  },
+  "canvas": {
+   "hub": "canvas_mock",
+   "brand": "Canvas Editor",
+   "origins": [
+    "https://editor.canvas.example"
+   ],
+   "home": "https://editor.canvas.example/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "status": "needs_brand"
+  },
+  "weibo": {
+   "hub": "weibo_mock",
+   "brand": "微博",
+   "origins": [
+    "https://weibo.com"
+   ],
+   "home": "https://weibo.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "xiaohongshu": {
+   "hub": "xiaohongshu_mock",
+   "brand": "小红书",
+   "origins": [
+    "https://www.xiaohongshu.com"
+   ],
+   "home": "https://www.xiaohongshu.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "zhihu": {
+   "hub": "zhihu_mock",
+   "brand": "知乎",
+   "origins": [
+    "https://www.zhihu.com"
+   ],
+   "home": "https://www.zhihu.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "wechat": {
+   "hub": "wechat_mock",
+   "brand": "微信",
+   "origins": [
+    "https://wx.qq.com"
+   ],
+   "home": "https://wx.qq.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "asana": {
+   "hub": "asana_mock",
+   "brand": "Asana",
+   "origins": [
+    "https://app.asana.com"
+   ],
+   "home": "https://app.asana.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "trello": {
+   "hub": "trello_mock",
+   "brand": "Trello",
+   "origins": [
+    "https://trello.com"
+   ],
+   "home": "https://trello.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "monday": {
+   "hub": "monday_mock",
+   "brand": "monday.com",
+   "origins": [
+    "https://acme.monday.com"
+   ],
+   "home": "https://acme.monday.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "airtable": {
+   "hub": "airtable_mock",
+   "brand": "Airtable",
+   "origins": [
+    "https://airtable.com"
+   ],
+   "home": "https://airtable.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "confluence": {
+   "hub": "confluence_mock",
+   "brand": "Confluence",
+   "origins": [
+    "https://acme.atlassian.net"
+   ],
+   "home": "https://acme.atlassian.net/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready",
+   "origin_group": "https://acme.atlassian.net"
+  },
+  "lucidchart": {
+   "hub": "lucidchart_mock",
+   "brand": "Lucidchart",
+   "origins": [
+    "https://lucid.app"
+   ],
+   "home": "https://lucid.app/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "miro": {
+   "hub": "miro_mock",
+   "brand": "Miro",
+   "origins": [
+    "https://miro.com"
+   ],
+   "home": "https://miro.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "lattice": {
+   "hub": "lattice_mock",
+   "brand": "Lattice",
+   "origins": [
+    "https://acme.latticehq.com"
+   ],
+   "home": "https://acme.latticehq.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "bamboohr": {
+   "hub": "bamboohr_mock",
+   "brand": "BambooHR",
+   "origins": [
+    "https://acme.bamboohr.com"
+   ],
+   "home": "https://acme.bamboohr.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "workday": {
+   "hub": "workday_mock",
+   "brand": "Workday",
+   "origins": [
+    "https://wd5.myworkday.com"
+   ],
+   "home": "https://wd5.myworkday.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "adp": {
+   "hub": "adp_mock",
+   "brand": "ADP Workforce Now",
+   "origins": [
+    "https://workforcenow.adp.com"
+   ],
+   "home": "https://workforcenow.adp.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "gusto": {
+   "hub": "gusto_mock",
+   "brand": "Gusto",
+   "origins": [
+    "https://app.gusto.com"
+   ],
+   "home": "https://app.gusto.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "greenhouse": {
+   "hub": "greenhouse_mock",
+   "brand": "Greenhouse",
+   "origins": [
+    "https://app.greenhouse.io"
+   ],
+   "home": "https://app.greenhouse.io/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "expensify": {
+   "hub": "Expensify_mock",
+   "brand": "Expensify",
+   "origins": [
+    "https://new.expensify.com"
+   ],
+   "home": "https://new.expensify.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "docusign": {
+   "hub": "docusign_mock",
+   "brand": "DocuSign",
+   "origins": [
+    "https://app.docusign.com"
+   ],
+   "home": "https://app.docusign.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "status": "ready"
+  },
+  "dingtalk": {
+   "hub": "dingtalk_mock",
+   "brand": "钉钉",
+   "origins": [
+    "https://im.dingtalk.com"
+   ],
+   "home": "https://im.dingtalk.com/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "feishu": {
+   "hub": "feishu_mock",
+   "brand": "飞书",
+   "origins": [
+    "https://www.feishu.cn"
+   ],
+   "home": "https://www.feishu.cn/",
+   "role": "common",
+   "scenario": "组织办公",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "clio": {
+   "hub": "clio_mock",
+   "brand": "Clio",
+   "origins": [
+    "https://app.clio.com"
+   ],
+   "home": "https://app.clio.com/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "westlaw": {
+   "hub": "westlaw_mock",
+   "brand": "Westlaw",
+   "origins": [
+    "https://1.next.westlaw.com"
+   ],
+   "home": "https://1.next.westlaw.com/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "status": "ready"
+  },
+  "contractbook": {
+   "hub": "contractbook_mock",
+   "brand": "Contractbook",
+   "origins": [
+    "https://app.contractbook.com"
+   ],
+   "home": "https://app.contractbook.com/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "quickbooks": {
+   "hub": "quickbooks_mock",
+   "brand": "QuickBooks",
+   "origins": [
+    "https://qbo.intuit.com"
+   ],
+   "home": "https://qbo.intuit.com/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "status": "ready"
+  },
+  "canvas_lms": {
+   "hub": "Canvas-LMS_mock",
+   "brand": "Canvas LMS",
+   "origins": [
+    "https://canvas.instructure.com"
+   ],
+   "home": "https://canvas.instructure.com/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "status": "ready"
+  },
+  "openreview": {
+   "hub": "openreview_mock",
+   "brand": "OpenReview",
+   "origins": [
+    "https://openreview.net"
+   ],
+   "home": "https://openreview.net/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "pacs_viewer": {
+   "hub": "PACS-viewer_mock",
+   "brand": "PACS Viewer",
+   "origins": [
+    "https://pacs.hospital.example"
+   ],
+   "home": "https://pacs.hospital.example/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "status": "needs_sync"
+  },
+  "shopify": {
+   "hub": "shopify_admin_mock",
+   "brand": "Shopify",
+   "origins": [
+    "https://admin.shopify.com"
+   ],
+   "home": "https://admin.shopify.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready",
+   "patches": [
+    "structured refunds[] with per-line quantities"
+   ]
+  },
+  "amazon_seller": {
+   "hub": "amazon_seller_mock",
+   "brand": "Amazon Seller Central",
+   "origins": [
+    "https://sellercentral.amazon.com"
+   ],
+   "home": "https://sellercentral.amazon.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "woocommerce": {
+   "hub": "woocommerce_mock",
+   "brand": "WooCommerce",
+   "origins": [
+    "https://greenleaforganics.com"
+   ],
+   "home": "https://greenleaforganics.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "salesforce": {
+   "hub": "salesforce_mock",
+   "brand": "Salesforce",
+   "origins": [
+    "https://acme.lightning.force.com"
+   ],
+   "home": "https://acme.lightning.force.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "hubspot": {
+   "hub": "hubspot_mock",
+   "brand": "HubSpot",
+   "origins": [
+    "https://app.hubspot.com"
+   ],
+   "home": "https://app.hubspot.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "dyn_fail",
+   "origin_group": "https://app.hubspot.com"
+  },
+  "hubspot_marketing": {
+   "hub": "hubspot_marketing_mock",
+   "brand": "HubSpot Marketing Hub",
+   "origins": [
+    "https://app.hubspot.com"
+   ],
+   "home": "https://app.hubspot.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "dyn_fail",
+   "origin_group": "https://app.hubspot.com"
+  },
+  "sap": {
+   "hub": "SAP_mock",
+   "brand": "SAP S/4HANA",
+   "origins": [
+    "https://my-s4hana.cloud.sap"
+   ],
+   "home": "https://my-s4hana.cloud.sap/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "servicenow": {
+   "hub": "ServiceNow_mock",
+   "brand": "ServiceNow",
+   "origins": [
+    "https://acme.service-now.com"
+   ],
+   "home": "https://acme.service-now.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "zendesk": {
+   "hub": "Zendesk_mock",
+   "brand": "Zendesk",
+   "origins": [
+    "https://acme.zendesk.com"
+   ],
+   "home": "https://acme.zendesk.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "stripe_dashboard": {
+   "hub": "stripe_dashboard_mock",
+   "brand": "Stripe",
+   "origins": [
+    "https://dashboard.stripe.com"
+   ],
+   "home": "https://dashboard.stripe.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "mailchimp": {
+   "hub": "mailchimp_mock",
+   "brand": "Mailchimp",
+   "origins": [
+    "https://us1.admin.mailchimp.com"
+   ],
+   "home": "https://us1.admin.mailchimp.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "klaviyo": {
+   "hub": "klaviyo_mock",
+   "brand": "Klaviyo",
+   "origins": [
+    "https://www.klaviyo.com"
+   ],
+   "home": "https://www.klaviyo.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "google_ads": {
+   "hub": "google_ads_mock",
+   "brand": "Google Ads",
+   "origins": [
+    "https://ads.google.com"
+   ],
+   "home": "https://ads.google.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "meta_ads": {
+   "hub": "meta_ads_mock",
+   "brand": "Meta Ads Manager",
+   "origins": [
+    "https://adsmanager.facebook.com"
+   ],
+   "home": "https://adsmanager.facebook.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "google_analytics": {
+   "hub": "google_analytics_mock",
+   "brand": "Google Analytics",
+   "origins": [
+    "https://analytics.google.com"
+   ],
+   "home": "https://analytics.google.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "amplitude": {
+   "hub": "amplitude_mock",
+   "brand": "Amplitude",
+   "origins": [
+    "https://app.amplitude.com"
+   ],
+   "home": "https://app.amplitude.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "mixpanel": {
+   "hub": "mixpanel_mock",
+   "brand": "Mixpanel",
+   "origins": [
+    "https://mixpanel.com"
+   ],
+   "home": "https://mixpanel.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "hotjar": {
+   "hub": "hotjar_mock",
+   "brand": "Hotjar",
+   "origins": [
+    "https://insights.hotjar.com"
+   ],
+   "home": "https://insights.hotjar.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "looker_studio": {
+   "hub": "looker_studio_mock",
+   "brand": "Looker Studio",
+   "origins": [
+    "https://lookerstudio.google.com"
+   ],
+   "home": "https://lookerstudio.google.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "tableau": {
+   "hub": "tableau_mock",
+   "brand": "Tableau",
+   "origins": [
+    "https://online.tableau.com"
+   ],
+   "home": "https://online.tableau.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "status": "ready"
+  },
+  "taobao_seller": {
+   "hub": "taobao_seller_mock",
+   "brand": "淘宝卖家中心",
+   "origins": [
+    "https://myseller.taobao.com"
+   ],
+   "home": "https://myseller.taobao.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "github": {
+   "hub": "github_mock",
+   "brand": "GitHub",
+   "origins": [
+    "https://github.com"
+   ],
+   "home": "https://github.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "gitlab": {
+   "hub": "gitlab_mock",
+   "brand": "GitLab",
+   "origins": [
+    "https://gitlab.com"
+   ],
+   "home": "https://gitlab.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "jira": {
+   "hub": "jira_mock",
+   "brand": "Jira",
+   "origins": [
+    "https://acme.atlassian.net"
+   ],
+   "home": "https://acme.atlassian.net/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready",
+   "origin_group": "https://acme.atlassian.net"
+  },
+  "linear": {
+   "hub": "linear_mock",
+   "brand": "Linear",
+   "origins": [
+    "https://linear.app"
+   ],
+   "home": "https://linear.app/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "circleci": {
+   "hub": "circleci_mock",
+   "brand": "CircleCI",
+   "origins": [
+    "https://app.circleci.com"
+   ],
+   "home": "https://app.circleci.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "vercel": {
+   "hub": "vercel_mock",
+   "brand": "Vercel",
+   "origins": [
+    "https://vercel.com"
+   ],
+   "home": "https://vercel.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "cloudflare": {
+   "hub": "cloudflare_mock",
+   "brand": "Cloudflare",
+   "origins": [
+    "https://dash.cloudflare.com"
+   ],
+   "home": "https://dash.cloudflare.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "aws_console": {
+   "hub": "aws_console_mock",
+   "brand": "AWS Console",
+   "origins": [
+    "https://console.aws.amazon.com"
+   ],
+   "home": "https://console.aws.amazon.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "azure": {
+   "hub": "azure_mock",
+   "brand": "Microsoft Azure",
+   "origins": [
+    "https://portal.azure.com"
+   ],
+   "home": "https://portal.azure.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "datadog": {
+   "hub": "datadog_mock",
+   "brand": "Datadog",
+   "origins": [
+    "https://app.datadoghq.com"
+   ],
+   "home": "https://app.datadoghq.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "sentry": {
+   "hub": "sentry_mock",
+   "brand": "Sentry",
+   "origins": [
+    "https://acme.sentry.io"
+   ],
+   "home": "https://acme.sentry.io/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "postman": {
+   "hub": "postman_mock",
+   "brand": "Postman",
+   "origins": [
+    "https://web.postman.co"
+   ],
+   "home": "https://web.postman.co/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "ready"
+  },
+  "wandb": {
+   "hub": "wandb_mock",
+   "brand": "Weights & Biases",
+   "origins": [
+    "https://wandb.ai"
+   ],
+   "home": "https://wandb.ai/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "status": "dyn_fail"
+  },
+  "aliyun": {
+   "hub": "aliyun_mock",
+   "brand": "阿里云",
+   "origins": [
+    "https://home.console.aliyun.com"
+   ],
+   "home": "https://home.console.aliyun.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "zh",
+   "status": "zh"
+  },
+  "visa_portal_ds160": {
+   "hub": "visa_portal_ds160_mock",
+   "brand": "DS-160 (CEAC)",
+   "origins": [
+    "https://ceac.state.gov"
+   ],
+   "home": "https://ceac.state.gov/",
+   "role": "scenario",
+   "scenario": "公共事务",
+   "locale": "en",
+   "status": "ready"
+  },
+  "usa_gov": {
+   "hub": "usa-gov_mock",
+   "brand": "USAGov",
+   "origins": [
+    "https://www.usa.gov"
+   ],
+   "home": "https://www.usa.gov/",
+   "role": "scenario",
+   "scenario": "公共事务",
+   "locale": "en",
+   "status": "needs_sync"
+  },
+  "california_tax": {
+   "hub": "california_tax_mock",
+   "brand": "CalFile (FTB)",
+   "origins": [
+    "https://webapp.ftb.ca.gov"
+   ],
+   "home": "https://webapp.ftb.ca.gov/",
+   "role": "scenario",
+   "scenario": "公共事务",
+   "locale": "en",
+   "status": "ready"
+  },
+  "airbnb": {
+   "hub": "airbnb_mock",
+   "brand": "Airbnb",
+   "origins": [
+    "https://www.airbnb.com"
+   ],
+   "home": "https://www.airbnb.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "medium": {
+   "hub": "medium_mock",
+   "brand": "Medium",
+   "origins": [
+    "https://medium.com"
+   ],
+   "home": "https://medium.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "yahoo_mail": {
+   "hub": "yahoo_mail_mock",
+   "brand": "Yahoo Mail",
+   "origins": [
+    "https://mail.yahoo.com"
+   ],
+   "home": "https://mail.yahoo.com/",
+   "role": "common",
+   "scenario": "公共工具",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "clickup": {
+   "hub": "clickup_mock",
+   "brand": "ClickUp",
+   "origins": [
+    "https://app.clickup.com"
+   ],
+   "home": "https://app.clickup.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "mattermost": {
+   "hub": "mattermost_mock",
+   "brand": "Mattermost",
+   "origins": [
+    "https://acme.cloud.mattermost.com"
+   ],
+   "home": "https://acme.cloud.mattermost.com/",
+   "role": "common",
+   "scenario": "公共工具",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "xero": {
+   "hub": "xero_mock",
+   "brand": "Xero",
+   "origins": [
+    "https://go.xero.com"
+   ],
+   "home": "https://go.xero.com/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "microsoft_excel_for_the_web": {
+   "hub": "microsoft_excel_for_the_web_mock",
+   "brand": "Microsoft Excel for the web",
+   "origins": [
+    "https://excel.cloud.microsoft"
+   ],
+   "home": "https://excel.cloud.microsoft/",
+   "role": "common",
+   "scenario": "公共工具",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "microsoft_word_for_the_web": {
+   "hub": "microsoft_word_for_the_web_mock",
+   "brand": "Microsoft Word for the web",
+   "origins": [
+    "https://word.cloud.microsoft"
+   ],
+   "home": "https://word.cloud.microsoft/",
+   "role": "common",
+   "scenario": "公共工具",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "bitbucket": {
+   "hub": "bitbucket_mock",
+   "brand": "Bitbucket",
+   "origins": [
+    "https://bitbucket.org"
+   ],
+   "home": "https://bitbucket.org/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "netsuite": {
+   "hub": "netsuite_mock",
+   "brand": "NetSuite",
+   "origins": [
+    "https://acme.app.netsuite.com"
+   ],
+   "home": "https://acme.app.netsuite.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "walmart": {
+   "hub": "walmart_mock",
+   "brand": "Walmart",
+   "origins": [
+    "https://www.walmart.com"
+   ],
+   "home": "https://www.walmart.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "substack": {
+   "hub": "substack_mock",
+   "brand": "Substack",
+   "origins": [
+    "https://substack.com"
+   ],
+   "home": "https://substack.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "freshbooks": {
+   "hub": "freshbooks_mock",
+   "brand": "FreshBooks",
+   "origins": [
+    "https://my.freshbooks.com"
+   ],
+   "home": "https://my.freshbooks.com/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "azure_devops": {
+   "hub": "azure_devops_mock",
+   "brand": "Azure DevOps",
+   "origins": [
+    "https://dev.azure.com"
+   ],
+   "home": "https://dev.azure.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "basecamp": {
+   "hub": "basecamp_mock",
+   "brand": "Basecamp",
+   "origins": [
+    "https://3.basecamp.com"
+   ],
+   "home": "https://3.basecamp.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "target": {
+   "hub": "target_mock",
+   "brand": "Target",
+   "origins": [
+    "https://www.target.com"
+   ],
+   "home": "https://www.target.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "wordpress_com": {
+   "hub": "wordpress_com_mock",
+   "brand": "WordPress.com",
+   "origins": [
+    "https://wordpress.com"
+   ],
+   "home": "https://wordpress.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "california_dmv": {
+   "hub": "california_dmv_mock",
+   "brand": "California DMV",
+   "origins": [
+    "https://www.dmv.ca.gov"
+   ],
+   "home": "https://www.dmv.ca.gov/",
+   "role": "scenario",
+   "scenario": "公共事务",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "smartsheet": {
+   "hub": "smartsheet_mock",
+   "brand": "Smartsheet",
+   "origins": [
+    "https://app.smartsheet.com"
+   ],
+   "home": "https://app.smartsheet.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "wayfair": {
+   "hub": "wayfair_mock",
+   "brand": "Wayfair",
+   "origins": [
+    "https://www.wayfair.com"
+   ],
+   "home": "https://www.wayfair.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "tier": "B",
+   "new": true,
+   "status": "ready"
+  },
+  "grubhub": {
+   "hub": "grubhub_mock",
+   "brand": "Grubhub",
+   "origins": [
+    "https://www.grubhub.com"
+   ],
+   "home": "https://www.grubhub.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "tier": "B",
+   "new": true,
+   "status": "ready"
+  },
+  "etsy": {
+   "hub": "etsy_mock",
+   "brand": "Etsy",
+   "origins": [
+    "https://www.etsy.com"
+   ],
+   "home": "https://www.etsy.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "heroku": {
+   "hub": "heroku_mock",
+   "brand": "Heroku",
+   "origins": [
+    "https://dashboard.heroku.com"
+   ],
+   "home": "https://dashboard.heroku.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "lexisnexis": {
+   "hub": "lexisnexis_mock",
+   "brand": "LexisNexis",
+   "origins": [
+    "https://advance.lexis.com"
+   ],
+   "home": "https://advance.lexis.com/",
+   "role": "scenario",
+   "scenario": "专业事务",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "best_buy": {
+   "hub": "best_buy_mock",
+   "brand": "Best Buy",
+   "origins": [
+    "https://www.bestbuy.com"
+   ],
+   "home": "https://www.bestbuy.com/",
+   "role": "scenario",
+   "scenario": "生活消费",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "digitalocean": {
+   "hub": "digitalocean_mock",
+   "brand": "DigitalOcean",
+   "origins": [
+    "https://cloud.digitalocean.com"
+   ],
+   "home": "https://cloud.digitalocean.com/",
+   "role": "scenario",
+   "scenario": "数字技术",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "freshdesk": {
+   "hub": "freshdesk_mock",
+   "brand": "Freshdesk",
+   "origins": [
+    "https://acme.freshdesk.com"
+   ],
+   "home": "https://acme.freshdesk.com/",
+   "role": "scenario",
+   "scenario": "产业运营",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "goodreads": {
+   "hub": "goodreads_mock",
+   "brand": "Goodreads",
+   "origins": [
+    "https://www.goodreads.com"
+   ],
+   "home": "https://www.goodreads.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "imdb": {
+   "hub": "imdb_mock",
+   "brand": "IMDb",
+   "origins": [
+    "https://www.imdb.com"
+   ],
+   "home": "https://www.imdb.com/",
+   "role": "scenario",
+   "scenario": "文化内容",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "my_social_security": {
+   "hub": "my_social_security_mock",
+   "brand": "my Social Security",
+   "origins": [
+    "https://secure.ssa.gov"
+   ],
+   "home": "https://secure.ssa.gov/",
+   "role": "scenario",
+   "scenario": "公共事务",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "myuscis": {
+   "hub": "myuscis_mock",
+   "brand": "myUSCIS",
+   "origins": [
+    "https://my.uscis.gov"
+   ],
+   "home": "https://my.uscis.gov/",
+   "role": "scenario",
+   "scenario": "公共事务",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "surveymonkey": {
+   "hub": "surveymonkey_mock",
+   "brand": "SurveyMonkey",
+   "origins": [
+    "https://www.surveymonkey.com"
+   ],
+   "home": "https://www.surveymonkey.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  },
+  "typeform": {
+   "hub": "typeform_mock",
+   "brand": "Typeform",
+   "origins": [
+    "https://admin.typeform.com"
+   ],
+   "home": "https://admin.typeform.com/",
+   "role": "scenario",
+   "scenario": "组织办公",
+   "locale": "en",
+   "tier": "A",
+   "new": true,
+   "status": "ready"
+  }
+ },
+ "planned": [
+  {
+   "hub": "city311_mock",
+   "brand": "NYC311",
+   "origins": [
+    "https://portal.311.nyc.gov"
+   ],
+   "scenario": "公共事务",
+   "role": "scenario",
+   "scope": "service requests, case status, agency routing",
+   "status": "planned"
+  },
+  {
+   "hub": "dmv_mock",
+   "brand": "California DMV",
+   "origins": [
+    "https://www.dmv.ca.gov"
+   ],
+   "scenario": "公共事务",
+   "role": "scenario",
+   "scope": "appointments, registration renewal, address change",
+   "status": "planned"
+  },
+  {
+   "hub": "irs_mock",
+   "brand": "IRS Online Account",
+   "origins": [
+    "https://sa.www4.irs.gov"
+   ],
+   "scenario": "公共事务",
+   "role": "scenario",
+   "scope": "balances, payment plans, notices, transcripts",
+   "status": "planned"
+  },
+  {
+   "hub": "permits_mock",
+   "brand": "Accela Citizen Access",
+   "origins": [
+    "https://aca-prod.accela.com"
+   ],
+   "scenario": "公共事务",
+   "role": "scenario",
+   "scope": "building permits, inspections, fees",
+   "status": "planned"
+  },
+  {
+   "hub": "courts_mock",
+   "brand": "Odyssey eFileCA",
+   "origins": [
+    "https://california.tylertech.cloud"
+   ],
+   "scenario": "公共事务",
+   "role": "scenario",
+   "scope": "e-filing, case lookup, hearing dates",
+   "status": "planned"
+  },
+  {
+   "hub": "medicare_mock",
+   "brand": "Medicare.gov",
+   "origins": [
+    "https://www.medicare.gov"
+   ],
+   "scenario": "公共事务",
+   "role": "scenario",
+   "scope": "plan comparison, claims, enrollment",
+   "status": "planned"
+  },
+  {
+   "hub": "library_mock",
+   "brand": "BiblioCommons",
+   "origins": [
+    "https://sfpl.bibliocommons.com"
+   ],
+   "scenario": "公共事务",
+   "role": "scenario",
+   "scope": "holds, renewals, fines, events",
+   "status": "planned"
+  }
+ ]
+}

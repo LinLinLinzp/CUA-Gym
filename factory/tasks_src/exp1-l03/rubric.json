@@ -1,0 +1,127 @@
+{
+ "task_id": "cua-hard/escalation-review-prep",
+ "task_version": "0.1.0",
+ "verifier_version": "0.1.0",
+ "reward_file": "/logs/verifier/reward.txt",
+ "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。主杠杆 L03（隐藏数据）：17 张目标工单中有 8 张（3141、3157、3166、3177、3183、3186、3204、3218）为 solved 或 hold，不在默认视图“Your unsolved tickets”中，也不在任何 unsolved 视图的可见范围内（solved 只出现在“Recently solved tickets”且共 81 行，按更新时间倒序，9–10 月的目标排在第 19–45 行）；升级到研发的工单只能靠 Engineering Escalations 分组与折叠在“Show more”里的“Jira issue”自定义字段识别，搜索不覆盖自定义字段，各工单的升级备注措辞也不同，没有单一筛选或搜索恰好列出它们。逐工单计分：标签三组（Z1–Z3）、隐藏目标（Z4）、Jira 评论中的工单号/账户数/ARR（J1–J3）、CSV 逐行（C1）都按目标逐个计分，只做首屏可见部分（visible_only 夹具）约得 0.33。标 core 的检查点即逐目标组，仅作说明，不调用 g.gate()/g.cap()。“不应改动/不应多做”类检查（Z5、Z6、J5）乘以覆盖率 cov 才得分：cov = 当前已带正确 bug 标签的目标数/17，但若没有任何目标新增正确标签则 cov=0，因此空操作为 0。站点状态文件缺失或不可解析、工单或 Jira issue 从状态中消失时记为 invalid，以非零退出码结束且不写 reward。",
+ "numeric_rule": "“今天”为 2026-11-18（America/Los_Angeles）。时间窗口“opened since September 1”= created_at ≥ 2026-09-01T00:00:00-07:00（即 2026-09-01T07:00:00Z）；3140 创建于 2026-08-31T23:40 PT（2026-09-01T06:40:00Z），不在窗口内。ARR 来自 /workspace/input/billing_accounts.csv 的 arr_usd，按请求人邮箱域名与 billing_domain 精确匹配求 account_id（Zendesk 组织名与账单名不一致，组织“Brightline”= brightline-electric.com = ACC-1004，而非 Brightline Solar ACC-1016；3177 的请求人无组织，域名 summitroofing.co = ACC-1005，不是 summitgutters.com 的 ACC-1021）。同一账户多张工单只计一次 ARR。阈值：受影响账户 ARR 合计 ≥ 150,000 则 Jira 优先级改为 Highest。文本中金额用正则提取：支持 $287,000、287000、$287k、287.0K，先去掉千分位逗号，k/K 乘 1000，取整后比较；工单号按 4 位整数提取（允许前导 #）。",
+ "common": {
+  "type": "客观要求",
+  "implementation": "tests/verifier.py:evaluate",
+  "evidence": "/var/lib/cua/state/{zendesk,slack,jira}/{initial,current}.json、/workspace/output/escalation_review.csv、expected.json",
+  "score_mode": "partial",
+  "coverage": "已实现，正反例夹具自测通过"
+ },
+ "checkpoints": [
+  {
+   "id": "Z1.tag_fld412",
+   "weight": 11,
+   "core": true,
+   "requirement": "FLD-412 的全部目标工单带 fld-412 标签",
+   "rule": "需新打标签的 4 张：3141、3157、3183、3233（3220、3222 种子中已带 fld-412，不计入分母）。hits = 这 4 张中 current tags 含 fld-412 的数量；wrong = 不属于 FLD-412 目标集合 {3141,3157,3183,3220,3222,3233} 却新增了 fld-412 的工单数（含 3200、3125）。得分 = max(0,(hits−wrong)/4)",
+   "trap": "Diego 已标过两张开放工单（重复处理）；3200 的 Jira 字段仍写 FLD-412 但已被改判为 FLD-398；3125 是 8 月的工单"
+  },
+  {
+   "id": "Z2.tag_fld398",
+   "weight": 11,
+   "core": true,
+   "requirement": "FLD-398 的全部目标工单带 fld-398 标签",
+   "rule": "目标 5 张：3166、3177、3186、3200、3236。hits = 其中 current tags 含 fld-398 的数量；wrong = 目标外新增 fld-398 的工单数（如被合并的 3168、8 月 31 日的 3140、3226）。得分 = max(0,(hits−wrong)/5)",
+   "trap": "3200 只有内部备注和 Jira 评论说明属于 FLD-398；3168 已合并进 3166（closed）；3140 创建于窗口前 20 分钟"
+  },
+  {
+   "id": "Z3.tag_fld447",
+   "weight": 11,
+   "core": true,
+   "requirement": "FLD-447 的全部目标工单带 fld-447 标签",
+   "rule": "目标 6 张：3204、3208、3210、3218、3230、3241。hits = 其中 current tags 含 fld-447 的数量；wrong = 目标外新增 fld-447 的工单数（如 FLD-431 的 3151、3173、3190、3194，或 3234）。得分 = max(0,(hits−wrong)/6)",
+   "trap": "Slack 线程中 FLD-431 已被 FLD-447 取代；3241 为 new 且未分配，只在 Unassigned/New 视图中"
+  },
+  {
+   "id": "Z4.hidden_targets",
+   "weight": 8,
+   "core": true,
+   "requirement": "默认视图之外的 solved / hold 目标工单也被找到并打上正确标签",
+   "rule": "8 张隐藏目标：3141→fld-412、3157→fld-412、3183→fld-412、3166→fld-398、3177→fld-398、3186→fld-398、3204→fld-447、3218→fld-447。得分 = 带正确标签的数量/8",
+   "trap": "solved 工单不出现在任何 unsolved 视图；hold 工单分配给 Wen，只在 All unsolved 中"
+  },
+  {
+   "id": "Z5.no_tags_on_exclusions",
+   "weight": 6,
+   "requirement": "排除对象不被打上任何 fld-* 标签，已有标签不被移除",
+   "rule": "以下工单不得新增任何以 fld- 开头的标签：3168（合并）、3140（窗口外）、3151、3173、3190、3194（FLD-431）、3125（8 月 FLD-412）、3104、3152、3161、3214、3224（FLD-388/405/422）、3144、3213、3226、3234（未升级的相似工单）；3200 不得带 fld-412；3220、3222 必须仍带 fld-412。全部满足得 cov，否则 0",
+   "trap": "保护非目标：相似标题的 Tier 1 工单、FLD-431 已修复的客户"
+  },
+  {
+   "id": "Z6.no_other_ticket_changes",
+   "weight": 3,
+   "requirement": "除加标签外不改动工单",
+   "rule": "所有种子工单的 status、group_id、assignee_id、priority 与 initial 相同，无工单被删除，任何工单的原有标签未被移除（新增评论不扣分）。满足得 cov，否则 0"
+  },
+  {
+   "id": "J1.comment_fld412",
+   "weight": 9,
+   "core": true,
+   "requirement": "FLD-412（issue id i412）上有 Dana（ju1）新增的评论，列出工单、账户数与 ARR",
+   "rule": "拼接 i412 上所有 userId=ju1 的新增评论。工单部分 0.4：提取 4 位数字，correct = 与 {3141,3157,3183,3220,3222,3233} 的交集数，wrong = 属于其他种子工单号的数量，0.4×max(0,(correct−wrong)/6)；账户数 0.2：匹配 “N (distinct|unique|different)? (customer)? accounts?” 或 “accounts?: N”，至少一处且全部 N=5；ARR 0.4：提取的金额中含 287000",
+   "trap": "Jira 描述只链接了 #3141；Copperline 两张工单（3222、3233）为同一账户 ACC-1001，账户数为 5 而非 6"
+  },
+  {
+   "id": "J2.comment_fld398",
+   "weight": 9,
+   "core": true,
+   "requirement": "FLD-398（i398）上有 ju1 新增评论，列出工单、账户数与 ARR",
+   "rule": "同 J1 规则：工单集合 {3166,3177,3186,3200,3236}（n=5），账户数 5，ARR 144500（ACC-1006 27,500 + ACC-1005 18,000 + ACC-1017 39,000 + ACC-1018 24,000 + ACC-1004 36,000）",
+   "trap": "Brightline 按名称误配 Brightline Solar（54,000）会得到 162,500 并越过阈值"
+  },
+  {
+   "id": "J3.comment_fld447",
+   "weight": 9,
+   "core": true,
+   "requirement": "FLD-447（i447）上有 ju1 新增评论，列出工单、账户数与 ARR",
+   "rule": "同 J1 规则：工单集合 {3204,3208,3210,3218,3230,3241}（n=6），账户数 5（Redwood 3210、3241 同为 ACC-1011），ARR 158400（ACC-1012 48,000 + ACC-1007 9,600 + ACC-1011 66,000 + ACC-1020 19,800 + ACC-1008 15,000）",
+   "trap": "漏掉 hold 的 3218（Vantage 19,800）会使合计 138,600 低于阈值"
+  },
+  {
+   "id": "J4.priorities",
+   "weight": 9,
+   "requirement": "按 ARR 阈值调整优先级，其余保持",
+   "rule": "FLD-412 priority=Highest、FLD-447 priority=Highest、FLD-398 priority=High（种子分别为 High、Medium、High）。得分 = 正确项/3；仅当 J1–J3 至少一项有 ju1 新增评论时计分，否则 0",
+   "trap": "FLD-398 为 144,500 < 150,000，不应升级"
+  },
+  {
+   "id": "J5.fld431_untouched",
+   "weight": 3,
+   "requirement": "被取代的 FLD-431 不做处理",
+   "rule": "i431 上无 ju1 新增评论，priority 仍为 Medium，status 仍为 Done。满足且 J1–J3 至少一项有新增评论时得 cov，否则 0",
+   "trap": "Tomás 的原始消息写的是 FLD-431，线程回复中改为 FLD-447"
+  },
+  {
+   "id": "S1.slack_thread_reply",
+   "weight": 4,
+   "requirement": "在 #support-escalations 中 Tomás 消息（m_e4）的线程 th_review 里回复各 bug 的结果",
+   "rule": "threads.th_review.replies 中新增、senderId=U01 的消息文本，按每次出现的 “FLD-数字” 切段；对 FLD-412、FLD-398、FLD-447 各 1/3：以该 key 开头的段落中出现其 ARR（287000、144500、158400）。在频道顶层发帖不计分"
+  },
+  {
+   "id": "C1.review_csv",
+   "weight": 7,
+   "core": true,
+   "requirement": "/workspace/output/escalation_review.csv 每个计入的工单一行",
+   "rule": "列 ticket_id,jira_key,account_id,status。行正确 = (ticket_id 去掉 # 与空白, jira_key 大写, account_id, status 小写) 与期望 17 行之一完全一致（见 expected.json ticket_account / ticket_status，例如 3141,FLD-412,ACC-1013,solved；3177,FLD-398,ACC-1005,hold；3241,FLD-447,ACC-1011,new）。得分 = 正确行数/max(17, 数据行数)；文件不存在为 0",
+   "trap": "3200 应记为 FLD-398；3236 的账户为 ACC-1004"
+  }
+ ],
+ "subjective": [],
+ "subjective_note": "无主观项：所有要求都落在 Zendesk、Jira、Slack 的持久化状态或本地 CSV 上。",
+ "fixtures": {
+  "golden": "1.0（参考终态）",
+  "nop": "0.0（未做任何操作）",
+  "naive": "≈0.09（只处理首屏可见的 unsolved 非 hold 工单；按原消息做 FLD-431；信任 3200 的过期字段计入 FLD-412；Brightline 误配 Solar）",
+  "visible_only": "≈0.33（其余陷阱全部处理正确，只漏掉 8 张 solved/hold 隐藏目标——主杠杆单独的代价）",
+  "slip_superseded": "≈0.61（仅做 FLD-431 而非 FLD-447）",
+  "slip_retriage": "≈0.74（仅把 3200 计入 FLD-412）",
+  "slip_hold": "≈0.62（仅漏掉 3 张 hold 工单 3157、3177、3218，FLD-447 因此未越阈值）",
+  "slip_brightline": "≈0.92（仅把 Brightline 配成 ACC-1016，FLD-398 误升 Highest）",
+  "slip_window": "≈0.78（仅把窗口外的 3140 与已合并的 3168 计入 FLD-398，误升 Highest）"
+ }
+}

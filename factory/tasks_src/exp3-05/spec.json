@@ -1,0 +1,30 @@
+{
+  "additive_scoring": true,
+  "task_id": "exp3-05",
+  "name": "cua-hard/summit-dock-reconciliation",
+  "version": "0.1.2",
+  "description": "Reconcile a Portland shipment against an approved PO revision, signed dock count and issued supplier invoice.",
+  "keywords": ["browser", "receiving", "accounts-payable", "three-way-match"],
+  "sites": ["netsuite", "yahoo_mail", "mattermost"],
+  "clock": "2026-11-18T11:30:00-08:00",
+  "timezone": "America/Los_Angeles",
+  "locale": "en-US",
+  "hide_browser_debug": true,
+  "metadata": {
+    "scenario": "产业运营",
+    "subscenario": "收货与应付对账",
+    "operation_difficulty": 2,
+    "tool_type": 1,
+    "difficulty": 2,
+    "levers": ["L06"]
+  },
+  "fixture_expectations": {
+    "golden": [1, 1],
+    "nop": [0, 0],
+    "naive": [0, 0.35],
+    "slip_revision": [0.55, 0.95],
+    "slip_dock": [0.55, 0.95],
+    "slip_invoice": [0.55, 0.95],
+    "slip_prior_lot": [0.55, 0.95]
+  }
+}

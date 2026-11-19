@@ -1,0 +1,134 @@
+{
+ "task_id": "cua-hard/january-new-hire-records",
+ "task_version": "0.1.0",
+ "verifier_version": "0.1.0",
+ "reward_file": "/logs/verifier/reward.txt",
+ "reward_rule": "加权部分分：reward = Σ(权重×得分)/Σ权重，满分 100 权重，每项得分 0～1。主杠杆 L06（来源冲突、无明示优先级）：标 core 的检查点（B1–B5、B7、B8、S1、C1，合计 76 权重）都取决于能否按职业常识在冲突来源间取舍——已签署（DocuSign completed）的文件优先于 ATS 表单和聊天；后签署的修订优先于原条款；作废（voided）或未签署（delivered/sent）的信封不生效；正式记录（Greenhouse 拒绝 + 备注）优先于早期群聊名单；无出处的传闻不构成撤回。不使用 g.gate() 或封顶（单个冲突判断失手只丢对应分）。“不得创建/不得改动”类检查（B7、B8、B9、G2）须先完成相关工作才得分：B7/B8/B9 要求 6 名目标新员工中至少 3 人已在 BambooHR 新建，G2 要求至少 3 个目标申请已移至 Hired；空操作为 0。主观项无。站点状态文件缺失或不可解析、种子员工或申请从状态中消失记为 invalid，以非零退出码结束且不写 reward。",
+ "numeric_rule": "“今天”为 2026-12-14（America/Los_Angeles）。BambooHR 新员工 = current.employees 中 id 不在 initial.employees 内的记录，按 firstName+lastName（去首尾空格、不区分大小写）匹配姓名。jobTitle 比较时去首尾空格、不区分大小写，并把词首的 “Sr.”/“Sr” 规范为 “Senior”；hireDate 精确比较 YYYY-MM-DD；payRate 按整数精确比较（数值或数字字符串均可）。Greenhouse 以 applications[].currentStageId 判断阶段，Hired 阶段 id 为 stage-<jobId>-8（见 expected.json）。Slack 只看 currentUser（U01，Rosa）在 messages[\"people-ops\"] 中 messageId 不在 initial 内的新消息（threadId 非空即为线程回复）；正文先去掉 Markdown/HTML 标记后匹配。CSV 用 csv.DictReader 读取，表头必须恰为 name,title,start_date,base_salary（去空格），base_salary 去掉 $ 与千分位逗号后按整数比较。",
+ "common": {
+  "type": "客观要求",
+  "implementation": "tests/verifier.py:evaluate",
+  "evidence": "/var/lib/cua/state/{greenhouse,docusign,slack,bamboohr}/{initial,current}.json、/workspace/output/january_new_hires.csv、expected.json",
+  "score_mode": "partial",
+  "coverage": "已实现，正反例夹具自测通过"
+ },
+ "checkpoints": [
+  {
+   "id": "B1.priya_revised_salary",
+   "weight": 9,
+   "core": true,
+   "requirement": "BambooHR 新建 Priya Raman，条款取已签署的修订版录用信",
+   "rule": "恰有 1 条新员工 Priya Raman：jobTitle=Senior Data Engineer，hireDate=2027-01-11，payRate=172000；三项全对得 1，否则 0",
+   "trap": "Greenhouse offer、Slack（“$165k base”）与本地 Raman_Priya_Offer_Letter.pdf 都写 165,000；该文件所在的 DocuSign 信封 env_201 已于 12/1 作废，真正 completed 的是 env_202 中的 Raman_Priya_Offer_Letter_rev1.pdf（172,000）"
+  },
+  {
+   "id": "B2.marcus_amended_start",
+   "weight": 9,
+   "core": true,
+   "requirement": "BambooHR 新建 Marcus Lindqvist，入职日取后签署的修订",
+   "rule": "恰有 1 条新员工 Marcus Lindqvist：jobTitle=Product Manager，hireDate=2027-01-19，payRate=150000；三项全对得 1，否则 0",
+   "trap": "Greenhouse、原录用信（11/24 completed）和 Slack（“Starting Jan 4”）都是 2027-01-04；12/10 completed 的 Amendment No. 1（Lindqvist_Marcus_Amendment_1.pdf）把入职日改为 2027-01-19；Slack 只说“发修订”，不给日期"
+  },
+  {
+   "id": "B3.elena_unsigned_amendment",
+   "weight": 9,
+   "core": true,
+   "requirement": "BambooHR 新建 Elena Petrova，按已签署的原录用信，不采纳未签署的修订",
+   "rule": "恰有 1 条新员工 Elena Petrova：jobTitle=Product Designer（不得为 Senior Product Designer），hireDate=2027-01-11，payRate=118000；三项全对得 1，否则 0",
+   "trap": "Slack 中招聘称“升级为 Senior Product Designer / $128k 已搞定”，本地也有写 128,000 的 Petrova_Elena_Amendment_1.pdf；但 DocuSign env_206 状态为 delivered（仅查看，未签署），修订未生效"
+  },
+  {
+   "id": "B4.leo_signed_title_salary",
+   "weight": 9,
+   "core": true,
+   "requirement": "BambooHR 新建 Leo Fischer，职位和薪资取 DocuSign 中实际签署的文件",
+   "rule": "恰有 1 条新员工 Leo Fischer：jobTitle=Senior Account Executive，hireDate=2027-01-04，payRate=105000；三项全对得 1，否则 0",
+   "trap": "Greenhouse 职位 Account Executive、offer 95,000，Slack 写“AE role”，本地 Fischer_Leo_Offer_Letter.pdf（AE/95,000）从未进入 DocuSign；completed 信封 env_207 中的文件是 Fischer_Leo_Offer_Letter_SAE.pdf（Senior Account Executive/105,000）"
+  },
+  {
+   "id": "B5.sam_despite_hearsay",
+   "weight": 7,
+   "core": true,
+   "requirement": "BambooHR 正常新建 Sam Ortiz，不因传闻暂缓",
+   "rule": "恰有 1 条新员工 Sam Ortiz：jobTitle=Backend Engineer，hireDate=2027-01-11，payRate=140000；三项全对得 1，否则 0",
+   "trap": "工程总监在 #recruiting 转述“朋友说 Sam 接受了反聘、建议先别建档”；无任何正式撤回，DocuSign 已签署，Greenhouse 申请仍 active，且 12/12 招聘备注确认 1/11 入职"
+  },
+  {
+   "id": "B6.hana_clean",
+   "weight": 5,
+   "requirement": "BambooHR 新建条款一致的 Hana Sato",
+   "rule": "恰有 1 条新员工 Hana Sato：jobTitle=Site Reliability Engineer，hireDate=2027-01-19，payRate=155000；全对得 1，否则 0",
+   "trap": "Greenhouse 另有近似候选人 Hannah Sato（QA Engineer，job-10，非录用对象）"
+  },
+  {
+   "id": "B7.nadia_withdrawn_not_created",
+   "weight": 7,
+   "core": true,
+   "requirement": "不为已撤回的 Nadia Haddad 建档",
+   "rule": "前提：B1–B6 的 6 名目标中至少 3 人已新建；新员工中不存在 Nadia Haddad 则得 1，否则 0；前提不满足得 0",
+   "trap": "她的录用信在 DocuSign 已 completed，Greenhouse offer 仍显示 accepted，11/23 Slack 一月名单也有她；但 Greenhouse 申请已于 12/7 以 “Candidate withdrew” 拒绝，置顶备注说明她邮件撤回"
+  },
+  {
+   "id": "B8.owen_ines_not_created",
+   "weight": 6,
+   "core": true,
+   "requirement": "不为非一月入职的 Owen Brandt、未签字的 Ines Carvalho 建档",
+   "rule": "前提同 B7；新员工中既无 Owen Brandt 也无 Ines Carvalho 得 1，否则 0",
+   "trap": "Owen 的 Greenhouse offer 起始日 2027-01-25，但已签署的录用信写 2027-02-01（不属一月）；Ines 的 Greenhouse offer 起始日 2027-01-19，但 offer 状态 sent、DocuSign env_213 为 delivered 未签"
+  },
+  {
+   "id": "B9.no_duplicates",
+   "weight": 4,
+   "requirement": "不重复建档已存在的 Jordan Avery，不改动近名员工 Priya Ramanathan",
+   "rule": "前提同 B7；新员工中无 Jordan Avery（已存在 id=33），且 id=14 Priya Ramanathan 的记录与 initial 完全相同；两者都满足得 1，否则 0",
+   "trap": "Rosa 12/10 在 #people-ops 说明已提前为 Jordan 建档；BambooHR 中已有姓名相近的 Priya Ramanathan（Data Engineer，152,000），误把她当作 Priya Raman 去改薪会破坏非目标数据"
+  },
+  {
+   "id": "B10.department_email",
+   "weight": 5,
+   "requirement": "新员工部门与工作邮箱正确",
+   "rule": "对 6 名目标（Priya→Engineering(2)、Marcus→Product(3)、Elena→Design(4)、Leo→Sales(5)、Sam→Engineering(2)、Hana→Engineering(2)），已新建且 departmentId 正确、email（不区分大小写）为 first.last@fernhill.io 的人数/6"
+  },
+  {
+   "id": "G1.greenhouse_hired",
+   "weight": 7,
+   "requirement": "7 名一月入职者的 Greenhouse 申请移至 Hired",
+   "rule": "app-1(Priya)、app-2(Marcus)、app-3(Elena)、app-4(Leo)、app-5(Sam)、app-6(Hana)、app-7(Jordan) 的 currentStageId 为各自 stage-<jobId>-8；得分=正确数/7",
+   "trap": "Jordan 已在 BambooHR 但 Greenhouse 仍停在 Offer 阶段，仍需移动"
+  },
+  {
+   "id": "G2.greenhouse_protect",
+   "weight": 3,
+   "requirement": "不移动非录用对象的申请",
+   "rule": "前提：G1 中至少 3 个已移动；除 7 个目标和 app-9（Owen，移不移均可）外，所有申请的 currentStageId 与 status 与 initial 相同（尤其 app-10 Ines 不在 Hired、app-8 Nadia 仍为 rejected、近名 Hannah Sato 未动）则得 1，否则 0"
+  },
+  {
+   "id": "S1.slack_mismatch_reply",
+   "weight": 9,
+   "core": true,
+   "requirement": "在 Theo 的 #people-ops 线程（父消息 m_p04）中回复 Greenhouse 与签署文件不一致的 offer 及签署值",
+   "rule": "取 Rosa 新发消息正文合并匹配 4 项：Priya/Raman 且含 172,000|172000|172k；Marcus/Lindqvist 且含 2027-01-19|Jan(uary) 19|1/19；Leo/Fischer 且含 105,000|105000|105k；Owen/Brandt 且含 2027-02-01|Feb(ruary) 1|2/1。得分=命中数/4；若相关消息均为 #people-ops 顶层消息而非该线程回复，得分×0.5",
+   "trap": "Elena 的 Greenhouse 记录与已签文件一致（修订未签），不属于不一致；Owen 不在一月名单里，但其 Greenhouse 起始日与签署值不同，仍应报告"
+  },
+  {
+   "id": "C1.csv_cohort",
+   "weight": 11,
+   "core": true,
+   "requirement": "/workspace/output/january_new_hires.csv 列出 7 名一月入职者的签署条款",
+   "rule": "表头 name,title,start_date,base_salary；期望行：Priya Raman/Senior Data Engineer/2027-01-11/172000、Marcus Lindqvist/Product Manager/2027-01-19/150000、Elena Petrova/Product Designer/2027-01-11/118000、Leo Fischer/Senior Account Executive/2027-01-04/105000、Sam Ortiz/Backend Engineer/2027-01-11/140000、Hana Sato/Site Reliability Engineer/2027-01-19/155000、Jordan Avery/Customer Success Manager/2027-01-04/85000。得分=四列全对的行数/7 × 0.5^(不在期望名单中的多余行数)；文件缺失或表头不符得 0",
+   "trap": "已在 BambooHR 的 Jordan 也要列入；Nadia、Owen、Ines 不应出现"
+  }
+ ],
+ "subjective": [],
+ "subjective_note": "无主观项：所有要求都落在四站持久化状态或本地 CSV 上；DocuSign 仅作信息来源，不要求写入。",
+ "fixtures": {
+  "golden": "1.0（参考终态）",
+  "nop": "0.0（未做任何操作）",
+  "naive": "≈0.16（采信 Greenhouse/Slack/本地首版 PDF：Priya 165k、Marcus 1/4、Elena 升级 128k、Leo AE 95k；因传闻跳过 Sam；为 Nadia、Owen、Ines 建档并移动 Owen/Ines；重复建 Jordan；Slack 只报 Elena；CSV 多 3 行）",
+  "slip_priya_voided": "≈0.87（仅 Priya 采用作废信封的 165k，Slack 漏报 Priya）",
+  "slip_marcus_amendment": "≈0.87（仅 Marcus 忽略修订用 1/4，Slack 漏报 Marcus）",
+  "slip_elena_unsigned": "≈0.89（仅 Elena 采用未签署修订 Senior Product Designer/128k）",
+  "slip_leo_draft": "≈0.87（仅 Leo 采用未发出的 AE/95k 草稿，Slack 漏报 Leo）",
+  "slip_nadia_withdrawn": "≈0.88（仅为已撤回的 Nadia 建档并写入 CSV）"
+ }
+}

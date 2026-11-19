@@ -1,0 +1,1 @@
+../../factory/agents/hard-verifier-writer.md

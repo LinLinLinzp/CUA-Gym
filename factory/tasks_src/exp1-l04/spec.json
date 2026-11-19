@@ -1,0 +1,39 @@
+{
+  "task_id": "stripe-payout-reconciliation",
+  "name": "cua-hard/stripe-payout-reconciliation",
+  "version": "0.1.1",
+  "additive_scoring": true,
+  "description": "Reconcile two landed Stripe payouts (35 client charges) for a design studio: match each charge to its QuickBooks invoice(s), receive payment, chase short payments by Gmail, refund an unrefunded duplicate in Stripe, book payout fees, and write a per-charge reconciliation CSV.",
+  "keywords": [
+    "browser",
+    "cli",
+    "bookkeeping",
+    "accounts-receivable",
+    "reconciliation",
+    "multi-site"
+  ],
+  "sites": [
+    "quickbooks",
+    "stripe_dashboard",
+    "gmail"
+  ],
+  "clock": "2026-11-16T09:30:00-05:00",
+  "timezone": "America/New_York",
+  "locale": "en-US",
+  "metadata": {
+    "scenario": "专业事务",
+    "subscenario": "代账与收款对账",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": ["L04"]
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.4476, 0.4476],
+    "slip_in_transit": [0.9283, 0.9283],
+    "slip_deposits": [0.8997, 0.8997],
+    "slip_wren_refund": [0.9366, 0.9366]
+  }
+}

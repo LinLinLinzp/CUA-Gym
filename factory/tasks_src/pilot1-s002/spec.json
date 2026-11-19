@@ -1,0 +1,38 @@
+{
+  "task_id": "pilot1-s002",
+  "name": "cua-hard/lsfs-december-programme",
+  "version": "0.1.0",
+  "description": "Turn a community film society's Reddit nomination thread into the December programme under the GitLab wiki rules and a local distributor quote sheet, then file screening issues in GitLab, add the screenings to Google Calendar, announce them on Reddit and write a programme CSV.",
+  "keywords": [
+    "browser",
+    "cli",
+    "film",
+    "community",
+    "multi-site"
+  ],
+  "sites": [
+    "reddit",
+    "gitlab",
+    "google_calendar"
+  ],
+  "clock": "2026-11-18T09:30:00+00:00",
+  "timezone": "Europe/London",
+  "locale": "en-GB",
+  "metadata": {
+    "scenario": "文化内容",
+    "subscenario": "社区影迷放映策划",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4
+  },
+  "fixture_expectations": {
+    "golden": [1.0, 1.0],
+    "nop": [0.0, 0.0],
+    "naive": [0.0, 0.35],
+    "slip_merge": [0.55, 0.95],
+    "slip_move": [0.55, 0.95],
+    "slip_repeat": [0.55, 0.95],
+    "slip_boundary": [0.55, 0.95],
+    "slip_solaris": [0.55, 0.95]
+  }
+}
