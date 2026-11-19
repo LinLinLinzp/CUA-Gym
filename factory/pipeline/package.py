@@ -26,8 +26,10 @@ from pathlib import Path
 
 if __package__:
     from .ap_package import AP_AGENT_TIMEOUT_SEC, DESKTOP_MCP_URL, package_sha256, validate_package
+    from .checkpoints import COLUMNS, check_checklist, check_report, markdown_cell
 else:
     from ap_package import AP_AGENT_TIMEOUT_SEC, DESKTOP_MCP_URL, package_sha256, validate_package
+    from checkpoints import COLUMNS, check_checklist, check_report, markdown_cell
 
 FACTORY = Path(__file__).resolve().parents[1]
 REPO = FACTORY.parent
@@ -68,21 +70,26 @@ def copy_verifier_kit(tests: Path, *, additive_scoring: bool):
         shutil.copy(kit / "cuaverify.py", tests)
 
 
-def selfcheck(src: Path, build: Path, spec: dict) -> dict:
-    """Score every fixture variant with the task's verifier; return {name: reward}."""
-    with tempfile.TemporaryDirectory() as tmp:
-        tests = Path(tmp) / "tests"
-        shutil.copytree(src / "tests", tests)
-        copy_verifier_kit(tests, additive_scoring=spec.get("additive_scoring", False))
-        if (build / "expected.json").exists():
-            shutil.copy(build / "expected.json", tests)
-        shutil.copytree(build / "variants", tests / "fixtures")
-        (tests / "fixtures" / "expectations.json").write_text(json.dumps(spec["fixture_expectations"]))
-        shutil.copy(TEMPLATE / "tests" / "test_verifier.py", tests)
-        result = subprocess.run([sys.executable, str(tests / "test_verifier.py")], capture_output=True, text=True)
+def selfcheck(task_dir: Path, checkpoint_ids: set[str]) -> dict:
+    """Score every staged fixture and check the reports written by its verifier."""
+    staged_tests = task_dir / "tests"
+    fixtures = json.loads((staged_tests / "fixtures" / "expectations.json").read_text())
+    if not fixtures:
+        raise ValueError("D11 needs verifier reports from at least one fixture")
+    with tempfile.TemporaryDirectory() as temp:
+        tests = Path(temp) / "tests"
+        reports = Path(temp) / "reports"
+        shutil.copytree(staged_tests, tests)
+        result = subprocess.run(
+            [sys.executable, str(tests / "test_verifier.py"), "--reports-dir", str(reports)],
+            capture_output=True, text=True,
+        )
         print(result.stdout, end="")
         if result.returncode != 0:
             raise SystemExit(f"fixture self-check failed:\n{result.stderr}")
+        for index, name in enumerate(fixtures):
+            check_report(reports / f"{index}.json", checkpoint_ids, f"fixture {name}")
+        print(f"PASS D11 {len(checkpoint_ids)} checkpoints across {len(fixtures)} verifier reports")
     return {line.split()[1]: float(line.split("reward=")[1].split()[0])
             for line in result.stdout.splitlines() if line.startswith("PASS")}
 
@@ -155,14 +162,14 @@ def checkpoints_md(rubric: dict) -> str:
         "## 评分口径", "", rubric["reward_rule"], "",
         "## 数值与时间口径", "", rubric.get("numeric_rule", "无"), "",
         "## 全部检查点", "",
-        "| 检查点编号 | 对应任务要求 | 要求类型 | 检查内容与证据 | 判定标准 | 实现或评审方式 | 分值/权重 | 评分方式 | 覆盖状态 |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| " + " | ".join(label for _, label in COLUMNS) + " |",
+        "| " + " | ".join("---" for _ in COLUMNS) + " |",
     ]
     for cp in rubric["checkpoints"]:
         row = {**common, **cp}
-        rule = row["rule"] + (f"（陷阱：{row['trap']}）" if row.get("trap") else "")
-        lines.append(f"| {row['id']} | {row['requirement']} | {row['type']} | {row['evidence']} | {rule} | "
-                     f"{row['implementation']} | {row['weight']} | {row['score_mode']} | {row['coverage']} |")
+        if row.get("rule") and row.get("trap"):
+            row["rule"] += f"（陷阱：{row['trap']}）"
+        lines.append("| " + " | ".join(markdown_cell(row.get(key)) for key, _ in COLUMNS) + " |")
     lines += ["", "## 主观检查点", "", rubric.get("subjective_note", "无主观项。") if not rubric.get("subjective") else
               "\n".join(f"- {s['id']}：{s['dimension']}" for s in rubric["subjective"])]
     if rubric.get("fixtures"):
@@ -249,7 +256,6 @@ def package(task: str, out_root: Path, skip_selfcheck: bool = False, *, computer
     with tempfile.TemporaryDirectory() as tmp:
         build = Path(tmp)
         run_world(src, build)
-        rewards = {} if skip_selfcheck else selfcheck(src, build, spec)
 
         if out.exists():
             shutil.rmtree(out)
@@ -320,7 +326,7 @@ def package(task: str, out_root: Path, skip_selfcheck: bool = False, *, computer
     shutil.copy(src / "rubric.json", out / "rubric.json")
     (out / "task.toml").write_text(task_toml(spec, computer_mcp=computer_mcp))
     (out / "verifier-checkpoints.md").write_text(checkpoints_md(json.loads((src / "rubric.json").read_text())))
-    (out / "evaluation.json").write_text(json.dumps(evaluation_json(spec, rewards), ensure_ascii=False, indent=2))
+    (out / "evaluation.json").write_text(json.dumps(evaluation_json(spec, {}), ensure_ascii=False, indent=2))
     for script in (out / "solution" / "solve.sh", out / "tests" / "test.sh", cua / "entrypoint.sh"):
         if script.is_file():
             script.chmod(0o755)
@@ -329,6 +335,14 @@ def package(task: str, out_root: Path, skip_selfcheck: bool = False, *, computer
 
 def make_tar(task_dir: Path, tars: Path, *, computer_mcp: bool = False) -> Path:
     """Platform format: files at the archive root, no top-level directory, no AppleDouble files."""
+    rubric = json.loads((task_dir / "rubric.json").read_text(encoding="utf-8"))
+    checkpoint_ids = check_checklist((task_dir / "verifier-checkpoints.md").read_text(encoding="utf-8"), rubric)
+    rewards = selfcheck(task_dir, checkpoint_ids)
+    evaluation_path = task_dir / "evaluation.json"
+    evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
+    evaluation["fixture_selfcheck"] = rewards
+    evaluation_path.write_text(json.dumps(evaluation, ensure_ascii=False, indent=2), encoding="utf-8")
+
     tars.mkdir(parents=True, exist_ok=True)
     suffix = "-computer-mcp" if computer_mcp else ""
     target = tars / f"{task_dir.name}{suffix}.tar.gz"
@@ -371,8 +385,9 @@ def main():
     computer_mcp = args.runtime == "computer-mcp"
     for task in args.tasks:
         out = package(task, args.out, args.skip_selfcheck, computer_mcp=computer_mcp)
-        print("packaged", out)
-        if not args.skip_selfcheck:
+        if args.skip_selfcheck:
+            print("draft", out)
+        else:
             print("tar", make_tar(out, args.out / "tars", computer_mcp=computer_mcp))
 
 

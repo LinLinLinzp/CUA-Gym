@@ -12,11 +12,13 @@ from tempfile import TemporaryDirectory
 
 if __package__:
     from .ap_package import package_sha256, validate_package
+    from .checkpoints import check_report
 else:
     from ap_package import package_sha256, validate_package
+    from checkpoints import check_report
 
 
-def check_trials(harbor, task, jobs):
+def check_trials(harbor, task, jobs, checkpoint_ids):
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     for agent, expected in (("nop", 0.0), ("oracle", 1.0)):
         job = f"{task.name}-{agent}-{run_id}"
@@ -30,6 +32,7 @@ def check_trials(harbor, task, jobs):
         score = (result.get("verifier_result") or {}).get("rewards", {}).get("reward")
         if result.get("exception_info") or score != expected:
             raise SystemExit(f"{agent} returned {score}; expected {expected}. See {trial}")
+        check_report(trial.parent / "verifier" / "report.json", checkpoint_ids, f"Harbor {agent}")
         if agent == "oracle":
             actions = trial.parent / "verifier/terminal-state/actions.jsonl"
             if not actions.is_file() or not actions.stat().st_size:
@@ -55,9 +58,9 @@ def main():
         raise SystemExit(f"Package checksum mismatch: {archive}")
     with TemporaryDirectory(prefix="cua-ap-") as temp:
         extracted = Path(temp) / task.name
-        validate_package(archive, destination=extracted)
+        checkpoint_ids = validate_package(archive, destination=extracted)
         print(f"AP file-only package {archive.name} SHA256 {checksum}", flush=True)
-        check_trials(harbor, extracted, jobs)
+        check_trials(harbor, extracted, jobs, checkpoint_ids)
 
 
 if __name__ == "__main__":

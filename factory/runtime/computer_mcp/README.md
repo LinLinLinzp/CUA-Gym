@@ -17,6 +17,11 @@ uses the snapshot socket on Harbor 0.1.45. The packager also checks
 Docker `COPY` inputs in AP's file-only layout, adding a `.gitkeep` when
 the desktop workspace input would otherwise be empty.
 
+The D11 release check requires all eight checkpoint fields in
+`verifier-checkpoints.md`. Every fixture runs the packaged verifier, and each
+`report.json` must contain each rubric checkpoint ID exactly once. A failed
+check stops publication of that archive.
+
 The task's `computer_mcp` declaration lists the supported desktop applications
 and output filenames. Optional `attachments` map site keys to original upload
 filenames. The grader reads site state and allowlisted files from the desktop
@@ -33,7 +38,8 @@ Run the packaged NOP and GUI Oracle on Harbor 0.1.45 using
 `factory/pipeline/platform_check.sh <task-dir>`. Set `HARBOR_BIN` to the path
 of the Harbor 0.1.45 executable if it is outside `PATH`.
 The check verifies the upload archive's SHA256, extracts only its files
-into a clean directory, and runs both trials from that directory.
+into a clean directory, and runs both trials from that directory. It also
+matches both Harbor reports to the published checkpoint list.
 `factory/pipeline/prescreen.sh` remains an optional model rollout. For a
 collected rollout, run `factory/pipeline/audit_computer_mcp.py <trial-dir> <evidence-dir>`
 to match the native transcript and ATIF screenshots to the desktop action log.

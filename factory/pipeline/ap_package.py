@@ -6,6 +6,11 @@ from pathlib import Path, PurePosixPath
 import shlex
 import tarfile
 
+if __package__:
+    from .checkpoints import check_checklist
+else:
+    from checkpoints import check_checklist
+
 
 AP_AGENT_TIMEOUT_SEC = 5 * 60 * 60
 DESKTOP_MCP_URL = "http://desktop:8000/mcp"
@@ -47,7 +52,8 @@ def file_members(bundle):
 
 def check_archive(bundle, files):
     required = {
-        "task.toml", "instruction.md", "environment/docker-compose.yaml",
+        "task.toml", "instruction.md", "rubric.json", "verifier-checkpoints.md",
+        "environment/docker-compose.yaml",
         "environment/Dockerfile", "environment/desktop/Dockerfile", "environment/mcp.json",
         "tests/test.sh", "tests/get_snapshot.py", "tests/verifier.py",
         "tests/snapshot.json", "environment/desktop/cua/snapshot.json",
@@ -58,6 +64,8 @@ def check_archive(bundle, files):
         raise ValueError(f"AP file-only package is missing: {', '.join(sorted(missing))}")
 
     check_task_config(bundle.extractfile(files["task.toml"]).read().decode())
+    rubric = json.load(bundle.extractfile(files["rubric.json"]))
+    checkpoint_ids = check_checklist(bundle.extractfile(files["verifier-checkpoints.md"]).read().decode(), rubric)
     launcher = json.load(bundle.extractfile(files["environment/mcp.json"]))
     if launcher.get("mcpServers") != {
         "desktop": {"type": "http", "url": DESKTOP_MCP_URL, "alwaysLoad": True}
@@ -77,14 +85,16 @@ def check_archive(bundle, files):
                 prefix = context + source
                 if prefix not in files and not any(name.startswith(prefix.rstrip("/") + "/") for name in files):
                     raise ValueError(f"AP file-only repack loses Docker COPY source {prefix}")
+    return checkpoint_ids
 
 
 def validate_package(path: Path, *, destination: Path | None = None):
     with tarfile.open(path) as bundle:
         files = file_members(bundle)
-        check_archive(bundle, files)
+        checkpoint_ids = check_archive(bundle, files)
         if destination is not None:
             bundle.extractall(destination, members=files.values(), filter="data")
+        return checkpoint_ids
 
 
 def package_sha256(path: Path):
