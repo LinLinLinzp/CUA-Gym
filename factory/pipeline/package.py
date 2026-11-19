@@ -87,7 +87,7 @@ def task_toml(spec: dict, *, computer_mcp: bool = False) -> str:
     md = spec["metadata"]
     check_labels(md)
     keywords = ", ".join(json.dumps(k) for k in spec["keywords"])
-    artifacts = "" if computer_mcp else 'artifacts = ["/workspace/output", "/logs/agent/browser", "/var/lib/cua/state"]'
+    artifacts = 'artifacts = ["/workspace/output", "/logs/agent/browser", "/var/lib/cua/state"]'
     endpoint = (
         'name = "desktop"\ntransport = "streamable-http"\nurl = "http://desktop:8000/mcp"'
         if computer_mcp else 'name = "browser"\ntransport = "stdio"\ncommand = "/usr/local/bin/browser-mcp"'
@@ -99,10 +99,20 @@ timeout_sec = 10.0
 retries = 30
 
 '''
+    environment = f'''[environment]
+build_timeout_sec = 1800.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+{healthcheck}[[environment.mcp_servers]]
+{endpoint}'''
+    header = f"\n{environment}" if computer_mcp else artifacts
+    footer = "" if computer_mcp else f"\n{environment}\n"
     desktop_apps = "\ndesktop_apps = " + json.dumps(spec["computer_mcp"]["applications"]) if computer_mcp else ""
     verifier_mode = '\nenvironment_mode = "shared"' if computer_mcp else ""
     return f'''schema_version = "1.4"
-{artifacts}
+{header}
 
 [task]
 name = "{spec["name"]}"
@@ -121,22 +131,13 @@ sites = [{", ".join(json.dumps(CATALOG[s]["brand"]) for s in spec["sites"])}]
 language = "en"{desktop_apps}
 
 [agent]
-timeout_sec = {float(spec.get("agent_timeout_sec", 1500 if computer_mcp else AGENT_TIMEOUT_SEC))}
+timeout_sec = {float(spec.get("agent_timeout_sec", AGENT_TIMEOUT_SEC))}
 user = "agent"
 
 [verifier]
 timeout_sec = 600.0
 user = "root"{verifier_mode}
-
-[environment]
-build_timeout_sec = 1800.0
-cpus = 2
-memory_mb = 4096
-storage_mb = 10240
-
-{healthcheck}[[environment.mcp_servers]]
-{endpoint}
-'''
+{footer}'''
 
 
 def checkpoints_md(rubric: dict) -> str:
