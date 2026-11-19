@@ -103,12 +103,10 @@ retries = 30
 build_timeout_sec = 1800.0
 cpus = 2
 memory_mb = 4096
-storage_mb = 10240
-
-{healthcheck}[[environment.mcp_servers]]
-{endpoint}'''
-    header = f"\n{environment}" if computer_mcp else artifacts
-    footer = "" if computer_mcp else f"\n{environment}\n"
+storage_mb = 10240'''
+    mcp_servers = f"[[environment.mcp_servers]]\n{endpoint}"
+    header = f"\n{mcp_servers}\n\n{environment}" if computer_mcp else artifacts
+    footer = "" if computer_mcp else f"\n{environment}\n\n{healthcheck}{mcp_servers}\n"
     desktop_apps = "\ndesktop_apps = " + json.dumps(spec["computer_mcp"]["applications"]) if computer_mcp else ""
     verifier_mode = '\nenvironment_mode = "shared"' if computer_mcp else ""
     return f'''schema_version = "1.4"
