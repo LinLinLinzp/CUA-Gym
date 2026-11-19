@@ -15,9 +15,9 @@ def check_task_config(text):
     import tomllib
 
     config = tomllib.loads(text)
-    lines = [line.strip() for line in text.splitlines()]
-    if lines.index("[[environment.mcp_servers]]") >= lines.index("[environment]"):
-        raise ValueError("Place [[environment.mcp_servers]] before [environment] for AP")
+    sections = [line.strip() for line in text.splitlines() if line.lstrip().startswith("[")]
+    if sections[-2:] != ["[[environment.mcp_servers]]", "[environment]"]:
+        raise ValueError("End task.toml with [[environment.mcp_servers]], then [environment] for AP")
     if config["environment"].get("mcp_servers") != [
         {"name": "desktop", "transport": "streamable-http", "url": DESKTOP_MCP_URL}
     ]:

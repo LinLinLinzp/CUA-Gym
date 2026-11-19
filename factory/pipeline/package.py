@@ -91,7 +91,7 @@ def task_toml(spec: dict, *, computer_mcp: bool = False) -> str:
     md = spec["metadata"]
     check_labels(md)
     keywords = ", ".join(json.dumps(k) for k in spec["keywords"])
-    artifacts = 'artifacts = ["/workspace/output", "/logs/agent/browser", "/var/lib/cua/state"]'
+    artifacts = "" if computer_mcp else '\nartifacts = ["/workspace/output", "/logs/agent/browser", "/var/lib/cua/state"]'
     endpoint = (
         f'name = "desktop"\ntransport = "streamable-http"\nurl = "{DESKTOP_MCP_URL}"'
         if computer_mcp else 'name = "browser"\ntransport = "stdio"\ncommand = "/usr/local/bin/browser-mcp"'
@@ -103,19 +103,20 @@ timeout_sec = 10.0
 retries = 30
 
 '''
-    environment = f'''[environment]
+    environment = '''[environment]
 build_timeout_sec = 1800.0
 cpus = 2
 memory_mb = 4096
 storage_mb = 10240'''
     mcp_servers = f"[[environment.mcp_servers]]\n{endpoint}"
-    header = f"\n{mcp_servers}\n\n{environment}" if computer_mcp else artifacts
-    footer = "" if computer_mcp else f"\n{environment}\n\n{healthcheck}{mcp_servers}\n"
+    footer = (
+        f"{mcp_servers}\n\n{environment}" if computer_mcp
+        else f"{environment}\n\n{healthcheck}{mcp_servers}"
+    )
     desktop_apps = "\ndesktop_apps = " + json.dumps(spec["computer_mcp"]["applications"]) if computer_mcp else ""
     verifier_mode = '\nenvironment_mode = "shared"' if computer_mcp else ""
     agent_timeout = float(AP_AGENT_TIMEOUT_SEC if computer_mcp else spec.get("agent_timeout_sec", AGENT_TIMEOUT_SEC))
-    return f'''schema_version = "1.4"
-{header}
+    return f'''schema_version = "1.4"{artifacts}
 
 [task]
 name = "{spec["name"]}"
@@ -140,7 +141,9 @@ user = "agent"
 [verifier]
 timeout_sec = 600.0
 user = "root"{verifier_mode}
-{footer}'''
+
+{footer}
+'''
 
 
 def checkpoints_md(rubric: dict) -> str:

@@ -9,8 +9,9 @@ python3 factory/pipeline/package.py --runtime computer-mcp \
 
 Upload the archives from `output/harbor/computer-mcp/tars`. Each archive has
 `task.toml` at the root and an adjacent SHA256 file. Before the packager
-publishes the archive, it checks that `[[environment.mcp_servers]]` comes
-before `[environment]`, the agent timeout is 18,000 seconds, and Claude Code
+publishes the archive, it checks that `task.toml` ends with
+`[[environment.mcp_servers]]` followed by `[environment]`, the agent timeout
+is 18,000 seconds, and Claude Code
 loads the desktop MCP endpoint declared in `task.toml`. The shared verifier
 uses the snapshot socket on Harbor 0.1.45. The packager also checks
 Docker `COPY` inputs in AP's file-only layout, adding a `.gitkeep` when
