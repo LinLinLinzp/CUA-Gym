@@ -1,0 +1,181 @@
+{
+  "task_id": "cua-batch/hx01-exhibition-proof-recall",
+  "task_version": "1.0.0",
+  "verifier_version": "1.0.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "100 additive points: 24 for local editable deliverables, 40 for actual published channel assets and copy, 12 for version-bound selective review, 24 for accepted handoff. No global score cap.",
+  "numeric_rule": "PNG 和 PSD 尺寸必须匹配批准图中的两组像素尺寸。PNG 内容与原始图层合成比较，允许裁切原点各方向最多 12 像素的操作误差、正常色彩管理和编码差异。几何对齐以整幅图案为依据，不能只检查图标。",
+  "common": {
+    "type": "客观要求",
+    "implementation": "tests/verifier.py:evaluate",
+    "evidence": "Asana、WordPress.com、Pinterest 的 initial/current、两网站上传 PNG、四个本地文件、原始 PSD 和 Asana 批准图。",
+    "score_mode": "partial",
+    "coverage": "19 个主实例和对照实例经正式 evaluate 检查；原生 GIMP 与三站实际 UI 终态检查为 1.00，Harbor 与模型实测另行执行。"
+  },
+  "checkpoints": [
+    {
+      "id": "G1.wordpress_crop",
+      "weight": 6,
+      "requirement": "输出合规的横向 PNG。",
+      "rule": "1200x630 approved landscape composition; reproduction credit layer raised to its clear tide-band position (WordPress X=-400,Y=-480; portrait X=0,Y=-580) when its placement is rejected; print plates and credit content preserved."
+    },
+    {
+      "id": "G2.pinterest_crop",
+      "weight": 6,
+      "requirement": "输出合规的纵向 PNG。",
+      "rule": "800x1200 approved portrait composition; in the contrast, raise the reproduction credit layer to its clear tide-band position (WordPress X=-400,Y=-480; portrait X=0,Y=-580) when the portrait placement is rejected."
+    },
+    {
+      "id": "G3.wordpress_layers",
+      "weight": 6,
+      "requirement": "横向裁切具有独立可编辑图层。",
+      "rule": "符合 G1 内容。源原有七层按顺序、图像与可见性保留，允许偏移及裁边，生产标记与旧版片保留为隐藏层。"
+    },
+    {
+      "id": "G4.pinterest_layers",
+      "weight": 6,
+      "requirement": "纵向裁切具有独立可编辑图层。",
+      "rule": "符合 G2 内容，按 G3 验证图层。"
+    },
+    {
+      "id": "W1.featured",
+      "weight": 10,
+      "requirement": "更新原已发布文章的特色图。",
+      "rule": "新附件像素等同合规横版 PNG，且 post 的 featuredImageId 指向此附件，文章仍发布。"
+    },
+    {
+      "id": "W2.accessibility_and_credit",
+      "weight": 6,
+      "requirement": "填写特色图 alt 和批准的资料说明。",
+      "rule": "实际特色图满足 W1，alt 描述图中潮线、码头或太阳等可辨元素，caption 含完整批准 credit，可接受等效标点。"
+    },
+    {
+      "id": "W3.visible_credit",
+      "weight": 4,
+      "requirement": "替换原文章的 credit 占位段落。",
+      "rule": "W1 已实现。完整批准 credit 取代旧占位，原正文其他内容、发布版本和其他文章保持。"
+    },
+    {
+      "id": "P1.portrait_asset",
+      "weight": 10,
+      "requirement": "发布使用真实纵版上传的新 Pin。",
+      "rule": "恰一条当前用户新增 Tide Marks Pin，上传像素等同合规纵向 PNG。接受源字节或可解码的实际上传，忽略 UI 写死的宽高字段。"
+    },
+    {
+      "id": "P2.board",
+      "weight": 5,
+      "requirement": "Pin 进入正确的公开展览板。",
+      "rule": "P1 已实现，新 Pin 所属公开板、板内关联一致；试阅和已归档板未改。"
+    },
+    {
+      "id": "P3.copy_and_destination",
+      "weight": 5,
+      "requirement": "Pin 有批准内容并指向访客文章。",
+      "rule": "P1 已实现，题名正确，描述包含批准 credit 与免费室内展的邀请，链接指向现有文章访客路径。"
+    },
+    {
+      "id": "A1.release_links",
+      "weight": 12,
+      "requirement": "在原 Asana 工单记录两个实际链接。",
+      "rule": "W1–W3、P1–P3 均已实现，原工单新增说明含访客文章与实际 Pin URL。"
+    },
+    {
+      "id": "A2.close_release",
+      "weight": 12,
+      "requirement": "完成原发布工单。",
+      "rule": "A1 已实现，只有授权发布工单完成，原批准附件和其他工单保持。"
+    },
+    {
+      "id": "R1.version_bound_review",
+      "weight": 12,
+      "requirement": "Complete an upload-bound review and selective revision.",
+      "rule": "First receipt identifies the accepted channel by actual image SHA-256 and object identity; the final receipt accepts the rejected channel replacement. Final decoded assets remain correct and accepted channel retains its exact approved upload."
+    }
+  ],
+  "subjective": [],
+  "subjective_note": "无主观项。",
+  "fixtures": {
+    "golden": "准确信息和完整发布。",
+    "legal_alternative": "两个原点微调、描述和交班自然同义。",
+    "nop": "零操作。",
+    "bypass": "使用正确版片但忽略发布取景框。",
+    "one_core": "One fully released WordPress channel and its editable local files; no Pinterest release or acceptance.",
+    "false_completion": "只关闭工单并填链接。",
+    "naive": "使用草稿版片，误发到同名草稿和试阅板。",
+    "wrong_portrait_safety": "纵版几何偏离许可框。",
+    "stale_approval": "两个正确几何裁切用了旧版片及错误署名。",
+    "flattened_sources": "导出像素正确但两个 PSD 被压平。",
+    "wrong_board": "视觉、文案和链接正确但 Pin 发到秘密预览板。",
+    "wrong_post": "编辑同名内部草稿。",
+    "visible_press_marks": "公开 PNG 和可编辑图像显示内部标记。",
+    "partial_local_only": "两个渠道的本地交付均完成。",
+    "partial_wordpress_only": "仅 WordPress 和相应本地文件完成。",
+    "stale_portrait_plate": "横版发布完整正确，纵版按已签取景但误用旧版片。",
+    "marked_pin_upload": "两组本地交付与文章均合规，但 Pin 实际上传了含生产标记的纵版。",
+    "unrepaired_review": "The signed source crops are both uploaded but rejected viewport is never repaired.",
+    "changed_accepted_channel": "Final artwork looks correct, but the accepted upload identity/hash does not match the review receipt."
+  },
+  "difficulty_review": {
+    "simple_checks": [
+      "W2.accessibility_and_credit",
+      "W3.visible_credit",
+      "P2.board",
+      "P3.copy_and_destination",
+      "A2.close_release"
+    ],
+    "weak_fixtures": {
+      "bypass": "bypass",
+      "one_core": "one_core",
+      "false_completion": "false_completion"
+    },
+    "constraints": {
+      "calculation": {
+        "checks": [
+          "G2.pinterest_crop",
+          "G4.pinterest_layers"
+        ],
+        "fixture": "wrong_portrait_safety"
+      },
+      "authority": {
+        "checks": [
+          "R1.version_bound_review",
+          "A1.release_links",
+          "A2.close_release"
+        ],
+        "fixture": "unrepaired_review"
+      },
+      "protection": {
+        "checks": [
+          "G3.wordpress_layers",
+          "G4.pinterest_layers"
+        ],
+        "fixture": "flattened_sources"
+      },
+      "scope": {
+        "checks": [
+          "P2.board"
+        ],
+        "fixture": "wrong_board"
+      },
+      "mapping": {
+        "checks": [
+          "W1.featured",
+          "W3.visible_credit"
+        ],
+        "fixture": "wrong_post"
+      },
+      "delivery": {
+        "checks": [
+          "P1.portrait_asset"
+        ],
+        "fixture": "marked_pin_upload"
+      },
+      "duplicates": {
+        "checks": [
+          "R1.version_bound_review"
+        ],
+        "fixture": "changed_accepted_channel"
+      }
+    }
+  }
+}

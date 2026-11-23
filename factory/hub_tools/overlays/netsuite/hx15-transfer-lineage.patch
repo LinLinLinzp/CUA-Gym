@@ -1,0 +1,208 @@
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -9,12 +9,13 @@
+ import RecordList from './pages/RecordList.jsx'
+ import RouteFrame from './pages/RouteFrame.jsx'
+ import { getSessionId } from './utils/dataManager.js'
++import TransferOrdersHx15 from './pages/TransferOrdersHx15.jsx'
+ import './styles.css'
+ 
+ function Session() {
+   useLocation()
+   const sid = getSessionId()
+-  return <Workspace key={sid}><Shell><Routes><Route path="*" element={<RouteFrame pages={{ home: Home, workspace: WorkspaceTools, record: Record, stock: StockReport, list: RecordList, queue: Queue }} />} /></Routes></Shell></Workspace>
++  return <Workspace key={sid}><Shell>{window.location.pathname.includes("transferord") ? <TransferOrdersHx15 /> : <Routes><Route path="*" element={<RouteFrame pages={{ home: Home, workspace: WorkspaceTools, record: Record, stock: StockReport, list: RecordList, queue: Queue }} />} /></Routes>}</Shell></Workspace>
+ }
+ 
+ export default function App() {
+--- /dev/null
++++ b/src/pages/TransferOrdersHx15.jsx
+@@ -0,0 +1,170 @@
++import { useEffect, useRef, useState } from 'react'
++import { useWorkspace, useToast } from '../context/Workspace.jsx'
++import { PageHeader, Field, Section, Status, choices } from '../components/Controls.jsx'
++
++const date = '2026-11-19'
++const itemId = 'item_seal440'
++const locations = [{ id: 'loc_1', text: 'Portland' }, { id: 'loc_2', text: 'Reno' }]
++const location = id => locations.find(row => row.id === id)?.text
++const table = (headers, rows) => <div className="table-scroll"><table><thead><tr>{headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{rows}</tbody></table></div>
++const link = (label, action) => <button type="button" className="header-sort" style={{ color: '#24556d' }} onClick={action}>{label}</button>
++
++function InventoryDetail({ row, quantity, lots, item, editable, onSave, onClose }) {
++  const dialog = useRef(null)
++  const [lot, setLot] = useState(row?.lotNumber || '')
++  const [amount, setAmount] = useState(row?.quantity || '')
++  const [assignment, setAssignment] = useState(row)
++  useEffect(() => { dialog.current.showModal() }, [])
++  const valid = lots.some(x => x.lotNumber === lot && x.onHand >= Number(amount)) && Number(amount) === Number(quantity) && Number(amount) > 0
++  const actions = <><button className="primary" disabled={editable && !assignment} onClick={() => onSave(assignment)}>OK</button><button onClick={onClose}>Close</button></>
++  const edit = editable && !assignment
++  return <dialog ref={dialog} aria-label="Inventory Detail" style={{ width: 'min(700px, calc(100vw - 32px))', maxHeight: 'calc(100vh - 32px)', borderRadius: 4 }} onCancel={event => { event.preventDefault(); onClose() }}>
++    <header><h2>Inventory Detail</h2><div className="toolbar" style={{ marginTop: 8 }}>{actions}</div></header>
++    <div className="fields" style={{ gridTemplateColumns: 'minmax(0, 3fr) minmax(75px, 1fr)' }}><Field label="Item" value={item?.itemId}/><Field label="Quantity" value={quantity}/><Field label="Description" value={item?.displayName}/><Field label="Units" value={item?.units}/></div>
++    <Section title="Inventory Detail">
++      {table(['Quantity', 'Lot Number'], edit ? [<tr key="edit"><td><input aria-label="Assignment Quantity" type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)}/></td><td><select aria-label="Lot Number" value={lot} onChange={e => setLot(e.target.value)}><option value="">— Select —</option>{lots.map(x => <option key={x.lotNumber} value={x.lotNumber}>{x.lotNumber}</option>)}</select></td></tr>] : [<tr key="lot"><td>{assignment?.quantity}</td><td>{assignment?.lotNumber}</td></tr>])}
++      {editable && <div className="toolbar" style={{ padding: 10 }}>{edit ? <><button className="primary" disabled={!valid} onClick={() => setAssignment({ lotNumber: lot, quantity: Number(amount) })}>Add</button><button onClick={onClose}>Cancel</button></> : <button onClick={() => setAssignment(null)}>Remove</button>}</div>}
++    </Section>
++    <footer className="toolbar">{actions}</footer>
++  </dialog>
++}
++
++export default function TransferOrdersHx15() {
++  const { state, commit } = useWorkspace()
++  const toast = useToast()
++  const [page, setPage] = useState({ type: 'list' })
++  const [form, setForm] = useState({})
++  const [detail, setDetail] = useState(null)
++  const [error, setError] = useState('')
++  const orders = state.transferOrders || []
++  const receipts = state.transferReceipts || []
++  const order = orders.find(x => x.id === page.orderId)
++  const fulfillments = state.itemFulfillments.filter(x => x.createdFromType === 'transferOrder' && x.createdFromId === order?.id)
++  const linkedReceipts = receipts.filter(x => x.createdFromId === order?.id)
++  const openShipments = fulfillments.filter(x => !linkedReceipts.some(r => r.fulfillmentId === x.id))
++  const received = id => receipts.filter(x => x.createdFromId === id).reduce((sum, x) => sum + x.quantity, 0)
++  const status = o => o.status === 'Pending Fulfillment' ? o.status : received(o.id) === o.quantity ? 'Received' : 'Pending Receipt'
++
++  function go(type, orderId, documentId) {
++    setError('')
++    setPage({ type, orderId, documentId })
++    setForm({})
++    window.scrollTo(0, 0)
++  }
++
++  function receive() {
++    if (openShipments.length === 1) go('receive', order.id, openShipments[0].id)
++    else go('select', order.id)
++  }
++
++  function change(key, value) {
++    setForm(current => ({ ...current, [key]: value }))
++  }
++
++  function save() {
++    const result = commit(current => {
++      const s = structuredClone(current)
++      const currentOrder = s.transferOrders.find(x => x.id === order?.id)
++      const shipment = s.itemFulfillments.find(x => x.id === page.documentId)
++      const raise = message => ({ state: current, error: message })
++      const doc = prefix => prefix + s.counters.hx15Document++
++      const stock = (lotNumber, locationId, delta) => {
++        const row = s.inventoryLots.find(x => x.lotNumber === lotNumber && x.locationId === locationId)
++        if (row) row.onHand += delta
++        else s.inventoryLots.push({ itemId, lotNumber, locationId, onHand: delta })
++        s.items.find(x => x.id === itemId).locations.find(x => x.locationId === locationId).onHand += delta
++      }
++      const memo = (form.memo || '').trim()
++      let tranId, orderId
++      if (page.type === 'new') {
++        const quantity = Number(form.quantity)
++        if (!form.from || !form.to || form.from === form.to || !form.item || !Number.isInteger(quantity) || quantity < 1)
++          return raise('Enter two different locations, an item and a positive whole quantity.')
++        tranId = doc('TO')
++        orderId = tranId
++        s.transferOrders.push({ id: orderId, tranId, fromLocationId: form.from, toLocationId: form.to, itemId, quantity, tranDate: date, memo, status: 'Pending Fulfillment' })
++      } else if (page.type === 'fulfill') {
++        const assignment = form.assignment
++        if (currentOrder.status !== 'Pending Fulfillment') return raise('This transfer order has already been fulfilled.')
++        if (!assignment || assignment.quantity !== currentOrder.quantity) return raise('Enter Inventory Detail for the full line quantity.')
++        const available = s.inventoryLots.find(x => x.lotNumber === assignment.lotNumber && x.locationId === currentOrder.fromLocationId)
++        if (!available || available.onHand < assignment.quantity) return raise('The lot does not have sufficient available quantity.')
++        stock(assignment.lotNumber, currentOrder.fromLocationId, -assignment.quantity)
++        tranId = doc('IF')
++        orderId = currentOrder.id
++        currentOrder.status = 'Pending Receipt'
++        s.itemFulfillments.push({ id: tranId, tranId, type: 'itemFulfillment', createdFromId: orderId, createdFromType: 'transferOrder', locationId: currentOrder.fromLocationId, tranDate: date, status: 'Shipped', memo, lines: [{ lineId: 'l1', itemId, ...assignment }] })
++      } else {
++        if (!shipment || shipment.createdFromId !== currentOrder.id || s.transferReceipts.some(x => x.fulfillmentId === shipment.id))
++          return raise('This item fulfillment is no longer available to receive.')
++        const line = shipment.lines[0]
++        tranId = doc('IR')
++        orderId = currentOrder.id
++        s.transferReceipts.push({ id: tranId, tranId, createdFromId: orderId, fulfillmentId: shipment.id, itemId, lotNumber: line.lotNumber, palletSeal: line.palletSeal, locationId: currentOrder.toLocationId, quantity: line.quantity, memo, tranDate: date, status: 'Received' })
++        stock(line.lotNumber, currentOrder.toLocationId, line.quantity)
++      }
++      return { state: s, tranId, orderId }
++    })
++    if (result.error) { setError(result.error); return }
++    go(page.type === 'new' ? 'order' : page.type === 'fulfill' ? 'shipment' : 'receipt', result.orderId, result.tranId)
++    toast('Saved ' + result.tranId)
++  }
++
++  const modal = detail && <InventoryDetail {...detail} onSave={assignment => { if (detail.editable) change('assignment', assignment); setDetail(null) }} onClose={() => setDetail(null)}/>
++  const openDetail = (row, quantity, editable = false) => setDetail({ row, quantity, editable, item: state.items.find(item => item.id === itemId), lots: state.inventoryLots.filter(x => x.locationId === order?.fromLocationId && x.onHand > 0) })
++  const detailButton = (row, quantity, editable) => <button aria-label="Inventory Detail" onClick={() => openDetail(row, quantity, editable)}>Inventory Detail</button>
++  const listButton = <button onClick={() => go('list')}>List</button>
++  const backButton = order && <button onClick={() => go('order', order.id)}>Back to Transfer Order</button>
++
++  if (page.type === 'list') return <>
++    <PageHeader title="Transfer Orders"><button className="primary" onClick={() => go('new')}>New Transfer Order</button></PageHeader>
++    <Section title="Results">{table(['View', 'Document Number', 'Date', 'From Location', 'To Location', 'Memo', 'Status'], orders.map(o => <tr key={o.id}><td>{link('View', () => go('order', o.id))}</td><td>{link(o.tranId, () => go('order', o.id))}</td><td>{o.tranDate}</td><td>{location(o.fromLocationId)}</td><td>{location(o.toLocationId)}</td><td>{o.memo}</td><td><Status value={status(o)}/></td></tr>))}</Section>
++  </>
++
++  if (page.type === 'order') return <>
++    <PageHeader title="Transfer Order" identity={order.tranId} status={status(order)}>{listButton}{order.status === 'Pending Fulfillment' && <button onClick={() => go('fulfill', order.id)}>Fulfill</button>}{openShipments.length > 0 && <button onClick={receive}>Receive</button>}</PageHeader>
++    <Section title="Primary Information"><div className="fields"><Field label="Date" value={order.tranDate}/><Field label="From Location" value={location(order.fromLocationId)}/><Field label="To Location" value={location(order.toLocationId)}/><Field label="Memo" value={order.memo}/></div></Section>
++    <Section title="Items">{table(['Item', 'Quantity', 'Fulfilled', 'Received'], [<tr key="item"><td>SEAL-440</td><td>{order.quantity}</td><td>{fulfillments.reduce((sum, x) => sum + x.lines[0].quantity, 0)}</td><td>{received(order.id)}</td></tr>])}</Section>
++    <Section title="Related Records">{table(['Date', 'Type', 'Document Number', 'Quantity', 'Memo'], [
++      ...fulfillments.map(x => <tr key={x.id}><td>{x.tranDate}</td><td>Item Fulfillment</td><td>{link(x.tranId, () => go('shipment', order.id, x.id))}</td><td>{x.lines[0].quantity}</td><td>{x.memo}</td></tr>),
++      ...linkedReceipts.map(x => <tr key={x.id}><td>{x.tranDate}</td><td>Item Receipt</td><td>{link(x.tranId, () => go('receipt', order.id, x.id))}</td><td>{x.quantity}</td><td>{x.memo || x.dockReference}</td></tr>)
++    ])}</Section>
++  </>
++
++  if (page.type === 'select') return <>
++    <PageHeader title="Receive Transfer Order" identity={order.tranId}>{backButton}</PageHeader>
++    <Section title="Item Fulfillments">{table(['Receive', 'Document Number', 'Ship Date', 'Quantity', 'Memo'], openShipments.map(x => <tr key={x.id}><td>{link('Receive', () => go('receive', order.id, x.id))}</td><td>{link(x.tranId, () => go('shipment', order.id, x.id))}</td><td>{x.tranDate}</td><td>{x.lines[0].quantity}</td><td>{x.memo}</td></tr>))}</Section>
++  </>
++
++  const isNew = page.type === 'new'
++  const isShipment = ['fulfill', 'shipment'].includes(page.type)
++  const editing = ['new', 'fulfill', 'receive'].includes(page.type)
++  const shippingDoc = fulfillments.find(x => x.id === page.documentId)
++  const receipt = linkedReceipts.find(x => x.id === page.documentId)
++  const document = shippingDoc || receipt
++  const line = shippingDoc?.lines[0] || receipt || form.assignment
++  const quantity = isNew ? form.quantity || '' : line?.quantity ?? order?.quantity
++  const title = isNew ? 'Transfer Order' : isShipment ? 'Item Fulfillment' : 'Item Receipt'
++  return <>
++    <PageHeader title={title} identity={!editing ? document?.tranId : undefined} status={!editing ? document?.status : undefined}>
++      {editing ? <><button className="primary" onClick={save}>Save</button><button onClick={() => order ? go('order', order.id) : go('list')}>Cancel</button></> : <>{backButton}{listButton}</>}
++    </PageHeader>
++    {error && <p role="alert" style={{ color: '#a00' }}>{error}</p>}
++    <Section title="Primary Information"><div className="fields">
++      <Field label="Date" value={editing ? date : document?.tranDate}/>
++      {isNew ? <><Field label="From Location" value={form.from} options={locations} onChange={value => change('from', value)}/><Field label="To Location" value={form.to} options={locations} onChange={value => change('to', value)}/></> : <>
++        <Field label="Created From">{link(order.tranId, () => go('order', order.id))}</Field>
++        {!isShipment && document && <Field label="Item Fulfillment" value={receipt?.fulfillmentId || shippingDoc?.tranId}/>}
++        <Field label="Location" value={location(isShipment ? order.fromLocationId : order.toLocationId)}/>
++      </>}
++      <Field label="Memo" value={editing ? form.memo : document?.memo || document?.dockReference} onChange={editing ? value => change('memo', value) : undefined}/>
++    </div></Section>
++    <Section title="Items">{table(isNew ? ['Item', 'Quantity'] : ['Item', 'Quantity', 'Inventory Detail'], [
++      <tr key="line"><td>{isNew ? <Field label="Item" options={choices('SEAL-440')} value={form.item} onChange={value => change('item', value)}/> : 'SEAL-440'}</td>
++        <td>{isNew ? <input aria-label="Quantity" type="number" min="1" value={quantity} onChange={e => change('quantity', e.target.value)}/> : quantity}</td>
++        {!isNew && <td>{detailButton(line, quantity, page.type === 'fulfill')}</td>}
++      </tr>
++    ])}</Section>
++    {modal}
++  </>
++}
+--- a/src/utils/dataManager.js
++++ b/src/utils/dataManager.js
+@@ -57,7 +57,7 @@
+   fetch(sid ? `/post?sid=${encodeURIComponent(sid)}` : '/post', {
+     method: 'POST', headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ action: 'set', state }),
+-  }).catch(() => {})
++  }).then(response => response.arrayBuffer()).catch(() => {})
+   return state
+ }
+ 
+@@ -70,5 +70,5 @@
+     keepalive: body.length < 60000, // browsers cap keepalive bodies at 64 KB
+     headers: { 'Content-Type': 'application/json' },
+     body,
+-  }).catch(() => {})
++  }).then(response => response.arrayBuffer()).catch(() => {})
+ }

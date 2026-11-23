@@ -1,0 +1,27 @@
+--- a/src/components/DocumentView.jsx
++++ b/src/components/DocumentView.jsx
+@@ -2,6 +2,15 @@
+ import { rows, titleOf } from '../utils/display.js'
+ import MediaPreview from './MediaPreview.jsx'
+ 
++const applicationPrefix = 'Vendor application: '
++const respondentLink = /^https:\/\/admin\.typeform\.com\/to\/[a-zA-Z0-9_-]+(?:\?sid=[a-zA-Z0-9_-]+)?$/
++
++function paragraphContent(text) {
++  if (typeof text !== 'string' || !text.startsWith(applicationPrefix)) return text
++  const url = text.slice(applicationPrefix.length)
++  return respondentLink.test(url) ? <>{applicationPrefix}<a href={url} target="_blank" rel="noopener noreferrer">{url}</a></> : text
++}
++
+ export default function DocumentView({ record, media, children }) {
+   const list = rows(media)
+   const featured = list.find((item) => item.id === record.featuredImageId)
+@@ -25,7 +34,7 @@
+           <MediaPreview item={list.find((item) => item.id === block.mediaId)} full />
+           {block.caption && <figcaption>{block.caption}</figcaption>}
+         </figure>
+-        case 'paragraph': return <p key={key}>{text}</p>
++        case 'paragraph': return <p key={key}>{paragraphContent(text)}</p>
+         default: return null
+       }
+     })}

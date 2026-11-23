@@ -1,0 +1,315 @@
+diff --git a/SEED.md b/SEED.md
+index 808d39a90610744d7526eda950691d745575e434..595a5936df60fe49f7e1bbb71f7b25fc8c4d17d2 100644
+--- a/SEED.md
++++ b/SEED.md
+@@ -1,5 +1,7 @@
+ # IKEA — build brief
+ 
++To show the optional cookie preferences panel, set `"uiPrompts": { "privacy": { "enabled": true, "path": "/", "id": "account-entry" } }` on the site's seed. A browser session remembers the choice by session ID and prompt ID. Dismissing the panel does not update orders or cart data.
++
+ - Real product: IKEA (https://www.ikea.com). Mock directory: `websites/ikea_mock`.
+ - Scenario: 生活消费; tier A (core mainstream: highest fidelity).
+ - Must-have workflows (each is P0/P1 and must persist structured records): cart, delivery/assembly booking, returns.
+diff --git a/src/App.jsx b/src/App.jsx
+index 6fcd289713b25f5b080f209294ef34886f61b489..2f0d3b61ea76bca7509d407a694dfcef7ba730d9 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,12 +1,13 @@
+-import React from 'react'
+-import { ArrowUpRight, Armchair, ChevronRight, ClipboardList, House, PackageOpen, ShoppingBag, Truck, UserRound } from 'lucide-react'
+-import { Outlet, Route, Routes } from 'react-router-dom'
++import React, { useState } from 'react'
++import { ArrowUpRight, Armchair, ChevronRight, ClipboardList, House, PackageOpen, Search, ShoppingBag, Truck, UserRound } from 'lucide-react'
++import { Outlet, Route, Routes, useLocation } from 'react-router-dom'
+ import { useAccount } from './store.jsx'
+-import { AccountLink, Empty, OrderRow, Page, Photo } from './components.jsx'
+-import { byId, future, list, newest, serviceLabel, slotText, statusLabel } from './utils/account.js'
++import { AccountLink, detailPath, Empty, OrderRow, Page, useAccountNavigate } from './components.jsx'
++import { future, list, newest, orderLabel, serviceLabel, slotText, statusLabel } from './utils/account.js'
+ import { Cart, Catalog, Checkout } from './pages/Shopping.jsx'
+ import { OrderDetail, Orders } from './pages/Orders.jsx'
+ import { ReturnDetail, ReturnForm, Returns } from './pages/Returns.jsx'
++import { getSessionId } from './utils/dataManager.js'
+ import { ServiceDetail, Services } from './pages/Services.jsx'
+ 
+ const navigation = [
+@@ -18,13 +19,59 @@ function quantity(cart) {
+   return list(cart?.lines).reduce((sum, line) => sum + (Number(line.quantity) || 0), 0)
+ }
+ 
++function PrivacyNotice() {
++  const { state } = useAccount()
++  const { pathname } = useLocation()
++  const settings = state.uiPrompts?.privacy
++  const key = `ikea:privacy:${getSessionId() || 'default'}:${settings?.id || 'v1'}`
++  const [dismissed, setDismissed] = useState('')
++  const [choices, setChoices] = useState(false)
++  if (settings?.enabled !== true || (settings.path && settings.path !== pathname)
++    || dismissed === key || sessionStorage.getItem(key)) return null
++
++  function save(choice) {
++    sessionStorage.setItem(key, choice)
++    setDismissed(key)
++    setChoices(false)
++  }
++  return <section className="privacy-notice" aria-labelledby="privacy-title">
++    <h2 id="privacy-title">Cookie preferences</h2>
++    {choices ? <form onSubmit={(event) => {
++      event.preventDefault()
++      save(event.currentTarget.elements.optional.checked ? 'optional' : 'essential')
++    }}>
++      <p>Essential storage keeps your cart and account available.</p>
++      <label><input name="optional" type="checkbox" /> Allow optional storage</label>
++      <div className="privacy-actions"><button className="button primary">Save preferences</button>
++        <button type="button" className="button" onClick={() => setChoices(false)}>Back</button></div>
++    </form> : <>
++      <p>This shopping simulation uses essential browser storage. Your choice applies to this browser session.</p>
++      <div className="privacy-actions"><button className="button primary" onClick={() => save('optional')}>Allow optional</button>
++        <button className="button" onClick={() => setChoices(true)}>Choose settings</button></div>
++    </>}
++  </section>
++}
++
+ function Shell() {
+   const { state } = useAccount()
+   const itemCount = quantity(state.cart)
++  const { pathname } = useLocation()
++  const navigate = useAccountNavigate()
+   return <>
+     <header className="site-header">
++      <div className="utility-bar"><div><span>US · English</span><AccountLink to="/services">Delivery and assembly help</AccountLink></div></div>
+       <div className="header-inner">
+-        <AccountLink to="/" className="wordmark" aria-label="IKEA account home">IKEA<span>.</span></AccountLink>
++        <AccountLink to="/" className="wordmark" aria-label="IKEA account home">IKEA</AccountLink>
++        <span className="account-context">Customer account <small>Simulation</small></span>
++        <form className="header-find" role="search" onSubmit={(event) => {
++          event.preventDefault()
++          const query = new FormData(event.currentTarget).get('order').trim()
++          navigate(query ? '/orders?' + new URLSearchParams({ q: query }) : '/orders')
++        }}>
++          <label className="sr-only" htmlFor="header-order">Find an order</label>
++          <input id="header-order" type="search" name="order" placeholder="Order number or item" />
++          <button type="submit" aria-label="Run order search"><Search size={18} aria-hidden="true" /></button>
++        </form>
+         <div className="header-actions">
+           <AccountLink to="/cart" className="header-cart" aria-label={'Cart, ' + itemCount + (itemCount === 1 ? ' item' : ' items')}>
+             <ShoppingBag size={20} aria-hidden="true" /> <span>Cart</span><strong>{itemCount}</strong>
+@@ -34,7 +81,7 @@ function Shell() {
+         </div>
+       </div>
+     </header>
+-    <div className="workspace">
++    <div className={pathname === "/" ? "workspace workspace-overview" : "workspace"}>
+       <aside className="rail">
+         <nav aria-label="Account navigation">
+           <p className="rail-title">Your account</p>
+@@ -46,6 +93,7 @@ function Shell() {
+       </aside>
+       <main className="content" id="main"><Outlet /></main>
+     </div>
++    <PrivacyNotice />
+   </>
+ }
+ 
+@@ -63,26 +111,33 @@ function Overview() {
+     ['/returns', 'Returns', latestReturn ? (latestReturn.reference || latestReturn.id) + ' · ' + statusLabel(latestReturn.status) : 'No return requests yet', PackageOpen],
+   ]
+   return <div className="stack">
+-    <section className="hero">
+-      <div className="hero-copy">
+-        <h1>{firstName ? 'Hi, ' + firstName + '.' : 'Your account'}</h1>
+-        <p>Pick up where you left off. Manage your orders, home services and returns in one place.</p>
+-        <AccountLink className="button hero-button" to="/orders">View purchases <ArrowUpRight size={17} aria-hidden="true" /></AccountLink>
++    <section className="account-service-overview" aria-labelledby="order-services-title">
++      <p className="account-crumb">Customer account / Order services</p>
++      <h1>{firstName ? 'Hi, ' + firstName + '.' : 'Your account'}</h1>
++      <h2 id="order-services-title">Manage your orders</h2>
++      <div className="account-intro">
++        <div className="order-service-main">
++          <p>Find receipts, check delivery status or make changes to an existing purchase.</p>
++          <div className="overview-actions">
++            {recentOrders[0] && <AccountLink to={detailPath('orders', recentOrders[0].id)} className="button primary">View latest order <ArrowUpRight size={16} aria-hidden="true" /></AccountLink>}
++            <AccountLink className="button secondary" to="/orders">View purchases</AccountLink>
++          </div>
++          {recentOrders[0] && <p className="latest-status">Latest order <strong>{orderLabel(recentOrders[0])}</strong><span>{statusLabel(recentOrders[0].status)}</span></p>}
++        </div>
++        <section aria-label="Account shortcuts" className="order-services"><h3>Account services</h3>
++          {shortcuts.map(([to, title, description, Icon]) => <AccountLink key={to} to={to} className="shortcut">
++            <span className="tile-icon"><Icon size={21} aria-hidden="true" /></span>
++            <span className="shortcut-title">{title}</span>
++            <span className="muted shortcut-description">{description}</span>
++            <ChevronRight className="shortcut-arrow" size={19} aria-hidden="true" />
++          </AccountLink>)}
++        </section>
+       </div>
+-      <Photo imageKey="living-room" className="hero-art" />
+-    </section>
+-    <section aria-label="Account shortcuts" className="shortcut-grid">
+-      {shortcuts.map(([to, title, description, Icon]) => <AccountLink key={to} to={to} className="card shortcut">
+-        <span className="tile-icon"><Icon size={21} aria-hidden="true" /></span>
+-        <span className="shortcut-title">{title}</span>
+-        <span className="muted shortcut-description">{description}</span>
+-        <ChevronRight className="shortcut-arrow" size={19} aria-hidden="true" />
+-      </AccountLink>)}
+     </section>
+     <section>
+       <div className="section-heading"><h2>Recent purchases</h2><AccountLink to="/orders">All purchases <ChevronRight size={16} aria-hidden="true" /></AccountLink></div>
+       {recentOrders.length ? <div className="card rows">{recentOrders.map((order) =>
+-        <OrderRow key={order.id} order={order} product={byId(state.products, list(order.lines)[0]?.productId)} />)}
++        <OrderRow key={order.id} order={order} showPhoto={false} />)}
+       </div> : <Empty title="No purchases yet" action={<AccountLink to="/products">Browse products</AccountLink>} />}
+     </section>
+   </div>
+diff --git a/src/components.jsx b/src/components.jsx
+index 0c607346f1c97a97e6e0dcd9f0a2478899e03fc4..05a9057565d94120ac9ef9addd520b1a117680c8 100644
+--- a/src/components.jsx
++++ b/src/components.jsx
+@@ -50,10 +50,10 @@ export function Photo({ imageKey, category, className = '' }) {
+   return <img className={'photo ' + className} src={'/art/' + key + '.png'} alt="" />
+ }
+ 
+-export function OrderRow({ order, product }) {
++export function OrderRow({ order, product, showPhoto = true }) {
+   const items = list(order.lines)
+-  return <AccountLink to={detailPath('orders', order.id)} className="record-row order-row">
+-    <Photo imageKey={product?.imageKey} category={product?.category} className="row-photo" />
++  return <AccountLink to={detailPath('orders', order.id)} className={'record-row order-row' + (showPhoto ? '' : ' order-row-text')}>
++    {showPhoto && <Photo imageKey={product?.imageKey} category={product?.category} className="row-photo" />}
+     <span className="record-name"><strong>Order {orderLabel(order)}</strong><small>
+       {[dateText(order.createdAt), items.length ? items.length + (items.length === 1 ? ' item type' : ' item types') : null].filter(Boolean).join(' · ')}
+     </small></span>
+diff --git a/src/pages/Orders.jsx b/src/pages/Orders.jsx
+index 25737c29e41f33bda52b78d69b05508fffa28b58..c2df8a8c56b323b29383094733e38bb890267b09 100644
+--- a/src/pages/Orders.jsx
++++ b/src/pages/Orders.jsx
+@@ -1,6 +1,6 @@
+-import React, { useState } from 'react'
++import React, { useEffect, useState } from 'react'
+ import { Search } from 'lucide-react'
+-import { useParams } from 'react-router-dom'
++import { useLocation, useParams, useSearchParams } from 'react-router-dom'
+ import { AccountLink, detailPath, Empty, OrderRow, Page, Photo, PriceSummary, Status } from '../components.jsx'
+ import { assemblyChoices, assemblySchedule, assemblySlots, returnQuantity } from '../data/mutations.js'
+ import { useAccount } from '../store.jsx'
+@@ -9,7 +9,11 @@ import { assemblyPath } from './Services.jsx'
+ 
+ export function Orders() {
+   const { state } = useAccount()
+-  const [search, setSearch] = useState('')
++  const [params] = useSearchParams()
++  const fromHeader = params.get('q') || ''
++  const { key } = useLocation()
++  const [search, setSearch] = useState(fromHeader)
++  useEffect(() => setSearch(fromHeader), [fromHeader, key])
+   const [status, setStatus] = useState('')
+   const orders = newest(state.orders)
+   const statuses = [...new Set(orders.map((order) => order.status).filter(Boolean))].sort()
+diff --git a/src/styles.css b/src/styles.css
+index 2c5023b3a616fa5b1248053ac84117d668583747..55f7e021c8a769003903c14bf5302a1011a90dfa 100644
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -1,7 +1,7 @@
+ :root {
+   font-family: system-ui, "Segoe UI", sans-serif;
+   color: #17232b;
+-  background: #f5f3ee;
++  background: #fff;
+   font-size: 15px;
+   line-height: 1.53;
+   font-variant-numeric: tabular-nums;
+@@ -35,8 +35,17 @@ img { display: block; max-width: 100%; }
+ .site-header { background: var(--surface); border-bottom: 1px solid var(--outline); }
+ .header-inner, .workspace { max-width: 1440px; margin: 0 auto; padding-inline: 32px; }
+ .header-inner { height: 72px; display: flex; align-items: center; justify-content: space-between; }
+-.wordmark { font-size: 32px; font-weight: 900; letter-spacing: -.085em; color: var(--blue); text-decoration: none; line-height: 1; }
+-.wordmark span { color: #b18412; padding-left: 2px; }
++.wordmark { display: inline-flex; align-items: center; background: #202a34; color: #fff; padding: 9px 13px; font-size: 22px; font-weight: 850; letter-spacing: .04em; text-decoration: none; line-height: 1; }
++.wordmark:hover { color: #fff; background: #384653; }
++.utility-bar { background: #202020; color: #fff; }
++.utility-bar > div { max-width: 1440px; margin: auto; padding: 0 32px; display: flex; justify-content: space-between; align-items: center; min-height: 40px; font-size: 13px; gap: 12px; }
++.utility-bar a { color: inherit; }
++.account-context { margin-right: auto; margin-left: 20px; font-weight: 650; }
++.account-context small { font-weight: 400; }
++.header-find { display: flex; flex: 0 1 365px; margin: 0 28px 0 18px; min-width: 120px; border-radius: 24px; background: #f1f2f3; border: 1px solid #e3e5e7; }
++.header-find input { width: 100%; min-width: 0; background: transparent; border: 0; border-radius: 24px 0 0 24px; padding: 9px 14px; }
++.header-find button { flex: 0 0 46px; display: grid; place-items: center; background: transparent; border: 0; border-radius: 0 24px 24px 0; color: #253648; }
++.header-find button:hover { background: #e4e7e9; }
+ .header-actions, .profile, .header-cart { display: flex; align-items: center; gap: 12px; }
+ .header-actions { gap: 22px; }
+ .header-cart { text-decoration: none; min-height: 44px; }
+@@ -51,14 +60,47 @@ img { display: block; max-width: 100%; }
+ .rail-link:hover, .rail-link.active { background: #e6edf0; color: var(--blue); }
+ .rail-link.active { border-left-color: var(--blue); }
+ .content { min-width: 0; }
+-.hero { position: relative; isolation: isolate; display: grid; align-items: center; min-height: 272px; border-radius: 18px; overflow: hidden; background: #17436a; color: white; }
+-.hero-copy { padding: 32px 0 32px 34px; width: min(55%, 460px); z-index: 1; }
+-.hero h1 { font-size: 48px; line-height: 1.08; letter-spacing: -.045em; font-weight: 750; }
+-.hero p { max-width: 32ch; margin: 12px 0 22px; color: #eef4f8; }
+-.hero-art { position: absolute; width: 58%; height: 100%; right: 0; bottom: 0; object-fit: cover; object-position: center 56%; }
+-.hero .hero-button { background: var(--yellow); color: var(--ink); }
+-.hero .hero-button:hover { background: #ffdb72; }
+-.hero .hero-button:focus-visible { outline-color: white; }
++.workspace-overview { display: block; padding-top: 0; }
++.workspace-overview .rail { border-bottom: 1px solid var(--outline); margin-bottom: 33px; }
++.workspace-overview .rail nav { display: flex; flex-wrap: wrap; gap: 5px 22px; }
++.workspace-overview .rail-title { display: none; }
++.workspace-overview .rail-link { border: 0; border-bottom: 3px solid transparent; border-radius: 0; margin: 0; padding-inline: 6px; min-height: 50px; }
++.workspace-overview .rail-link.active { border-bottom-color: #263d53; background: transparent; }
++.workspace-overview .rail-link svg { display: none; }
++.account-service-overview { padding-bottom: 34px; border-bottom: 1px solid var(--outline); }
++.account-crumb { font-size: 13px; margin-bottom: 18px; color: var(--muted); }
++.account-service-overview h1 { font-size: 17px; font-weight: 640; margin-bottom: 16px; }
++.account-service-overview > h2 { font-size: clamp(31px, 3.8vw, 43px); line-height: 1.16; letter-spacing: -.035em; margin-bottom: 33px; }
++.account-intro { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 54px; align-items: start; }
++.order-service-main > p:first-child { max-width: 61ch; font-size: 16px; }
++.overview-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block: 23px 19px; }
++.overview-actions .button { border-radius: 999px; padding-inline: 22px; }
++.overview-actions .primary { background: #171717; }
++.order-services h3 { margin-bottom: 5px; }
++.workspace-overview .order-services .shortcut { grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; padding: 12px 0; column-gap: 12px; }
++.order-services .shortcut .tile-icon { grid-area: 1 / 1 / span 2; background: none; width: auto; height: auto; margin: 0; }
++.order-services .shortcut-title { grid-column: 2; }
++.order-services .shortcut-description { grid-column: 2; }
++.order-services .shortcut-arrow { grid-area: 1 / 3 / span 2; }
++.latest-status { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 14px; }
++.latest-status span { border-left: 1px solid var(--outline); padding-left: 8px; }
++.workspace-overview .order-row-text { grid-template-columns: minmax(0, 1fr) auto auto auto; min-height: 60px; }
++.workspace-overview .shortcut { border: 0; border-radius: 0; border-bottom: 1px solid var(--outline); }
++.workspace-overview .rows { border-radius: 0; }
++.privacy-notice { position: fixed; bottom: 20px; right: 20px; z-index: 4; width: min(410px, calc(100vw - 40px)); background: white; box-shadow: 0 4px 24px #0002; border: 1px solid #777; border-top: 5px solid #252525; padding: 22px; }
++.privacy-notice p { margin: 10px 0 15px; }
++.privacy-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
++.privacy-actions .button { border-radius: 999px; }
++.privacy-actions .primary { background: #171717; }
++.privacy-actions .button:not(.primary) { background: white; border-color: #454545; }
++@media (max-width: 640px) {
++  .account-context, .header-find { display: none; }
++  .utility-bar > div { padding-inline: 16px; }
++  .account-intro { grid-template-columns: 1fr; gap: 22px; }
++  .workspace-overview .order-row-text { grid-template-columns: minmax(0, 1fr) auto; }
++  .workspace-overview .order-row-text .status { grid-column: 1; grid-row: 2; }
++  .workspace-overview .order-row-text .row-amount { grid-column: 2; }
++}
+ .shortcut-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+ .card { background: var(--surface); border: 1px solid var(--outline); border-radius: 14px; min-width: 0; }
+ .shortcut { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; padding: 18px 19px; text-decoration: none; color: var(--ink); align-content: start; }
+@@ -84,7 +126,6 @@ img { display: block; max-width: 100%; }
+ .row-chevron { color: var(--blue); display: inline-flex; }
+ .return-row .row-chevron { padding: 8px; margin-right: -8px; }
+ .photo { background: #eee6d8; object-fit: cover; }
+-.hero-art { background: transparent; }
+ .row-photo { width: 50px; height: 50px; border-radius: 8px; }
+ .status { display: inline-block; width: max-content; max-width: 100%; padding: 4px 9px; line-height: 1.35; border-radius: 50px; background: #e9eff1; color: var(--blue); font-size: 13px; font-weight: 650; }
+ .status.success { background: #e4f1e8; color: #245841; }
+@@ -202,11 +243,6 @@ dialog .actions { justify-content: end; }
+   .header-cart > span { display: none; }
+   .rail-link { padding: 6px 8px; gap: 5px; font-size: 13px; }
+   .rail-link svg { width: 16px; }
+-  .hero { min-height: 0; }
+-  .hero-copy { width: 100%; padding: 22px 20px 0; }
+-  .hero h1 { font-size: 34px; }
+-  .hero p { margin-bottom: 15px; }
+-  .hero-art { width: 100%; height: 155px; position: static; object-position: center 65%; }
+   .shortcut-grid { grid-template-columns: 1fr; gap: 10px; }
+   .shortcut { grid-template-columns: auto 1fr auto; align-items: center; padding: 12px 15px; gap: 2px 12px; }
+   .shortcut .tile-icon { grid-area: 1 / 1 / span 2; margin: 0; }

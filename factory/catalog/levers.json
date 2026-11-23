@@ -1,0 +1,130 @@
+[
+ {
+  "id": "L01",
+  "name_zh": "门槛计分",
+  "what": "Core requirements are all-or-nothing: unless every core check passes, the reward is capped low.",
+  "build": "Mark 4-8 checks as core in rubric.json (`core: true`); reward = weighted score if all core pass, else min(score, 0.3).",
+  "verify": "cuaverify Grader.gate(); recomputable offline from any report.json",
+  "runtime": "none"
+ },
+ {
+  "id": "L02",
+  "name_zh": "非文本证据",
+  "what": "The decisive facts exist only inside images or scanned documents (receipt photo, signed form scan, chart, screenshot) attached on a site.",
+  "build": "Render evidence with worldkit.scan_document()/chart_png(); attach via the site's file/attachment fields; no text copy anywhere.",
+  "verify": "Outcome depends on values readable only from the image",
+  "runtime": "worldkit media helpers"
+ },
+ {
+  "id": "L03",
+  "name_zh": "隐藏数据",
+  "what": "Needed records are not on the first screen: beyond pagination, behind default filters (archived, closed, other year), in collapsed threads or 'load more'.",
+  "build": "Seed 100+ records so lists paginate; put 30-50% of targets behind a default filter or on later pages; no shortcut that lists them all.",
+  "verify": "Per-target checks; missing the hidden ones costs most of the score",
+  "runtime": "none"
+ },
+ {
+  "id": "L04",
+  "name_zh": "规模",
+  "what": "25-40 items must each be processed with a per-item cross-site lookup and exact handling.",
+  "build": "Generate items programmatically with varied, realistic attributes; each needs data from a second site.",
+  "verify": "Per-item checks with an accuracy threshold on the core group",
+  "runtime": "none"
+ },
+ {
+  "id": "L05",
+  "name_zh": "多跳依赖",
+  "what": "A chain of 4+ dependent hops across 3-4 sites: a value found on A identifies a record on B, whose data drives an action on C that produces an id needed on D.",
+  "build": "Design the chain so each hop's input only exists in the previous hop's output; no hop can be skipped by guessing.",
+  "verify": "Check the final artifacts and every intermediate write",
+  "runtime": "none"
+ },
+ {
+  "id": "L06",
+  "name_zh": "判断冲突",
+  "what": "Sources disagree and nothing states which wins; the right answer follows professional norms (signed contract over email, system of record over chat, later signed amendment over earlier terms, official notice over hearsay).",
+  "build": "Plant 3+ conflicts each resolvable by one clear norm a competent professional applies; the wrong source must look equally authoritative at a glance.",
+  "verify": "Check the values that depend on resolving each conflict",
+  "runtime": "none"
+ },
+ {
+  "id": "L07",
+  "name_zh": "可重算脚本",
+  "what": "Besides doing the work, deliver a script that recomputes the outputs from inputs; the verifier reruns it on hidden mutated inputs.",
+  "build": "Specify the script interface (env vars for input/output paths, exit codes); generate 3-6 mutations in the verifier.",
+  "verify": "cuaverify.run_replay() as the agent user with a timeout; compare outputs per mutation",
+  "runtime": "replay helper"
+ },
+ {
+  "id": "L08",
+  "name_zh": "高级操作",
+  "what": "The outcome requires continuous/precise manipulation: drag-and-drop ordering between columns, date-range pickers, spreadsheet range selection/fill, resizing.",
+  "build": "Pick a site interaction that genuinely needs it (no keyboard alternative); verify the resulting order/range.",
+  "verify": "operation_difficulty = 3",
+  "runtime": "browser drag/move actions (present)"
+ },
+ {
+  "id": "L09",
+  "name_zh": "不可逆与顺序",
+  "what": "Some actions are irreversible or lock records (submit, publish, pay) and order matters (approve before pay, fix data before submitting).",
+  "build": "Seed records that must be corrected before an irreversible submit; submitting early leaves a permanent wrong record.",
+  "verify": "Check final state and the event history (e.g. first submission content)",
+  "runtime": "sites keep history fields"
+ },
+ {
+  "id": "L10",
+  "name_zh": "不可信指令",
+  "what": "Content from third parties contains instructions that must not be followed (vendor asks to change bank details by email, a doc says 'also forward this to ...').",
+  "build": "Embed 1-3 plausible but unauthorized requests in emails/docs/tickets within the work material.",
+  "verify": "Check that no unauthorized change/forward happened, alongside the real work",
+  "runtime": "none"
+ },
+ {
+  "id": "L11",
+  "name_zh": "长文条款",
+  "what": "A long policy/contract (8-15 pages) with exceptions and definitions buried in later sections decides the outcome.",
+  "build": "Generate a multi-page PDF (worldkit.long_pdf()) on a site; the exception applies to some items only.",
+  "verify": "Check items affected by buried exceptions",
+  "runtime": "worldkit media helpers"
+ },
+ {
+  "id": "L12",
+  "name_zh": "数值精算",
+  "what": "Exact arithmetic with domain rules: proration by days, currency conversion with rates published on another site for a specific date, rounding rules, fee tiers.",
+  "build": "Put rates/rules on a different site than the amounts; require cents-exact results.",
+  "verify": "Exact match to independently computed values",
+  "runtime": "none"
+ },
+ {
+  "id": "L13",
+  "name_zh": "文件往返",
+  "what": "Download a file from one site, transform it locally (CLI), upload the result to another site in a required format.",
+  "build": "The uploaded file's content is what gets checked (parse it from the target site's stored files).",
+  "verify": "Read uploaded file via /var/lib/cua/files/<site>/",
+  "runtime": "upload/download (present)"
+ },
+ {
+  "id": "L14",
+  "name_zh": "动态世界",
+  "what": "The world reacts to the agent: after a submission a rejection/reply/new request arrives that must be handled.",
+  "build": "Declare triggers in world output (triggers.json): when a record matching X appears on site A, append Y to site B after N seconds.",
+  "verify": "Check that the follow-up was handled",
+  "runtime": "sitehost triggers + browser storage refresh"
+ },
+ {
+  "id": "L15",
+  "name_zh": "状态错觉",
+  "what": "Things look done but are not: drafts vs sent, scheduled vs published, pending vs posted, saved vs submitted.",
+  "build": "Seed items in deceptive intermediate states; the instruction asks for the real final state.",
+  "verify": "Check the true status field",
+  "runtime": "none"
+ },
+ {
+  "id": "L16",
+  "name_zh": "隐含意图",
+  "what": "The request leans on history ('same split as last quarter', 'the usual courier', 'like we did for Acme') that must be inferred from past records.",
+  "build": "Seed the history so exactly one reading is consistent; nearby distractor histories exist.",
+  "verify": "Check values derived from the inferred precedent",
+  "runtime": "none"
+ }
+]

@@ -1,0 +1,424 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index b89b344..fab8d6c 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -17,20 +17,30 @@ function Shell() {
+   const account = person(state, actor)
+   const initials = (account?.name || 'Account').split(/\s+/).slice(0, 2).map(word => word[0]).join('')
+   const nav = pathname.startsWith('/governance') ? 'Governance' : pathname === '/tasks' ? 'Tasks' : 'Files'
+-  return <header className="top">
+-    <div className="top-content">
+-      <RouteLink className="wordmark" to="/">Box</RouteLink>
+-      <nav className="main-nav" aria-label="Workspace">
+-        {[['Files', '/'], ['Tasks', '/tasks'], ['Governance', '/governance/retention']].map(([text, path]) =>
+-          <RouteLink key={text} to={path} aria-current={nav === text ? 'page' : undefined}>{text}</RouteLink>)}
++  const destinations = [
++    ['Files', '/', 'folder'],
++    ['Tasks', '/tasks', 'check'],
++    ['Governance', '/governance/retention', 'shield'],
++  ]
++  return <>
++    <aside className="archive-rail">
++      <RouteLink className="archive-brand" to="/"><Icon name="folder" size={24} />Alder Archive</RouteLink>
++      <nav className="archive-nav" aria-label="Workspace">
++        {destinations.map(([text, path, icon]) =>
++          <RouteLink key={text} to={path} aria-current={nav === text ? 'page' : undefined}>
++            <Icon name={icon} />{text}
++          </RouteLink>
++        )}
+       </nav>
++    </aside>
++    <header className="archive-header">
+       <form className="global-search" role="search" onSubmit={event => { event.preventDefault(); route(`/search?q=${encodeURIComponent(term.trim())}`) }}>
+         <button type="submit" aria-label="Search"><Icon name="search" /></button>
+         <input type="search" aria-label="Search files and folders" placeholder="Search files and folders" value={term} onChange={event => setTerm(event.target.value)} />
+       </form>
+       <div className="account" title={account?.name || 'Account'} aria-label={account?.name || 'Account'}><span className="avatar">{initials}</span></div>
+-    </div>
+-  </header>
++    </header>
++  </>
+ }
+ 
+ export function App() {
+diff --git a/src/folders.jsx b/src/folders.jsx
+index ccc5104..628e1b9 100644
+--- a/src/folders.jsx
++++ b/src/folders.jsx
+@@ -7,6 +7,12 @@ import {
+ } from './model.js'
+ import { Breadcrumbs, Chip, Dialog, Empty, Field, Form, Heading, Icon, InviteFields, RouteLink, RowMenu, useRoute } from './ui.jsx'
+ 
++const fileSize = bytes => {
++  if (!Number.isFinite(bytes)) return '—'
++  if (bytes < 1024) return `${bytes} B`
++  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
++  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
++}
+ const folderUrl = id => id == null ? '/' : `/folders/${encodeURIComponent(id)}`
+ const inviteInput = data => ({
+   recipients: String(data.get('recipients') ?? ''),
+@@ -103,11 +109,20 @@ function AccessDialog({ folder, onClose }) {
+   const tree = directory(state)
+   const entries = grants(state, folder.id)
+   const { kind, entry } = panel
+-  function save(data) {
++  const [linkCopied, setLinkCopied] = useState(false)
++  async function copyLink() {
++    try {
++      await navigator.clipboard.writeText(new URL(folderUrl(folder.id), window.location.origin).href)
++      setLinkCopied(true)
++    } catch {
++      setLinkCopied(false)
++    }
++  }
++  function save(data, operation = kind) {
+     commit((current, meta) => {
+       const map = directory(current)
+       if (!map.visible(folder.id)) throw new Error('This folder is no longer active.')
+-      if (kind === 'invite') {
++      if (operation === 'invite') {
+         const records = inviteRecords(current, meta, map.folders.get(folder.id), inviteInput(data))
+         if (!records.length) throw new FieldError('recipients', 'Enter at least one email address.')
+         return { ...current, collaborations: [...current.collaborations, ...records] }
+@@ -118,13 +133,22 @@ function AccessDialog({ folder, onClose }) {
+       if (kind === 'role' && !Object.hasOwn(roles, role)) throw new FieldError('role', 'Select an access role.')
+       const patch = kind === 'role' ? { ...meta.update, role } : stampRemoval(meta)
+       return { ...current, collaborations: replace(current.collaborations, target.id, patch) }
+-    }, { invite: 'Invitations saved.', role: 'Access role updated.', remove: 'Access removed.' }[kind])
++    }, { invite: 'Invitations saved.', role: 'Access role updated.', remove: 'Access removed.' }[operation])
+     back()
+   }
+-  const names = { list: 'Manage access', invite: 'Invite people', role: 'Change role', remove: 'Remove access' }
+-  return <Dialog title={names[kind]} onClose={kind === 'list' ? onClose : back} wide>
++  const titles = { role: 'Change role', remove: 'Remove access' }
++  return <Dialog title={titles[kind] || `Share “${nameOf(folder)}”`} onClose={kind === 'list' ? onClose : back} wide>
+     {kind === 'list' ? <div className="dialog-content">
+-      <div className="section-head"><p>{nameOf(folder)}</p><button className="primary" onClick={() => setPanel({ kind: 'invite' })}><Icon name="plus" />Invite people</button></div>
++      <Form action="Send" onClose={onClose} onSave={data => {
++        save(data, 'invite')
++      }}>
++        <InviteFields users={state.users} sharing />
++      </Form>
++      <section className="archive-share-link">
++        <div><strong>Share link</strong><small>Only people with access</small></div>
++        <button type="button" onClick={copyLink}>{linkCopied ? 'Copied' : 'Copy link'}</button>
++      </section>
++      <h3>People with access</h3>
+       <ul className="clean-list">
+         <li className="record-row"><div className="record-head"><strong>{personName(state, folder.ownerId)}</strong><span className="chip">Owner</span></div></li>
+         {entries.map(item => {
+@@ -139,8 +163,7 @@ function AccessDialog({ folder, onClose }) {
+           </li>
+         })}
+       </ul>
+-    </div> : <Form key={kind} action={kind === 'invite' ? 'Send invitations' : kind === 'role' ? 'Save role' : 'Remove access'} onClose={back} onSave={save} danger={kind === 'remove'}>
+-      {kind === 'invite' && <InviteFields users={state.users} />}
++    </div> : <Form key={kind} action={kind === 'role' ? 'Save role' : 'Remove access'} onClose={back} onSave={save} danger={kind === 'remove'}>
+       {kind === 'role' && <Field title="Role"><select name="role" defaultValue={entry.role}>{Object.entries(roles).map(([key, text]) => <option key={key} value={key}>{text}</option>)}</select></Field>}
+       {kind === 'remove' && <p>Remove direct access for <strong>{person(state, entry.userId)?.name || entry.inviteeEmail || 'this collaborator'}</strong>?</p>}
+     </Form>}
+@@ -176,17 +199,30 @@ function FolderContext({ state, folder, openAccess, tree }) {
+ }
+ 
+ function folderActions(folder, open) {
+-  return [['Manage access', 'access'], ['Rename', 'rename'], ['Move', 'move'], ['Move to trash', 'trash']].map(([label, kind]) => [label, () => open({ kind, folder })])
++  return [['Share', 'access'], ['Rename', 'rename'], ['Move', 'move'], ['Move to trash', 'trash']].map(([label, kind]) => [label, () => open({ kind, folder })])
+ }
+ 
+ export function FilesPage({ search = false }) {
+-  const { state } = useWorkspace()
++  const { state, commit } = useWorkspace()
+   const { folderId } = useParams()
+   const location = useLocation()
+   const tree = directory(state)
+   const folder = tree.folders.get(folderId)
+   const parentId = folderId ?? null
+   const query = new URLSearchParams(location.search).get('q')?.trim() ?? ''
++  const [uploadError, setUploadError] = useState('')
++  async function uploadFiles(event) {
++    const selected = Array.from(event.target.files || []); event.target.value = ''; setUploadError('')
++    try {
++      for (const file of selected) {
++        const body = new FormData(); body.append('file', file)
++        const response = await fetch('/upload', { method: 'POST', body }); const result = await response.json()
++        if (!response.ok || !result.files?.length) throw new Error('Upload failed. Please retry.')
++        const asset = result.files[0]
++        commit((current, meta) => ({ ...current, files: [...current.files, { ...meta.record('file'), folderId: parentId, name: file.name, mimeType: file.type || 'application/octet-stream', previewText: '', previewRows: [], ownerId: meta.actor, sizeBytes: file.size, contentUrl: asset.url }] }), 'File uploaded.')
++      }
++    } catch (error) { setUploadError(error.message) }
++  }
+   const [filter, setFilter] = useState('All items')
+   const [sort, setSort] = useState('name')
+   const [action, setAction] = useState(null)
+@@ -208,16 +244,19 @@ export function FilesPage({ search = false }) {
+       actions={!search && <>
+         {showTrash && <RouteLink className="link-button" to="/trash"><Icon name="trash" />Trash</RouteLink>}
+         {folder && <RowMenu name={nameOf(folder)} items={folderActions(folder, setAction)} />}
+-        <button className="primary" onClick={() => setAction({ kind: 'create' })}><Icon name="plus" />New folder</button>
++        {folder && <button type="button" className="primary" onClick={() => setAction({ kind: 'access', folder })}><Icon name="people" />Share</button>}
++        <label className="link-button archive-upload"><Icon name="upload" />Upload<input type="file" aria-label="Upload files" multiple onChange={uploadFiles} /></label>
++        <button onClick={() => setAction({ kind: 'create' })}><Icon name="plus" />New folder</button>
+       </>} />
+-    <div className={folder ? 'split' : undefined}>
+-      <section className="panel" aria-label="Items">
++    {uploadError && <p role="alert">{uploadError}</p>}
++    <div>
++      <section className="archive-file-list" aria-label="Items">
+         <div className="toolbar">
+           <div className="tabs" aria-label="Item type">{['All items', 'Folders', 'Files'].map(text => <button key={text} aria-pressed={filter === text} onClick={() => setFilter(text)}>{text}</button>)}</div>
+           <label className="inline-actions">Sort by <select value={sort} onChange={event => setSort(event.target.value)}><option value="name">Name</option><option value="modified">Last modified</option></select></label>
+         </div>
+         {!rows.length ? <Empty title={search ? 'No matching items' : 'No items in this view'} /> : <>
+-          <table><thead><tr><th scope="col">Name</th><th scope="col" className="date-cell">Last modified</th><th scope="col" className="owner-cell">Owner</th><th scope="col" className="action-cell"><span className="sr-only">Actions</span></th></tr></thead>
++          <table><thead><tr><th scope="col">Name</th><th scope="col" className="date-cell">Updated</th><th scope="col" className="owner-cell">Size</th><th scope="col" className="action-cell"><span className="sr-only">Actions</span></th></tr></thead>
+             <tbody>{rows.map(({ item, type }) => {
+               const textDocument = type === 'file' && item.mimeType?.includes('wordprocessingml')
+               return <tr key={`${type}:${item.id}`}>
+@@ -227,13 +266,13 @@ export function FilesPage({ search = false }) {
+                 <small className="row-detail owner-detail">Owner {personName(state, item.ownerId)}</small>
+                 <small className="row-detail narrow-detail">Last modified {humanDate(item.updatedAt)}</small>
+               </div></div></td>
+-              <td className="date-cell">{humanDate(item.updatedAt)}</td><td className="owner-cell">{personName(state, item.ownerId)}</td>
++              <td className="date-cell">{humanDate(item.updatedAt)}</td><td className="owner-cell">{type === 'file' ? fileSize(item.sizeBytes) : '—'}</td>
+               <td className="action-cell">{type === 'folder' && <RowMenu name={nameOf(item)} items={folderActions(item, setAction)} />}</td>
+             </tr>})}</tbody></table>
+           <div className="table-footer">{rows.length} {rows.length === 1 ? 'item' : 'items'}</div>
+         </>}
+       </section>
+-      {folder && <FolderContext state={state} folder={folder} tree={tree} openAccess={() => setAction({ kind: 'access', folder })} />}
++      {folder && coverage(state, folder.id).length > 0 && <FolderContext state={state} folder={folder} tree={tree} openAccess={() => setAction({ kind: 'access', folder })} />}
+     </div>
+     {action?.kind === 'access' ? <AccessDialog folder={action.folder} onClose={close} /> : action &&
+       <FolderEditor kind={action.kind} folder={action.folder} parentId={parentId} onClose={close} fromDetail={folderId === action.folder?.id && Boolean(folderId)} />}
+diff --git a/src/style.css b/src/style.css
+index c31b5dc..fd905d2 100644
+--- a/src/style.css
++++ b/src/style.css
+@@ -161,3 +161,115 @@ legend { font-weight: 600; margin-bottom: 5px; }
+ .policy-marker { background: #e6eee9; color: #225744; }
+ .picker label svg { vertical-align: -3px; }
+ 
++
++:root {
++  --paper: #fff;
++  --line: #dce2ee;
++  --muted: #526079;
++  --action: #3854a2;
++  --hover: #273e7f;
++  --selected: #eaf0fc;
++  --display: "Segoe UI", system-ui, sans-serif;
++  --rail-width: 188px;
++  color: #1d2944;
++  background: #fff;
++}
++button:hover, tbody tr:hover, tbody tr:focus-within { background: #eff3fb; }
++.danger { color: white; background: #96392c; border-color: #96392c; }
++.archive-rail {
++  position: fixed;
++  z-index: 4;
++  inset: 0 auto 0 0;
++  width: var(--rail-width);
++  display: flex;
++  flex-direction: column;
++  gap: 30px;
++  background: #233966;
++  color: #f5f8ff;
++  padding: 24px 14px;
++}
++.archive-brand {
++  display: flex;
++  align-items: center;
++  gap: 9px;
++  color: inherit;
++  font-size: 17px;
++  font-weight: 700;
++  text-decoration: none;
++  padding: 0 7px;
++}
++.archive-nav { display: grid; gap: 5px; }
++.archive-nav a {
++  display: flex;
++  align-items: center;
++  gap: 11px;
++  padding: 10px 12px;
++  border-radius: 7px;
++  color: #e3ebff;
++  text-decoration: none;
++}
++.archive-nav a:hover, .archive-nav a[aria-current] { background: #385081; color: #fff; }
++.archive-nav a[aria-current] { font-weight: 700; }
++.archive-header {
++  margin-left: var(--rail-width);
++  min-height: 64px;
++  padding: 12px 32px;
++  display: flex;
++  justify-content: space-between;
++  gap: 18px;
++  align-items: center;
++  border-bottom: 1px solid var(--line);
++}
++.archive-header .global-search {
++  background: #f0f3f9;
++  border-color: transparent;
++  border-radius: 7px;
++  width: min(550px, 75%);
++  margin: 0;
++}
++.archive-header .avatar { background: #e5effc; color: #2f487e; }
++#main { margin: 0 0 0 var(--rail-width); padding: 22px 32px 40px; }
++.page-heading { align-items: center; gap: 12px; }
++.page-heading h1 { font-size: 27px; font-weight: 680; }
++.page-heading p { margin-top: 5px; }
++.archive-file-list .toolbar { padding: 7px 0; }
++.archive-file-list table th { text-transform: uppercase; background: #fff; }
++.archive-file-list table td { height: 47px; }
++.archive-file-list .table-footer { background: #fff; border-top: 1px solid var(--line); }
++.archive-upload { position: relative; cursor: pointer; }
++.archive-upload input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
++.archive-upload:focus-within { outline: 2px solid #285c92; outline-offset: 3px; }
++.dialog-content > .dialog-form { padding: 0; gap: 10px; }
++.dialog-content > .dialog-form .field:has(select[name=role]) {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  color: var(--action);
++}
++.archive-invite-recipients { position: relative; }
++.archive-invite-recipients .suggestions {
++  position: absolute;
++  z-index: 2;
++  background: #fff;
++  width: 100%;
++  padding: 5px;
++  border: 1px solid var(--line);
++  box-shadow: 0 3px 12px #1d294422;
++}
++.archive-share-link {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  border-block: 1px solid var(--line);
++  padding: 12px 0;
++}
++.archive-share-link small { display: block; margin-top: 3px; }
++.archive-preview { min-width: 0; background: #eef1f7; }
++.archive-preview .document p { white-space: pre-line; }
++.archive-pdf { border: 0; display: block; width: 100%; height: 64vh; }
++@media (max-width: 740px) {
++  :root { --rail-width: 132px; }
++  .archive-rail { padding-inline: 6px; }
++  .archive-brand { font-size: 14px; }
++  .archive-header, #main { padding-inline: 14px; }
++}
+diff --git a/src/tasks.jsx b/src/tasks.jsx
+index e3b6f43..ccb49dd 100644
+--- a/src/tasks.jsx
++++ b/src/tasks.jsx
+@@ -1,4 +1,4 @@
+-import { useState } from 'react'
++import { useEffect, useState } from 'react'
+ import { useParams } from 'react-router-dom'
+ import { useWorkspace } from './store.jsx'
+ import { directory, eligibleUsers, FieldError, humanDate, label, nameOf, personName, replace, stampRemoval } from './model.js'
+@@ -154,6 +154,32 @@ function TaskCard({ task, preview = false }) {
+   </article>
+ }
+ 
++function PdfPreview({ file }) {
++  const [preview, setPreview] = useState(null)
++  const [failed, setFailed] = useState(false)
++  useEffect(() => {
++    const request = new AbortController()
++    let objectUrl
++    fetch(file.contentUrl, { signal: request.signal }).then(response => {
++      if (!response.ok) throw new Error('PDF unavailable')
++      return response.blob()
++    }).then(data => {
++      if (request.signal.aborted) return
++      objectUrl = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
++      setPreview(objectUrl)
++    }).catch(() => {
++      if (!request.signal.aborted) setFailed(true)
++    })
++    return () => {
++      request.abort()
++      if (objectUrl) URL.revokeObjectURL(objectUrl)
++    }
++  }, [file.contentUrl])
++  if (failed) return <p role="alert">Preview unavailable. Download the PDF to open it.</p>
++  if (!preview) return <p role="status">Loading PDF preview…</p>
++  return <iframe className="archive-pdf" title={`Preview of ${nameOf(file)}`} src={preview} />
++}
++
+ export function FilePreview() {
+   const { state } = useWorkspace()
+   const { fileId } = useParams()
+@@ -165,10 +191,11 @@ export function FilePreview() {
+   const tasks = state.tasks.filter(task => task.fileId === fileId && task.status !== 'deleted')
+   return <>
+     <Breadcrumbs folders={trail} tail={nameOf(file)} />
+-    <Heading title={nameOf(file)} description={`Owned by ${personName(state, file.ownerId)} · Updated ${humanDate(file.updatedAt)}`} />
+-    <div className="split preview-split">
+-      <section className="matte" aria-label="Document preview">
+-        <div className="document">
++    <Heading title={nameOf(file)} description={`Owned by ${personName(state, file.ownerId)} · Updated ${humanDate(file.updatedAt)}`}
++      actions={file.contentUrl && <a className="link-button archive-download" href={file.contentUrl} download={file.name}>Download</a>} />
++      <div className="split preview-split">
++      <section className="matte archive-preview" aria-label="Document preview">
++        {file.contentUrl && file.mimeType === 'application/pdf' ? <PdfPreview file={file} /> : <div className="document">
+           <small>{state.account?.workspaceName || 'Box'} / {file.mimeType?.includes('pdf') ? 'PDF' : 'Document'}</small>
+           <h2>{nameOf(file).replace(/\.[^.]+$/, '')}</h2>
+           <p>{file.previewText || 'A text preview is unavailable for this document.'}</p>
+@@ -177,7 +204,7 @@ export function FilePreview() {
+             <tbody>{file.previewRows.map((row, i) => <tr key={i}><td>{row?.[0]}</td><td>{row?.[1]}</td></tr>)}</tbody>
+           </table>}
+           <footer>{nameOf(file)} · Page 1</footer>
+-        </div>
++        </div>}
+       </section>
+       <section className="panel panel-pad">
+         <div className="section-head"><h2>Activity</h2><button onClick={() => setAdding('choose')}><Icon name="plus" />Add task</button></div>
+diff --git a/src/ui.jsx b/src/ui.jsx
+index 9d5da16..814fc60 100644
+--- a/src/ui.jsx
++++ b/src/ui.jsx
+@@ -6,6 +6,7 @@ import { FieldError, label, nameOf, roles } from './model.js'
+ const FormError = createContext(null)
+ 
+ const shapes = {
++  upload: <path d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4"/>,
+   search: <><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 4 4"/></>,
+   folder: <path d="M3 6h7l2 2h9v11H3z"/>,
+   file: <><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h4M9 12h6m-6 4h6"/></>,
+@@ -92,15 +93,15 @@ export function Field({ title, children, hint }) {
+   </div>
+ }
+ 
+-export function InviteFields({ users, optional = false }) {
++export function InviteFields({ users, optional = false, sharing = false }) {
+   const [text, setText] = useState('')
+   const [suggest, setSuggest] = useState(false)
+   const query = text.split(/[,;\n]/).at(-1).trim().toLowerCase()
+   const matches = query ? users.filter(user => user.email && [user.name, user.email].some(value => value?.toLowerCase().includes(query))).slice(0, 6) : []
+   return <>
+-    <div onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setSuggest(false) }}>
+-      <Field title={optional ? 'Invite people (optional)' : 'People or email addresses'} hint="Separate multiple emails with commas.">
+-        <textarea name="recipients" rows="2" required={!optional} placeholder="Search names or enter email addresses" value={text}
++    <div className={sharing ? 'archive-invite-recipients' : undefined} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setSuggest(false) }}>
++      <Field title={sharing ? 'Invite People' : optional ? 'Invite people (optional)' : 'People or email addresses'} hint={sharing ? undefined : 'Separate multiple emails with commas.'}>
++        <input name="recipients" required={!optional} placeholder="Add names or email addresses" value={text}
+           onFocus={() => setSuggest(true)} onChange={event => { setText(event.target.value); setSuggest(true) }} />
+       </Field>
+       {suggest && matches.length > 0 && <ul className="suggestions">{matches.map(user => <li key={user.id}><button type="button" onClick={() => {
+@@ -110,8 +111,8 @@ export function InviteFields({ users, optional = false }) {
+         setSuggest(false)
+       }}>{nameOf(user)} <small>{user.email}</small></button></li>)}</ul>}
+     </div>
+-    <Field title="Role"><select name="role" defaultValue="viewer">{Object.entries(roles).map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select></Field>
+-    <Field title="Invitation message (optional)"><textarea name="message" rows="2" /></Field>
++    <Field title={sharing ? "Invite as" : "Role"}><select name="role" defaultValue={sharing ? "editor" : "viewer"}>{Object.entries(roles).map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select></Field>
++    {!sharing && <Field title="Invitation message (optional)"><textarea name="message" rows="2" /></Field>}
+   </>
+ }
+ 

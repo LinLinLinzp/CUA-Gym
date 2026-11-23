@@ -1,0 +1,59 @@
+--- a/src/pages/Preview.jsx
++++ b/src/pages/Preview.jsx
+@@ -1,4 +1,4 @@
+-import { useEffect, useState } from 'react'
++import { useEffect, useRef, useState } from 'react'
+ import { Link, useParams } from 'react-router-dom'
+ import { ArrowLeft, Download, FileText, History, Share2 } from 'lucide-react'
+ import { accessibleLink, active, currentVersion, getFile, parentOf, restoreVersion, routeFor } from '../model'
+@@ -15,6 +15,9 @@
+   const textType = type.startsWith('text/') || type === 'application/json'
+   const mediaType = /^(image\/(png|jpe?g|webp|gif|svg\+xml|avif|bmp|x-icon)|application\/pdf)$/.test(type)
+   const [loaded, setLoaded] = useState(null)
++  const [zoom, setZoom] = useState(1)
++  const [imageScale, setImageScale] = useState(null)
++  const imageRef = useRef(null)
+   useEffect(() => {
+     if (content?.kind !== 'upload' || !safePath || (!textType && !mediaType)) return
+     const controller = new AbortController()
+@@ -43,10 +46,38 @@
+     }
+   }, [content?.kind, safePath, type, textType, mediaType])
+   const result = loaded?.safePath === safePath ? loaded : null
++  const media = content?.kind === 'localAsset' ? safePath : result?.objectUrl
++  useEffect(() => {
++    const image = imageRef.current
++    if (!image) return
++    const measureScale = () => {
++      if (image.naturalWidth) {
++        setImageScale(Math.round(100 * image.getBoundingClientRect().width / image.naturalWidth))
++      }
++    }
++    const observer = new ResizeObserver(measureScale)
++    observer.observe(image)
++    image.addEventListener('load', measureScale)
++    measureScale()
++    return () => {
++      observer.disconnect()
++      image.removeEventListener('load', measureScale)
++    }
++  }, [media])
+   if (content?.kind === 'text') return <div className="preview-stage"><pre className="document-sheet">{value}</pre></div>
+   if (result?.text != null) return <div className="preview-stage"><pre className="document-sheet">{result.text}</pre></div>
+-  const media = content?.kind === 'localAsset' ? safePath : result?.objectUrl
+-  if (media && type.startsWith('image/')) return <div className="preview-stage"><img src={media} alt={name} /></div>
++  if (media && type.startsWith('image/')) return <>
++    <div className="preview-toolbar" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12, alignItems: 'center', marginBottom: 12 }}>
++      <button className="button" onClick={() => setZoom(Math.max(.5, zoom - .5))}>Zoom out</button>
++      <button className="button" onClick={() => setZoom(Math.min(5, zoom + .5))}>Zoom in</button>
++      <output aria-label="Image scale">{imageScale === null ? '–' : imageScale + '%'}</output>
++      <button className="button" onClick={() => setZoom(1)}>Fit</button>
++      <a className="button" download={name} href={withSid(safePath)}><Download size={16} />Download original</a>
++    </div>
++    <div className="preview-stage" style={{ overflow: 'auto', display: 'block', maxHeight: '72vh' }}>
++      <img ref={imageRef} src={media} alt={name} style={{ width: zoom * 100 + '%', maxWidth: 'none', maxHeight: 'none' }} />
++    </div>
++  </>
+   if (media && type === 'application/pdf') return <div className="preview-stage"><iframe title={name} src={media} /></div>
+   const checking = content?.kind === 'upload' && safePath && !result && (textType || mediaType)
+   return <div className="preview-stage"><div className="preview-placeholder"><FileText size={34} />

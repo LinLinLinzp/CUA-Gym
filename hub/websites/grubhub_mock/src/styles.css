@@ -1,0 +1,40 @@
+@layer base, components, pages;
+
+@layer base {
+  :root {
+    font: 14px/1.48 system-ui, "Segoe UI", Arial, sans-serif;
+    color: #222126;
+    background: #fafafb;
+    font-variant-numeric: tabular-nums;
+    --page: #fafafb;
+    --surface: #fff;
+    --ink: #222126;
+    --muted: #5e5a62;
+    --border: #dfdde2;
+    --field: #79727e;
+    --brand: #c94116;
+    --action: #5131c8;
+    --action-hover: #3d259e;
+    --selected: #eee9fb;
+    --focus: #6244c9;
+    --good-bg: #e6f0e3;
+    --good: #28513e;
+    --pending-bg: #faecd4;
+    --pending: #714c20;
+    --alert-bg: #f7e5df;
+    --alert: #8d3527;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button, select { cursor: pointer; }
+  a { color: var(--action); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+  h1, h2, h3, p, dl, dd, ul, ol { margin: 0; }
+  h1 { font-size: 34px; font-weight: 750; letter-spacing: -.04em; line-height: 1.13; }
+  h2 { font-size: 22px; font-weight: 700; letter-spacing: -.025em; line-height: 1.23; }
+  h3 { font-size: 17px; line-height: 23px; font-weight: 650; letter-spacing: -.015em; }
+  .boot { padding: 48px 32px; }
+  @media (max-width: 650px) { h1 { font-size: 28px; } }
+}

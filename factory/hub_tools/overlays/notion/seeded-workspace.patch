@@ -1,0 +1,14 @@
+--- a/src/store/initialData.js
++++ b/src/store/initialData.js
+@@ -51,6 +51,11 @@
+   const ik = initialKey(sid);
+   if (customState) {
+     const data = deepMergeWithDefaults(createDefaultData(), customState);
++    // A supplied workspace collection is authoritative. Merging the demo
++    // pages into it would change the workspace and its move/search targets.
++    for (const key of ["pages", "blocks", "comments"]) {
++      if (Object.hasOwn(customState, key)) data[key] = customState[key];
++    }
+     localStorage.setItem(sk, JSON.stringify(data));
+     localStorage.setItem(ik, JSON.stringify(data));
+     return data;

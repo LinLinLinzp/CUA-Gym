@@ -1,0 +1,137 @@
+diff --git a/src/components/ProjectIcon.tsx b/src/components/ProjectIcon.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..558378d1276585195fc0b06f93b7f4453898c687
+--- /dev/null
++++ b/src/components/ProjectIcon.tsx
+@@ -0,0 +1,9 @@
++import { List } from 'lucide-react';
++
++export default function ProjectIcon({ icon, size }: { icon: string; size: number }) {
++  if (icon === 'project') {
++    return <List size={size} color="#fff" aria-hidden="true" />;
++  }
++
++  return <img src={icon} alt="" />;
++}
+diff --git a/src/context/AppContext.tsx b/src/context/AppContext.tsx
+index b94f478661f5c74e03faea647631df1d48393dd5..d7ea1e9e21e00b56c2c9abb647ac464a0ca2bfc2 100644
+--- a/src/context/AppContext.tsx
++++ b/src/context/AppContext.tsx
+@@ -69,6 +69,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
+     }
+   }, []);
+ 
++  // Placement reviews arrive while the task remains open; merge only new curator evidence.
++  useEffect(() => {
++    if (loading) return;
++    let stopped = false;
++    const poll = async () => {
++      const incoming = await fetchCustomState(sidRef.current);
++      if (stopped || !incoming) return;
++      setState(previous => {
++        const known = new Set(previous.comments.map(x => x.commentId));
++        const added = (incoming.comments || []).filter(x => x.commentId.startsWith('hx01-') && !known.has(x.commentId));
++        if (!added.length) return previous;
++        const attachments = [...previous.attachments];
++        const aids = new Set(attachments.map(x => x.attachmentId));
++        for (const row of incoming.attachments || []) if (row.attachmentId.startsWith('hx01-') && !aids.has(row.attachmentId)) attachments.push(row);
++        const tasks = previous.tasks.map(task => {
++          const server = (incoming.tasks || []).find(x => x.taskId === task.taskId);
++          if (!server) return task;
++          const extra = (server.attachmentIds || []).filter(x => x.startsWith('hx01-'));
++          return extra.length ? {...task, attachmentIds: [...new Set([...task.attachmentIds, ...extra])]} : task;
++        });
++        return {...previous, comments: [...previous.comments, ...added], attachments, tasks};
++      });
++    };
++    const timer = setInterval(poll, 1200);
++    return () => { stopped = true; clearInterval(timer); };
++  }, [loading]);
++
+   // Save state on changes (session-aware)
+   useEffect(() => {
+     if (loading) return;
+diff --git a/src/pages/Home.tsx b/src/pages/Home.tsx
+index dafbb04e584d536b4571c3c02a691a2d2c4fe8ab..b7714dab7d258931c00b7fd98d3332e36512a08d 100644
+--- a/src/pages/Home.tsx
++++ b/src/pages/Home.tsx
+@@ -2,6 +2,7 @@
+ import { useApp } from '../context/AppContext';
+ import { Link } from 'react-router-dom';
+ import { CheckSquare, Bell, Calendar } from 'lucide-react';
++import ProjectIcon from '../components/ProjectIcon';
+ import './Home.css';
+ 
+ export default function Home() {
+@@ -100,7 +101,7 @@ export default function Home() {
+               <Link key={project.projectId} to={`/projects/${project.projectId}`} className="project-card">
+                 <div className="project-card-header">
+                   <div className="project-icon" style={{ backgroundColor: project.color }}>
+-                    <img src={project.icon} alt="" />
++                    <ProjectIcon icon={project.icon} size={18} />
+                   </div>
+                   <h3>{project.name}</h3>
+                 </div>
+diff --git a/src/pages/ProjectDetail.tsx b/src/pages/ProjectDetail.tsx
+index 62537fbc2f046413610898bda5d3221972c177ca..4d72498b6ff6f0af20f024b970d325355e2cf66b 100644
+--- a/src/pages/ProjectDetail.tsx
++++ b/src/pages/ProjectDetail.tsx
+@@ -7,6 +7,7 @@ import { getSessionId } from '../data/initialData';
+ import { Star, X, CheckCircle2, Circle, Heart, ChevronDown, ChevronLeft, ChevronRight, Paperclip, Download, Upload } from 'lucide-react';
+ import { formatDistanceToNow } from 'date-fns';
+ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
++import ProjectIcon from '../components/ProjectIcon';
+ import './ProjectDetail.css';
+ 
+ type ViewTab = 'list' | 'board' | 'timeline' | 'calendar' | 'dashboard';
+@@ -1079,7 +1080,7 @@ export default function ProjectDetail() {
+       <div className="project-detail-header">
+         <div className="project-title-section">
+           <div className="project-icon-large" style={{ backgroundColor: project.color }}>
+-            <img src={project.icon} alt="" />
++            <ProjectIcon icon={project.icon} size={29} />
+           </div>
+           <div>
+             <h1>{project.name}</h1>
+diff --git a/src/pages/Projects.tsx b/src/pages/Projects.tsx
+index d4e2979479745c7b92077346839d32c47a61a33b..3355c485c7681dd05739d0ed0062bee56dbd7e9e 100644
+--- a/src/pages/Projects.tsx
++++ b/src/pages/Projects.tsx
+@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
+ import { Link } from 'react-router-dom';
+ import { Star } from 'lucide-react';
+ import CreateProjectModal from '../components/CreateProjectModal';
++import ProjectIcon from '../components/ProjectIcon';
+ import './Projects.css';
+ 
+ export default function Projects() {
+@@ -33,7 +34,7 @@ export default function Projects() {
+             <Link key={project.projectId} to={`/projects/${project.projectId}`} className="project-card-main">
+               <div className="project-card-header-main">
+                 <div className="project-icon-main" style={{ backgroundColor: project.color }}>
+-                  <img src={project.icon} alt="" />
++                  <ProjectIcon icon={project.icon} size={22} />
+                 </div>
+                 <button
+                   className="star-btn"
+diff --git a/src/pages/Teams.tsx b/src/pages/Teams.tsx
+index 3697aabf32eeebba48edefebc74a65a9fa3403cf..62534125cf269334ae40287aeb0759e957c6ba7b 100644
+--- a/src/pages/Teams.tsx
++++ b/src/pages/Teams.tsx
+@@ -1,6 +1,7 @@
+ 
+ import { useParams } from 'react-router-dom';
+ import { useApp } from '../context/AppContext';
++import ProjectIcon from '../components/ProjectIcon';
+ import './Teams.css';
+ 
+ export default function Teams() {
+@@ -32,7 +33,7 @@ export default function Teams() {
+             {teamProjects.map(project => (
+               <div key={project.projectId} className="team-project-card">
+                 <div className="team-project-icon" style={{ backgroundColor: project.color }}>
+-                  <img src={project.icon} alt="" />
++                  <ProjectIcon icon={project.icon} size={22} />
+                 </div>
+                 <h3>{project.name}</h3>
+               </div>

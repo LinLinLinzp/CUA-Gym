@@ -1,0 +1,180 @@
+--- a/src/pages/EnvelopeDetail.jsx
++++ b/src/pages/EnvelopeDetail.jsx
+@@ -1,3 +1,4 @@
++import {CompletedEnvelope} from '../components/EnvelopeFiles';
+ import React, { useState } from 'react';
+ import { useStore } from '../context/StoreContext';
+ import { useNavigate, useParams } from 'react-router-dom';
+@@ -37,6 +38,8 @@ const EnvelopeDetail = () => {
+     );
+   }
+ 
++  if (envelope.status === 'completed') return <CompletedEnvelope envelope={envelope} />;
++
+   const canResend = envelope.status === 'sent' || envelope.status === 'delivered';
+   const canCorrect = envelope.status === 'sent' || envelope.status === 'delivered';
+   const canVoid = envelope.status !== 'completed' && envelope.status !== 'voided';
+--- a/src/pages/SigningRoom.jsx
++++ b/src/pages/SigningRoom.jsx
+@@ -49,7 +49,8 @@ const SigningRoom = () => {
+       setFieldValues(existing);
+       // Set initial document
+       if (found.documents?.length > 0) {
+-        setActiveDocumentId(found.documents[0].id);
++        const requested=new URLSearchParams(window.location.search).get('document');
++        setActiveDocumentId(found.documents.some(d=>d.id===requested)?requested:found.documents[0].id);
+       }
+     }
+   }, [id, state.envelopes]);
+@@ -305,12 +306,12 @@ const SigningRoom = () => {
+ 
+         <div className="relative bg-white shadow-2xl" style={{ width: '800px', minHeight: '1100px' }}>
+           {activeDocObj && (
+-            <img
++            <>{activeDocObj.fileUrl?.startsWith('data:application/pdf') ? <iframe title="Signed document PDF" src={activeDocObj.fileUrl} style={{width:'100%',height:1100,border:0}}/> : <img
+               src={activeDocObj.fileUrl}
+               alt="Document"
+               className="w-full h-auto pointer-events-none select-none"
+               style={{ minHeight: '1100px' }}
+-            />
++            />}</>
+           )}
+ 
+           {/* Render Fields for active document */}
+--- /dev/null
++++ b/src/components/EnvelopeFiles.jsx
+@@ -0,0 +1,42 @@
++import React,{useState,useRef,useEffect} from 'react';
++import {useNavigate} from 'react-router-dom';
++import {Download,X,Check,Copy,FileText} from 'lucide-react';
++import {PDFDocument} from 'pdf-lib';
++function bytes(url){return Uint8Array.from(atob(url.split(',')[1]),c=>c.charCodeAt(0))}
++function save(name,content){const url=URL.createObjectURL(new Blob([content],{type:'application/pdf'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}
++export function DownloadFiles({envelope,onClose}){
++ const docs=envelope.documents||[],[chosen,setChosen]=useState(docs.map(d=>d.id)),[certificate,setCertificate]=useState(true),[combine,setCombine]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
++ const modal=useRef(null);useEffect(()=>{modal.current.showModal()},[]);
++ const all=chosen.length===docs.length&&certificate;
++ function toggle(id){setChosen(x=>x.includes(id)?x.filter(v=>v!==id):[...x,id])}
++ async function download(){setBusy(true);setError('');try{
++  const selected=docs.filter(d=>chosen.includes(d.id)).map(d=>({name:d.name,url:d.fileUrl}));
++  if(certificate){if(!envelope.certificateUrl)throw new Error('The certificate is unavailable.');selected.push({name:'Certificate of Completion.pdf',url:envelope.certificateUrl})}
++  if(!selected.length)throw new Error('Select at least one file.');
++  if(combine){const merged=await PDFDocument.create();for(const item of selected){const source=await PDFDocument.load(bytes(item.url));for(const page of await merged.copyPages(source,source.getPageIndices()))merged.addPage(page)}save(envelope.subject+' - Combined.pdf',await merged.save())}
++  else for(const item of selected){save(item.name,bytes(item.url));await new Promise(r=>setTimeout(r,180))}
++  onClose();
++ }catch(e){setError(String(e.message||e));setBusy(false)}}
++ return <dialog ref={modal} aria-label="Download files" onCancel={e=>{e.preventDefault();onClose()}} style={{background:'white',width:600,maxHeight:'92vh',overflow:'auto',padding:28,color:'#343440',fontSize:15,boxShadow:'0 8px 30px #0003',margin:'auto'}}><style>{'dialog::backdrop{background:rgba(0,0,0,.4)}input[type=checkbox]{width:19px;height:19px;accent-color:#6594ff}'}</style>
++ <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><h2 style={{fontSize:24,fontWeight:600}}>Download files</h2><button aria-label="Close download files" onClick={onClose}><X size={22}/></button></div>
++ <p style={{margin:'18px 0 25px'}}>Select which files you want to download:</p>
++ <label style={row}><input type="checkbox" checked={all} onChange={e=>{setChosen(e.target.checked?docs.map(d=>d.id):[]);setCertificate(e.target.checked)}}/> All</label><small style={sub}>{docs.length+1} files</small>
++ <label style={row}><input type="checkbox" checked={chosen.length===docs.length} onChange={e=>setChosen(e.target.checked?docs.map(d=>d.id):[])}/> Document</label><small style={sub}>{docs.length} PDF{docs.length===1?'':'s'}</small>
++ {docs.length>1&&<div style={{marginLeft:30,marginBottom:12}}>{docs.map(d=><label key={d.id} style={{...row,fontSize:14,margin:'8px 0'}}><input type="checkbox" checked={chosen.includes(d.id)} onChange={()=>toggle(d.id)}/>{d.name}<small style={{color:'#73737a'}}>({d.order})</small></label>)}</div>}
++ <label style={row}><input type="checkbox" checked={certificate} onChange={e=>setCertificate(e.target.checked)}/> Certificate of Completion</label><small style={sub}>1 PDF</small>
++ <hr style={{margin:'28px 0'}}/><label style={row}><input type="checkbox" checked={combine} onChange={e=>setCombine(e.target.checked)}/> Combine all PDFs into a single file</label>
++ {error&&<p role="alert" style={{color:'#b00'}}>{error}</p>}<div style={{display:'flex',justifyContent:'flex-end',marginTop:35}}><button disabled={busy||(!certificate&&!chosen.length)} onClick={download} style={{background:'#006aff',color:'white',padding:'11px 22px',fontWeight:600}}>{busy?'Downloading…':'Download'}</button></div>
++ </dialog>
++}
++const row={display:'flex',gap:10,alignItems:'center',margin:'14px 0 4px',cursor:'pointer'};
++const sub={display:'block',margin:'0 0 14px 30px',color:'#777',fontSize:12};
++export function CompletedEnvelope({envelope}){
++ const navigate=useNavigate(),[open,setOpen]=useState(false),[tab,setTab]=useState('Recipients');
++ return <div style={{color:'#19142d',fontFamily:'Arial,sans-serif'}}>
++ <header style={{background:'#f7f6f8',padding:'28px 38px',borderBottom:'1px solid #eee'}}><span style={{background:'#ecebf0',padding:'6px 9px',fontSize:14}}>✓ Completed</span><div style={{display:'flex',justifyContent:'space-between',marginTop:18}}><h1 style={{fontSize:24,fontWeight:400}}>{envelope.subject}</h1><button aria-label="Download" onClick={()=>setOpen(true)} style={{border:'1px solid #aaa',padding:'10px 14px'}}><Download size={20}/><span>Download</span></button></div><p style={{marginTop:12}}>From: {envelope.senderName||'Morgan Ellis'} &nbsp; | &nbsp; <button onClick={()=>navigator.clipboard.writeText(envelope.id)} style={{textDecoration:'underline'}}>Envelope ID</button> &nbsp; {envelope.id}</p></header>
++ <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 300px',minHeight:520}}><section style={{padding:'35px 38px'}}><div style={{display:'flex',gap:26,borderBottom:'1px solid #ddd'}}>{['Recipients','Details'].map(t=><button key={t} onClick={()=>setTab(t)} style={{padding:'16px 8px',borderBottom:tab===t?'3px solid #28164c':'3px solid transparent'}}>{t}{t==='Recipients'?' ('+envelope.recipients.length+')':''}</button>)}</div>
++ {tab==='Recipients'?<><p style={{background:'#f5f4f7',display:'inline-block',padding:12,marginTop:28}}>Signing Order</p>{envelope.recipients.map(r=><div key={r.id} style={{padding:'30px 12px',borderBottom:'1px solid #ddd',display:'flex',justifyContent:'space-between'}}><div><p style={{fontSize:18}}>✓ &nbsp; {r.name}</p><small>{r.email}</small></div><div>Signed<br/><small>{r.signedAt}</small></div></div>)}</>:<><p style={{marginTop:24}}>{envelope.message}</p><h3 style={{marginTop:25}}>History</h3>{envelope.history.map(h=><p key={h.id} style={{marginTop:12}}>{h.timestamp} · {h.details}</p>)}</>}
++ </section><aside style={{borderLeft:'1px solid #ddd',padding:30}}><h2 style={{fontSize:14,marginBottom:24}}>Documents</h2>{envelope.documents.map(d=><button key={d.id} onClick={()=>navigate('/sign/'+envelope.id+'?document='+encodeURIComponent(d.id))} style={{display:'block',textAlign:'left',border:'1px solid #ddd',borderRadius:9,width:'100%',marginBottom:18,overflow:'hidden'}}><div style={{height:120,background:'#f1f0f4',display:'flex',alignItems:'center',justifyContent:'center'}}><iframe title={d.name+" thumbnail"} src={d.fileUrl+"#toolbar=0&navpanes=0&view=FitH"} style={{width:"200%",height:280,border:0,pointerEvents:"none",transform:"scale(.5)",transformOrigin:"top center"}}/></div><div style={{padding:14}}><p>{d.name}</p><small>{d.pageCount} page{d.pageCount===1?'':'s'}</small></div></button>)}</aside></div>
++ {open&&<DownloadFiles envelope={envelope} onClose={()=>setOpen(false)}/>}
++ </div>
++}
+--- a/package.json
++++ b/package.json
+@@ -18,7 +18,8 @@
+     "clsx": "^2.1.0",
+     "tailwind-merge": "^2.2.1",
+     "date-fns": "^3.3.1",
+-    "react-signature-canvas": "^1.0.6"
++    "react-signature-canvas": "^1.0.6",
++    "pdf-lib": "1.17.1"
+   },
+   "devDependencies": {
+     "@types/react": "^18.2.56",
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -11,6 +11,7 @@
+         "clsx": "^2.1.0",
+         "date-fns": "^3.3.1",
+         "lucide-react": "^0.344.0",
++        "pdf-lib": "1.17.1",
+         "react": "^18.2.0",
+         "react-dom": "^18.2.0",
+         "react-draggable": "^4.4.6",
+@@ -803,6 +804,24 @@
+         "node": ">= 8"
+       }
+     },
++    "node_modules/@pdf-lib/standard-fonts": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/@pdf-lib/standard-fonts/-/standard-fonts-1.0.0.tgz",
++      "integrity": "sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==",
++      "license": "MIT",
++      "dependencies": {
++        "pako": "^1.0.6"
++      }
++    },
++    "node_modules/@pdf-lib/upng": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/@pdf-lib/upng/-/upng-1.0.1.tgz",
++      "integrity": "sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==",
++      "license": "MIT",
++      "dependencies": {
++        "pako": "^1.0.10"
++      }
++    },
+     "node_modules/@remix-run/router": {
+       "version": "1.23.1",
+       "resolved": "https://registry.npmjs.org/@remix-run/router/-/router-1.23.1.tgz",
+@@ -1968,6 +1987,12 @@
+         "node": ">= 6"
+       }
+     },
++    "node_modules/pako": {
++      "version": "1.0.11",
++      "resolved": "https://registry.npmjs.org/pako/-/pako-1.0.11.tgz",
++      "integrity": "sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==",
++      "license": "(MIT AND Zlib)"
++    },
+     "node_modules/path-parse": {
+       "version": "1.0.7",
+       "resolved": "https://registry.npmjs.org/path-parse/-/path-parse-1.0.7.tgz",
+@@ -1975,6 +2000,18 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/pdf-lib": {
++      "version": "1.17.1",
++      "resolved": "https://registry.npmjs.org/pdf-lib/-/pdf-lib-1.17.1.tgz",
++      "integrity": "sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==",
++      "license": "MIT",
++      "dependencies": {
++        "@pdf-lib/standard-fonts": "^1.0.0",
++        "@pdf-lib/upng": "^1.0.1",
++        "pako": "^1.0.11",
++        "tslib": "^1.11.1"
++      }
++    },
+     "node_modules/picocolors": {
+       "version": "1.1.1",
+       "resolved": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
+@@ -2649,6 +2686,12 @@
+       "dev": true,
+       "license": "Apache-2.0"
+     },
++    "node_modules/tslib": {
++      "version": "1.14.1",
++      "resolved": "https://registry.npmjs.org/tslib/-/tslib-1.14.1.tgz",
++      "integrity": "sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==",
++      "license": "0BSD"
++    },
+     "node_modules/update-browserslist-db": {
+       "version": "1.2.1",
+       "resolved": "https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.2.1.tgz",

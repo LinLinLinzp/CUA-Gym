@@ -1,0 +1,56 @@
+[
+  {
+    "sku": "A-MUG",
+    "title": "Mug",
+    "material": "Hard-paste porcelain",
+    "work": "https://www.metmuseum.org/art/collection/search/201590",
+    "image": "https://images.metmuseum.org/CRDImages/es/web-large/156511.jpg",
+    "sha256": "3412c1f41c7c72f5efb491d17bcb654bd4fe216a676414bda697c527bb2b458a",
+    "license": "CC0"
+  },
+  {
+    "sku": "A-TRAY",
+    "title": "Tray",
+    "material": "Porcelain",
+    "work": "https://www.metmuseum.org/art/collection/search/8800",
+    "image": "https://images.metmuseum.org/CRDImages/ad/web-large/171906.jpg",
+    "sha256": "80298c5fe364ad5f6eab89eaff8062de61f33eb621ed923c53f0a03305966c93",
+    "license": "CC0"
+  },
+  {
+    "sku": "B-CUP",
+    "title": "Cup",
+    "material": "Stoneware",
+    "work": "https://www.metmuseum.org/art/collection/search/2809",
+    "image": "https://images.metmuseum.org/CRDImages/ad/web-large/136403.jpg",
+    "sha256": "3d0419f6e6feec736ea6f306abad457dd9015bb076cbad026d03a19a074588ff",
+    "license": "CC0"
+  },
+  {
+    "sku": "B-VASE",
+    "title": "Vase",
+    "material": "Stoneware",
+    "work": "https://www.metmuseum.org/art/collection/search/19862",
+    "image": "https://images.metmuseum.org/CRDImages/ad/web-large/L.2009.22.99.jpg",
+    "sha256": "729559db7de1667b65f7341f2814990b8a7f084285489b1e6e8ef5e784badbee",
+    "license": "CC0"
+  },
+  {
+    "sku": "X-BOWL",
+    "title": "Bowl",
+    "material": "Stonepaste; painted under transparent turquoise glaze",
+    "work": "https://www.metmuseum.org/art/collection/search/451359",
+    "image": "https://images.metmuseum.org/CRDImages/is/web-large/ISL507.jpg",
+    "sha256": "7bda33c420eff0ae54c445339b8635b335513b0b8091ff12ce20dc5e74275e10",
+    "license": "CC0"
+  },
+  {
+    "sku": "OLD",
+    "title": "Coaster",
+    "material": "Lacquer",
+    "work": "https://www.metmuseum.org/art/collection/search/191698",
+    "image": "https://images.metmuseum.org/CRDImages/es/web-large/DP-13853-009.jpg",
+    "sha256": "f67dfb3d28ad442bbdb891d1c50012f2f67a544c58f23c353506fa60fa59c090",
+    "license": "CC0"
+  }
+]

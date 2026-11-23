@@ -1,0 +1,152 @@
+{
+  "qwen_raw_score_below": 0.4,
+  "task_id": "hx01-exhibition-proof-recall",
+  "name": "cua-batch/hx01-exhibition-proof-recall",
+  "version": "1.0.0",
+  "description": "Submit signed exhibition artwork for placement review, repair only the rejected channel, and publish the approved assets.",
+  "keywords": [
+    "publication",
+    "GIMP",
+    "PSD",
+    "WordPress.com",
+    "Pinterest",
+    "Asana"
+  ],
+  "sites": [
+    "wordpress_com",
+    "pinterest",
+    "asana"
+  ],
+  "clock": "2026-11-19T09:00:00-05:00",
+  "timezone": "America/New_York",
+  "locale": "en-US",
+  "hide_browser_debug": true,
+  "metadata": {
+    "scenario": "Cultural publishing",
+    "subscenario": "Version-bound exhibition placement review and selective recall",
+    "operation_difficulty": 3,
+    "tool_type": 2,
+    "difficulty": 6,
+    "levers": [
+      "L02",
+      "L08",
+      "L14"
+    ]
+  },
+  "additive_scoring": true,
+  "computer_mcp": {
+    "applications": [
+      "gimp"
+    ],
+    "outputs": [
+      "tide-marks-feature.png",
+      "tide-marks-pin.png",
+      "tide-marks-feature.psd",
+      "tide-marks-pin.psd"
+    ],
+    "verifier_inputs": [
+      "tide-marks-working.psd",
+      "channel-display-spec.json"
+    ],
+    "verifier_python_packages": [
+      "pillow"
+    ],
+    "attachments": {
+      "wordpress_com": [
+        "tide-marks-feature.png"
+      ],
+      "pinterest": [
+        "tide-marks-pin.png"
+      ]
+    },
+    "start_paths": {
+      "wordpress_com": "/wp-admin/",
+      "pinterest": "/board/b-indoor-exhibitions",
+      "asana": "/"
+    },
+    "artwork_review": true,
+    "mock_overlays": {
+      "asana": "hx01-placement-review",
+      "wordpress_com": "hx01-feature-viewport",
+      "pinterest": "hx01-pin-viewport"
+    }
+  },
+  "fixture_expectations": {
+    "bypass": [
+      0.0,
+      0.0
+    ],
+    "changed_accepted_channel": [
+      0.64,
+      0.64
+    ],
+    "false_completion": [
+      0.0,
+      0.0
+    ],
+    "flattened_sources": [
+      0.88,
+      0.88
+    ],
+    "golden": [
+      1.0,
+      1.0
+    ],
+    "legal_alternative": [
+      1.0,
+      1.0
+    ],
+    "marked_pin_upload": [
+      0.44,
+      0.44
+    ],
+    "naive": [
+      0.0,
+      0.0
+    ],
+    "nop": [
+      0.0,
+      0.0
+    ],
+    "one_core": [
+      0.32,
+      0.32
+    ],
+    "partial_local_only": [
+      0.24,
+      0.24
+    ],
+    "partial_wordpress_only": [
+      0.32,
+      0.32
+    ],
+    "stale_approval": [
+      0.0,
+      0.0
+    ],
+    "stale_portrait_plate": [
+      0.32,
+      0.32
+    ],
+    "unrepaired_review": [
+      0.32,
+      0.32
+    ],
+    "visible_press_marks": [
+      0.0,
+      0.0
+    ],
+    "wrong_board": [
+      0.71,
+      0.71
+    ],
+    "wrong_portrait_safety": [
+      0.32,
+      0.32
+    ],
+    "wrong_post": [
+      0.44,
+      0.44
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "task_id": "calc-desktop-smoke",
+  "name": "cua-smoke/calc-desktop-smoke",
+  "version": "0.2.0",
+  "description": "Build a live Calc dispatch workbook for dock availability, clinic orders, carton transfers and supervisor handover.",
+  "keywords": ["desktop", "libreoffice", "calc", "inventory", "dispatch", "live formulas"],
+  "sites": [],
+  "computer_mcp": {"applications": ["libreoffice_calc"], "outputs": ["result.xlsx"]},
+  "metadata": {
+    "scenario": "产业运营",
+    "subscenario": "跨库补货调度",
+    "operation_difficulty": 3,
+    "tool_type": 1,
+    "difficulty": 3,
+    "levers": ["L05"]
+  },
+  "additive_scoring": true,
+  "fixture_expectations": {
+    "golden": [1, 1],
+    "nop": [0, 0],
+    "single_complete_transfer": [0.3, 0.3],
+    "all_rectangles_totals_only": [0, 0],
+    "static_final_numbers": [0, 0],
+    "constant_formula_snapshot": [0, 0],
+    "miss_dock_cutoff": [0.57, 0.57],
+    "ignore_order_route": [0.57, 0.57],
+    "send_partial_carton": [0.57, 0.57],
+    "missing_handover": [0.84, 0.84],
+    "overwrite_source_note": [0.97, 0.97],
+    "equivalent_if_formula": [1, 1]
+  }
+}

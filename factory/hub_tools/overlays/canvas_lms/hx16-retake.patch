@@ -1,0 +1,752 @@
+diff --git a/src/App.jsx b/src/App.jsx
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,8 +1,11 @@
+ import React from 'react';
+-import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
++import RetakeCourse from './RetakeCourse';
++import {useAppContext} from './context/AppContext';
++import { Routes, Route, Navigate, useSearchParams, useLocation } from 'react-router-dom';
+ import GlobalNav from './components/GlobalNav';
+ import CourseLayout from './components/CourseLayout';
+ import Dashboard from './pages/Dashboard';
++import {GlobalAnnouncementsPage} from './pages/GlobalAnnouncements';
+ import Courses from './pages/Courses';
+ import Inbox from './pages/Inbox';
+ import Calendar from './pages/Calendar';
+@@ -46,6 +49,12 @@
+ }
+ 
+ export default function App() {
++  const {state} = useAppContext();
++  const {pathname} = useLocation();
++  const november = /^\/courses\/61(?:\/|$)/.test(pathname);
++  const accountPeople = /^\/accounts\/1\/users(?:\/|$)/.test(pathname);
++  if (state.retakePolicy && state.actingAccountId && !november) return <Navigate to="/courses/61/modules" replace/>;
++  if (state.retakePolicy && (november || accountPeople)) return <RetakeCourse/>;
+   return (
+     <div className="app-layout">
+       <Routes>
+@@ -57,6 +66,7 @@
+               <Routes>
+                 <Route path="/" element={<RedirectWithQuery to="/dashboard" />} />
+                 <Route path="/dashboard" element={<Dashboard />} />
++                {state.globalAnnouncements && <Route path="/account_notifications" element={<GlobalAnnouncementsPage />} />}
+                 <Route path="/courses" element={<Courses />} />
+                 <Route path="/courses/:courseId" element={<CourseLayout />}>
+                   <Route index element={<CourseHome />} />
+diff --git a/src/components/GlobalNav.jsx b/src/components/GlobalNav.jsx
+--- a/src/components/GlobalNav.jsx
++++ b/src/components/GlobalNav.jsx
+@@ -1,8 +1,9 @@
+ import React, { useState, useRef, useEffect } from 'react';
+ import { useNavigate, useLocation } from 'react-router-dom';
+-import { LayoutDashboard, BookOpen, Users, Calendar, MessageSquare, HelpCircle, User, Settings, Bell } from 'lucide-react';
++import { LayoutDashboard, BookOpen, Users, Calendar, MessageSquare, HelpCircle, User, Settings, Bell, Shield } from 'lucide-react';
+ import { useAppContext } from '../context/AppContext';
+ import './GlobalNav.css';
++import canvasLogomark from './canvas-logomark.svg';
+ 
+ const NAV_ITEMS = [
+   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+@@ -57,12 +58,12 @@
+   return (
+     <nav className="global-nav">
+       {/* Logo */}
+-      <button className="nav-item nav-logo" onClick={() => navigate('/dashboard')}>
++      <button className="nav-item nav-logo" aria-label="Canvas home" onClick={() => navigate('/dashboard')}>
+         <div className="canvas-logo">
+-          <svg viewBox="0 0 32 32" width="28" height="28">
++          {state.globalAnnouncements ? <img src={canvasLogomark} width="32" height="32" alt="" /> : <svg viewBox="0 0 32 32" width="28" height="28">
+             <circle cx="16" cy="16" r="15" fill="#E74C3C" />
+             <text x="16" y="22" textAnchor="middle" fill="white" fontSize="18" fontWeight="700" fontFamily="Lato, sans-serif">C</text>
+-          </svg>
++          </svg>}
+         </div>
+       </button>
+ 
+@@ -96,9 +97,21 @@
+             <button className="flyout-item" onClick={() => { setAccountOpen(false); navigate('/notifications'); }}>
+               <Bell size={16} /> Notifications
+             </button>
++            {state.globalAnnouncements && (
++              <button className="flyout-item" onClick={() => { setAccountOpen(false); navigate('/account_notifications'); }}>
++                <Bell size={16} /> Global Announcements
++              </button>
++            )}
+           </div>
+         )}
+       </div>
++
++      {state.retakePolicy && state.currentUser.isAccountAdmin && (
++        <button className="nav-item" onClick={() => navigate('/accounts/1/users')}>
++          <div className="nav-icon-wrap"><Shield size={22}/></div>
++          <span className="nav-label">Admin</span>
++        </button>
++      )}
+ 
+       {/* Main nav items */}
+       {NAV_ITEMS.map((item) => {
+diff --git a/src/RetakeCourse.jsx b/src/RetakeCourse.jsx
+new file mode 100644
+--- /dev/null
++++ b/src/RetakeCourse.jsx
+@@ -0,0 +1,310 @@
++import React, {useEffect, useState} from 'react';
++import {Link, NavLink, Navigate, useLocation, useNavigate} from 'react-router-dom';
++import {ClipboardList, CheckCircle2, ChevronDown, FileText, GripVertical, Lock, Menu, MoreVertical, Plus, X} from 'lucide-react';
++import GlobalNav from './components/GlobalNav';
++import {useAppContext} from './context/AppContext';
++import './pages/course/Modules.css';
++import './RetakeCourse.css';
++
++const course = '/courses/61';
++const modules = course + '/modules';
++const progress = modules + '/progressions';
++const announcements = course + '/announcements';
++const retake = course + '/pages/retake-instructions';
++const practice = course + '/assignments/6111';
++const people = '/accounts/1/users';
++const label = 'Retake eligibility';
++
++function Settings({policy, dismiss, save}) {
++  const [minimum, setMinimum] = useState(policy.minimum);
++  const [mode, setMode] = useState(policy.requirementMode);
++  const [criterion, setCriterion] = useState(policy.practiceCriterion || null);
++  const [tab, setTab] = useState('settings');
++  useEffect(() => {
++    const close = event => {if (event.key === 'Escape') dismiss();};
++    document.addEventListener('keydown', close);
++    return () => document.removeEventListener('keydown', close);
++  }, [dismiss]);
++
++  return <div className="hx-backdrop">
++    <form className="hx-dialog" role="dialog" aria-modal="true" aria-label="Edit Module Settings"
++      onSubmit={e => {e.preventDefault(); save({minimum: Number(minimum), requirementMode: mode, practiceCriterion: criterion});}}>
++      <header><h2>Edit Module Settings</h2><button type="button" aria-label="Close" onClick={dismiss}><X size={21}/></button></header>
++      <div className="hx-tabs" role="tablist" aria-label="Module settings">
++        <button type="button" role="tab" id="hx-settings-tab" aria-controls="hx-settings-panel" aria-selected={tab === 'settings'} onClick={() => setTab('settings')}>Settings</button>
++        <button type="button" role="tab" id="hx-assign-tab" aria-controls="hx-assign-panel" aria-selected={tab === 'assign'} onClick={() => setTab('assign')}>Assign To</button>
++      </div>
++      <div className="hx-dialog-body" role="tabpanel" id="hx-settings-panel" aria-labelledby="hx-settings-tab" hidden={tab !== 'settings'}>
++        <label className="hx-field">Module Name<input value={label} readOnly/></label>
++        <section className="hx-settings-section"><h3>Prerequisites</h3><p>No prerequisites</p></section>
++        <section className="hx-settings-section">
++          <h3>Requirements</h3>
++          <label className="hx-radio"><input type="radio" name="mode" checked={mode === 'all'} onChange={() => setMode('all')}/>
++            <span>Complete all<small>Students must complete all of these requirements.</small></span>
++          </label>
++          <label className="hx-radio"><input type="radio" name="mode" checked={mode === 'one'} onChange={() => setMode('one')}/>
++            <span>Complete one<small>Students must complete one of these requirements.</small></span>
++          </label>
++          <div className="hx-rule">
++            <label className="hx-field">Content<select defaultValue="diagnostic"><option value="diagnostic">Diagnostic</option></select></label>
++            <select aria-label="Diagnostic requirement" defaultValue="minimum"><option value="minimum">Score at least</option></select>
++            <input type="number" aria-label="Points" min="0" max="100" required value={minimum} onChange={e => setMinimum(e.target.value)}/>
++          </div>
++          {criterion && <div className="hx-rule">
++            <div className="hx-rule-heading"><label htmlFor="practice-content">Content</label>
++              <button type="button" aria-label="Remove requirement" onClick={() => setCriterion(null)}><X size={19}/></button>
++            </div>
++            <select id="practice-content" defaultValue="practice"><option value="practice">Practice workbook</option></select>
++            <select aria-label="Practice workbook requirement" value={criterion} onChange={e => setCriterion(e.target.value)}><option value="view">View the item</option><option value="submit">Submit the assignment</option></select>
++          </div>}
++          {!criterion && <button className="hx-button" type="button" onClick={() => setCriterion('view')}><Plus size={17}/> Requirement</button>}
++        </section>
++      </div>
++      <div className="hx-dialog-body" role="tabpanel" id="hx-assign-panel" aria-labelledby="hx-assign-tab" hidden={tab !== 'assign'}>
++        <section className="hx-assigned"><h3>Assign To</h3><p>Everyone</p></section>
++      </div>
++      <footer><button className="hx-button" type="button" onClick={dismiss}>Cancel</button><button className="hx-primary" type="submit">Save</button></footer>
++    </form>
++  </div>;
++}
++
++
++function EligibilityChange({dismiss, confirm}) {
++  return <div className="hx-backdrop hx-confirm-layer">
++    <section className="hx-relock" role="dialog" aria-modal="true" aria-labelledby="hx-relock-title">
++      <header><h2 id="hx-relock-title">Requirements Changed</h2>
++        <button aria-label="Close" onClick={dismiss}><X size={19}/></button>
++      </header>
++      <div>
++        <p>You have changed the progression requirements for an active course. There may be students who have already progressed to this module and to others that depend on it.</p>
++        <p>Would you like to let students continue in the course or do you want to re-lock these modules until the new requirements are completed?</p>
++      </div>
++      <footer><button className="hx-button" onClick={() => confirm('relock')}>Re-Lock Modules</button>
++        <button className="hx-primary" onClick={() => confirm('continue')}>Continue</button>
++      </footer>
++    </section>
++  </div>;
++}
++
++function practiceSubmission(submissions, id) {
++  return submissions.find(s => s.user_id === id && s.assignment_id === 6111 && s.submitted_at);
++}
++
++function learnerAccess(policy, submissions, id) {
++  const score = submissions.find(s => s.user_id === id && s.assignment_id === 6101)?.score;
++  const diagnosticMet = score >= policy.minimum;
++  const excused = policy.exemptions.includes(id);
++  const submitted = Boolean(practiceSubmission(submissions, id)) || policy.practiceCompleted.includes(id);
++  const practiceMet = excused || (policy.practiceCriterion === 'submit' && submitted) ||
++    (policy.practiceCriterion === 'view' && policy.practiceViewed.includes(id));
++  const qualifies = policy.practiceCriterion ?
++    (policy.requirementMode === 'one' ? diagnosticMet || practiceMet : diagnosticMet && practiceMet) : diagnosticMet;
++  return {score, excused, submitted, qualifies, allowed: policy.previousProgress.includes(id) || qualifies};
++}
++
++function ModuleProgress({students, policy, submissions}) {
++  const [selected, setSelected] = useState(students[0].id);
++  const learner = students.find(u => u.id === selected);
++  const access = learnerAccess(policy, submissions, selected);
++  const previouslyStarted = policy.previousProgress.includes(selected);
++  return <>
++    <div className="hx-module-toolbar"><h1>Module Progress</h1><Link className="hx-button" to={modules}>Back to Modules</Link></div>
++    <div className="hx-progress">
++      <aside><h2>Student Progress</h2>{students.map(u =>
++        <button key={u.id} aria-pressed={selected === u.id} onClick={() => setSelected(u.id)}>{u.name}</button>)}</aside>
++      <section><h2>{learner.name}</h2>
++        <div><span>Retake eligibility</span><span>{access.qualifies ? 'Complete' : 'In Progress'}</span></div>
++        <div><span>Retake assessment</span><span>{previouslyStarted ? 'In Progress' : access.allowed ? 'Unlocked' : 'Locked'}</span></div>
++      </section>
++    </div>
++  </>;
++}
++
++function Gradebook({students, submissions, policy, update}) {
++  const [cell, setCell] = useState(null);
++  const [entered, setEntered] = useState('');
++  const [tray, setTray] = useState(null);
++  const commit = (id, mark) => {
++    if (/^EX$/i.test(mark.trim())) update(id, true);
++    if (!mark.trim() || mark.trim() === '–') update(id, false);
++    setCell(null);
++  };
++  return <>
++    <h1>Gradebook</h1>
++    <table className="hx-grades"><thead><tr><th>Student Name</th><th>Diagnostic <small>Out of 100</small></th><th>Practice workbook <small>Out of 0</small></th></tr></thead>
++      <tbody>{students.map(student => {
++        const excused = policy.exemptions.includes(student.id);
++        const submitted = practiceSubmission(submissions, student.id);
++        return <tr key={student.id}><th scope="row">{student.name}</th><td>{submissions.find(s => s.user_id === student.id && s.assignment_id === 6101)?.score ?? '–'}</td>
++          <td className={excused ? 'hx-excused' : ''}><div className="hx-grade-cell">
++            {cell === student.id ? <input autoFocus aria-label={student.name + ' practice grade'} value={entered}
++              onFocus={e => e.target.select()} onChange={e => setEntered(e.target.value)} onBlur={() => commit(student.id, entered)}
++              onKeyDown={e => {if(e.key === 'Enter') e.target.blur(); if(e.key === 'Escape') setCell(null);}}/>
++              : <button onClick={() => {setEntered(excused ? 'EX' : ''); setCell(student.id);}} aria-label={student.name + ' practice grade'}>{excused ? 'EX' : submitted ? 'Submitted' : '–'}</button>}
++            <button aria-label={'Grade Detail Tray for ' + student.name} onClick={() => setTray(student)}><MoreVertical size={17}/></button>
++          </div></td></tr>;
++      })}</tbody>
++    </table>
++    {tray && <aside className="hx-grade-tray" aria-label="Grade Detail Tray">
++      <header><h2>{tray.name}</h2><button aria-label="Close Grade Detail Tray" onClick={() => setTray(null)}><X size={20}/></button></header>
++      <p>Practice workbook</p>
++      {practiceSubmission(submissions, tray.id) && <p>Submitted {practiceSubmission(submissions, tray.id).submitted_at.slice(0, 10)}</p>}
++      <h3>Status</h3>
++      <label className="hx-radio"><input type="radio" checked={!policy.exemptions.includes(tray.id)} onChange={() => update(tray.id, false)}/> None</label>
++      <label className="hx-radio"><input type="radio" checked={policy.exemptions.includes(tray.id)} onChange={() => update(tray.id, true)}/> Excused</label>
++    </aside>}
++  </>;
++}
++
++export default function RetakeCourse() {
++  const {state, setState} = useAppContext();
++  const {pathname} = useLocation();
++  const navigate = useNavigate();
++  const policy = state.retakePolicy;
++  const current = state.currentUser;
++  const student = current.role === 'student';
++  const accountStudents = state.users.filter(user => user.role === 'student');
++  const students = accountStudents.filter(user => state.enrollments.some(e => e.course_id === 61 && e.user_id === user.id));
++  const enrolled = students.some(user => user.id === current.id);
++  const [menu, setMenu] = useState(false);
++  const [editing, setEditing] = useState(false);
++  const [pending, setPending] = useState(null);
++  const [collapsed, setCollapsed] = useState({});
++  const change = updates => setState(s => ({
++    ...s, retakePolicy: {...s.retakePolicy, ...updates, revision: s.retakePolicy.revision + 1}
++  }));
++  const editExcused = (id, excused) => {
++    if (policy.exemptions.includes(id) === excused) return;
++    change({exemptions: excused ? [...policy.exemptions, id] : policy.exemptions.filter(user => user !== id)});
++  };
++
++  const {score, excused: practiceExcused, submitted, allowed} = learnerAccess(policy, state.submissions, current.id);
++
++  const retakePage = pathname === retake || pathname === course + '/retake';
++
++  useEffect(() => {
++    if (!student || !enrolled) return;
++    if (retakePage) {
++      setState(s => {
++        const {retakePolicy: p} = s;
++        const observation = {userId: current.id, route: 'retake', allowed, revision: p.revision, role: 'student'};
++        if (p.observations.some(o => o.userId === current.id && o.revision === p.revision && o.allowed === allowed)) return s;
++        return {...s, retakePolicy: {...p, observations: [...p.observations, observation]}};
++      });
++    }
++    if (pathname === practice && !policy.practiceViewed.includes(current.id) && !practiceExcused) {
++      setState(s => ({...s, retakePolicy: {...s.retakePolicy, practiceViewed: [...s.retakePolicy.practiceViewed, current.id]}}));
++    }
++  }, [pathname, current.id, policy.revision]);
++
++  const coursePeople = pathname === course + '/users';
++  const accountPeople = pathname === people;
++  const accountUser = pathname.match(/^\/accounts\/1\/users\/(\d+)(\/masquerade)?$/);
++  const person = accountStudents.find(user => user.id === Number(accountUser?.[1]));
++  const actingAs = Boolean(accountUser?.[2]);
++  const grades = pathname === course + '/grades';
++  const announcementList = pathname === announcements;
++  const announcement = state.announcements.find(a => a.course_id === 61 && pathname === announcements + '/' + a.id);
++  const moduleProgress = pathname === progress;
++  if (student && (accountPeople || accountUser || coursePeople || announcementList || announcement || moduleProgress)) return <Navigate to={modules} replace/>;
++
++  const saveSettings = values => {
++    setEditing(false);
++    if (Object.keys(values).every(key => values[key] === policy[key])) return;
++    if (policy.previousProgress.length) {
++      setPending(values);
++    } else {
++      change(values);
++    }
++  };
++  const resolveProgress = decision => {
++    change({...pending, progressionDecision: decision, previousProgress: decision === 'continue' ? policy.previousProgress : []});
++    setPending(null);
++  };
++
++  const stopActing = () => {
++    const roleOwner = state.users.find(user => user.id === state.actingAccountId);
++    if (!roleOwner) return;
++    setState({currentUser: roleOwner, actingAccountId: null});
++    navigate(people);
++  };
++
++  const nav = student ? [['Home', modules], ['Modules', modules], ['Grades', course + '/grades']] :
++    [['Home', course], ['Announcements', announcements], ['Modules', modules], ['Grades', course + '/grades'], ['People', course + '/users']];
++
++  return <div className="app-layout hx16"><GlobalNav/><div className="main-content">
++    <div className="course-layout">
++      <div className="hx-breadcrumb"><Menu size={20}/><Link to={accountPeople || accountUser ? people : modules}>{accountPeople || accountUser ? 'Field Methods Institute' : 'Field Methods | November'}</Link>
++        <span>›</span><span>{accountPeople || coursePeople ? 'People' : accountUser ? person?.name : grades ? 'Grades' : (announcementList || announcement) ? 'Announcements' : moduleProgress ? 'Module Progress' : 'Modules'}</span>
++      </div>
++      <div className="course-body">
++        <nav className="course-nav-sidebar" aria-label={accountPeople || accountUser ? 'Account Navigation' : 'Course Navigation'}>
++          {(accountPeople || accountUser ? [['People', people], ['Courses', modules]] : nav).map(([title, path]) =>
++            <NavLink key={title} to={path} end className={({isActive}) => 'course-nav-item' + (isActive && title !== 'Home' ? ' active' : '')}>{title}</NavLink>)}
++        </nav>
++        <main className="course-content-area">
++          {student && !enrolled ? <><h1>Unauthorized</h1><p>You are not enrolled in this course.</p></> : <>
++          {(coursePeople || accountPeople) && <><h1>People</h1>{coursePeople && <p><Link to={people}>Account People</Link></p>}
++            <table className="hx-people"><thead><tr><th>Name</th><th>Login ID</th><th>Role</th></tr></thead>
++              <tbody>{(accountPeople ? accountStudents : students).map(user => <tr key={user.id}><td><Link to={people + '/' + user.id}>{user.name}</Link></td><td>{user.email}</td><td>Student</td></tr>)}</tbody>
++            </table></>}
++          {person && !actingAs && <><h1>{person.name}</h1><div className="hx-profile"><div><h2>Login Information</h2><p>{person.email}</p></div>
++            <Link className="hx-button" to={people + '/' + person.id + '/masquerade'}>Act as User</Link></div></>}
++          {person && actingAs && <div className="hx-confirm"><h1>Act as User</h1>
++            <p>You are about to act as {person.name}. While acting as this user, any actions you take will be recorded in the audit log.</p>
++            <div className="hx-confirm-actions"><Link className="hx-button" to={people + '/' + person.id}>Cancel</Link>
++              <button className="hx-primary" onClick={() => {setState({currentUser: person, actingAccountId: current.id}); navigate(modules);}}>Proceed</button></div>
++          </div>}
++          {grades && !student && <Gradebook students={students} submissions={state.submissions} policy={policy} update={editExcused}/>}
++          {grades && student && <><h1>Grades for {current.name}</h1><table className="hx-people">
++            <thead><tr><th>Name</th><th>Score</th></tr></thead><tbody><tr><td>Diagnostic</td><td>{score}/100</td></tr><tr><td>Practice workbook</td><td>{practiceExcused ? 'EX' : submitted ? 'Submitted' : '–'}</td></tr></tbody></table></>}
++          {announcementList && <><h1>Announcements</h1><ul className="hx-announcements">{state.announcements.filter(a => a.course_id === 61).map(a =>
++            <li key={a.id}><Link to={announcements + '/' + a.id}>{a.title}</Link><time>{a.posted_at}</time></li>)}</ul></>}
++          {announcement && <article><h1>{announcement.title}</h1><div className="hx-announcement-body">{announcement.body}</div>
++            {announcement.id === 6160 && <p><Link to={retake}>Retake instructions</Link></p>}</article>}
++          {moduleProgress && <ModuleProgress students={students} policy={policy} submissions={state.submissions}/>}
++          {retakePage && <article>
++            <h1>Retake instructions</h1>
++            {student && !allowed ? <div className="hx-lock" role="status"><Lock size={19}/> This page is part of the module Retake assessment and hasn’t been unlocked yet. Complete an eligible requirement in Retake eligibility.<p><Link to={modules}>Back to Modules</Link></p></div>
++              : <p>Bring your field notebook and the sampling plan to the retake session. You will work through a new set of practice-site observations independently.</p>}
++          </article>}
++          {pathname === practice && <article><h1>Practice workbook</h1><p>Review the field sampling procedures, then submit your practice responses.</p>
++            {student && (practiceExcused ? <p>Excused</p> : submitted ? <><p>Submitted</p>{practiceSubmission(state.submissions, current.id) && <p>Submitted on {practiceSubmission(state.submissions, current.id).submitted_at.slice(0, 10)}</p>}</> :
++              <form onSubmit={e => {e.preventDefault(); change({practiceCompleted: [...policy.practiceCompleted, current.id]});}}>
++                <label className="hx-field">Text Entry<textarea required/></label><button className="hx-primary">Submit Assignment</button></form>)}
++          </article>}
++          {pathname === course + '/assignments/6101' && <article><h1>Diagnostic</h1><p>Points: 100</p>{student && <p>Grade: {score}/100</p>}</article>}
++          {(pathname === modules || pathname === course || pathname === course + '/') && <>
++            <div className="hx-module-toolbar"><h1>Modules</h1>{!student && <Link className="hx-button" to={progress}>View Progress</Link>}</div>
++            {[{id: 'eligibility', name: label, items: [['Diagnostic', course + '/assignments/6101', 'Score at least ' + policy.minimum], ['Practice workbook', practice, policy.practiceCriterion === 'submit' ? 'Submit the assignment' : policy.practiceCriterion === 'view' ? 'View the item' : '']]},
++              {id: 'retake', name: 'Retake assessment', items: [['Retake instructions', retake, '']]}].map((module) => {
++              const eligibility = module.id === 'eligibility';
++              const locked = student && !eligibility && !allowed;
++              return <section key={module.id} className="hx-module">
++                <div className="module-header-bar">
++                  <div className="module-header-left">{!student && <GripVertical size={16}/>}
++                    <button aria-expanded={!collapsed[module.id]} aria-label={'Toggle ' + module.name} onClick={() => setCollapsed({...collapsed, [module.id]: !collapsed[module.id]})}><ChevronDown size={16}/></button>
++                    <span className="module-name">{module.name}</span>
++                    <small>{eligibility ? (policy.requirementMode === 'one' ? 'Complete One Item' : 'Complete All Items') : 'Prerequisites: ' + label}</small>
++                  </div>
++                  <div className="module-header-right">
++                    {locked ? <Lock size={18}/> : (!student || eligibility && allowed) && <CheckCircle2 className="hx-published" size={18}/>}
++                    {!student && eligibility && <button className="module-kebab-btn" aria-label={module.name + ' options'} aria-expanded={menu} onClick={() => setMenu(!menu)}><MoreVertical size={18}/></button>}
++                  </div>
++                  {!student && eligibility && menu && <div className="hx-menu"><button onClick={() => {setMenu(false); setEditing(true);}}>Edit</button></div>}
++                </div>
++                {!collapsed[module.id] && module.items.map(([title, href, requirement]) =>
++                  <div className="hx-module-item" key={href}>{eligibility ? <ClipboardList size={18}/> : <FileText size={18}/>}
++                    {locked ? <span>{title}</span> : <Link to={href}>{title}</Link>}<small>{requirement}</small>{locked && <Lock size={15}/>}
++                  </div>)}
++              </section>;
++            })}
++          </>}
++        </>}</main>
++      </div>
++    </div>
++    {student && state.actingAccountId && <div className="hx-act-as"><span>You are currently acting as {current.name}.</span><button onClick={stopActing}>Stop Acting as User</button></div>}
++    {!student && editing && <Settings policy={policy} dismiss={() => setEditing(false)} save={saveSettings}/>}
++    {!student && pending && <EligibilityChange dismiss={() => setPending(null)} confirm={resolveProgress}/>}
++  </div></div>;
++}
+diff --git a/src/RetakeCourse.css b/src/RetakeCourse.css
+new file mode 100644
+--- /dev/null
++++ b/src/RetakeCourse.css
+@@ -0,0 +1,121 @@
++.hx16 .main-content {background: white}
++.hx16 .course-nav-sidebar {border: 0; width: 172px; padding-top: 15px}
++.hx16 .course-nav-item.active {background: none; border-color: #2d3b45; color: #2d3b45}
++.hx16 .course-content-area {padding: 24px}
++.hx16 h1 {font-size: 28px; font-weight: 400; line-height: 36px; margin: 0 0 20px}
++.hx16 h2 {font-size: 22px; font-weight: 400;}
++.hx16 h3 {font-size: 16px; margin: 15px 0 8px}
++.hx16 p {margin: 12px 0}
++.hx16 button {cursor: pointer}
++.hx-breadcrumb {height: 57px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #c7cdd1; padding: 0 24px; background: white; font-size: 17px}
++.hx-breadcrumb svg {color: #0374b5}
++.hx-module-toolbar {display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid #c7cdd1; margin-bottom: 23px}
++.hx-module {margin-bottom: 22px; border: 1px solid #c7cdd1}
++.hx-module .module-header-bar {position: relative; height: 51px; background: #f5f5f5}
++.hx-module small {font-size: 12px; color: #51616d; margin-left: 9px}
++.hx-module-item {display: flex; align-items: center; gap: 10px; min-height: 55px; padding: 10px 26px; border-top: 1px solid #e3e6e8}
++.hx-module-item small {margin-left: auto}
++.hx-published {color: #198734}
++.hx-menu {position: absolute; top: 42px; right: 8px; z-index: 3; width: 135px; background: white; border: 1px solid #c7cdd1; box-shadow: 0 3px 8px #0003}
++.hx-menu button {padding: 10px 14px; text-align: left; width: 100%}
++.hx-menu button:hover {background: #eef4f8}
++.hx-backdrop {position: fixed; inset: 0; z-index: 2001; background: #0005}
++.hx-dialog {position: absolute; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; width: min(525px, 96vw); background: white; box-shadow: -4px 0 12px #0005}
++.hx-dialog header, .hx-grade-tray header {display: flex; align-items: center; justify-content: space-between}
++.hx-dialog header {padding: 20px 19px; min-height: 73px}
++.hx-dialog header h2 {font-size: 26px}
++.hx-tabs {display: flex; align-items: stretch; border-bottom: 1px solid #c7cdd1; padding: 0 16px; min-height: 48px}
++.hx-tabs button {padding: 10px 14px; border-bottom: 3px solid transparent}
++.hx-tabs [aria-selected=true] {border-color: #0374b5}
++.hx-dialog footer {display: flex; justify-content: flex-end; gap: 8px; min-height: 62px; padding: 12px 17px; border-top: 1px solid #c7cdd1; background: #f5f5f5}
++.hx-dialog-body {flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 23px 24px 21px}
++.hx-field {display: grid; gap: 8px; margin-bottom: 14px; font-weight: 700}
++.hx-field textarea {min-height: 95px}
++.hx-settings-section {border-top: 1px solid #c7cdd1; margin-top: 20px; padding-top: 9px}
++.hx-settings-section p {color: #51616d}
++.hx16 input:not([type=radio]), .hx16 select, .hx16 textarea {padding: 8px 10px; border: 1px solid #a5afb5; border-radius: 3px; color: #2d3b45; background: white}
++.hx-radio {display: flex; align-items: flex-start; gap: 9px; margin: 9px 0}
++.hx-radio small {display: block; color: #51616d; margin-top: 3px; margin-bottom: 8px}
++.hx-dialog input[type=radio] {margin-top: 2px}
++.hx-rule {display: grid; gap: 9px; margin: 17px 0; padding: 17px 21px; border: 1px solid #c7cdd1; border-radius: 4px}
++.hx-rule .hx-field {margin: 0}
++.hx-rule-heading {display: flex; justify-content: space-between; align-items: center; font-weight: 700}
++.hx-rule-heading button {color: #c93637}
++.hx-rule select, .hx-rule input {width: 100%; min-height: 36px}
++.hx-assigned {border: 1px solid #c7cdd1; padding: 12px 16px}
++.hx-button, .hx-primary {padding: 8px 12px; border-radius: 3px; border: 1px solid #c7cdd1; min-height: 37px; color: #2d3b45; background: #f5f5f5; display: inline-flex; align-items: center; gap: 6px; text-decoration: none}
++.hx-primary {color: white; background: #0374b5; border-color: #025788}
++.hx-button:hover {background: #e6e9eb; text-decoration: none}
++.hx-primary:hover {background: #025788}
++.hx-grades, .hx-people {border-collapse: collapse; width: min(850px,100%); text-align: left}
++.hx-grades th, .hx-grades td, .hx-people th, .hx-people td {padding: 11px 13px; border-bottom: 1px solid #c7cdd1; height: 48px}
++.hx-grades th, .hx-grades td {border: 1px solid #c7cdd1; width: 33%}
++.hx-grades thead, .hx-grades tbody th {background: #f5f5f5}
++.hx-grades thead small {display: block; font-weight: 400}
++.hx-grade-cell {display: flex; align-items: center; justify-content: space-between; min-height: 25px}
++.hx-grade-cell button {padding: 3px 6px}
++.hx-grade-cell input {width: 90px}
++.hx-excused {background: #fcf4d9}
++.hx-grade-tray {position: fixed; top: 0; right: 0; bottom: 0; width: 310px; padding: 20px; background: #fff; box-shadow: -4px 0 9px #0003; z-index: 20}
++.hx-profile, .hx-confirm-actions {display: flex; justify-content: space-between; align-items: center}
++.hx-profile {border-top: 1px solid #c7cdd1; padding: 16px 0}
++.hx-confirm {max-width: 715px; margin: 52px auto auto}
++.hx-confirm-actions {justify-content: flex-end; border-top: 1px solid #c7cdd1; padding-top: 15px; margin-top: 21px; gap: 8px}
++.hx-lock {border: 1px solid #c7cdd1; background: #f5f5f5; padding: 22px}
++.hx-lock svg {vertical-align: middle; margin-right: 5px}
++.hx-act-as {position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; border: 3px solid #ae1582; height: 48px; padding: 0 18px; color: white; background: #ae1582; z-index: 2000}
++.hx-act-as button {background: #fff; color: #2d3b45; padding: 6px 12px; border-radius: 3px}
++.hx-sr {position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)}
++
++.hx-confirm-layer {display: grid; place-items: center}
++.hx-relock {width: min(424px, 96vw); background: white; border-radius: 3px; box-shadow: 0 4px 15px #0006}
++.hx-relock header, .hx-relock footer {display: flex; align-items: center; gap: 8px; padding: 13px 16px}
++.hx-relock header {justify-content: space-between; border-bottom: 1px solid #c7cdd1}
++.hx-relock h2 {font-size: 19px}
++.hx-relock > div {padding: 8px 15px; line-height: 1.5}
++.hx-relock footer {justify-content: flex-end; border-top: 1px solid #c7cdd1; background: #f5f5f5}
++.hx-announcements {border: 1px solid #c7cdd1; max-width: 850px; list-style: none}
++.hx-announcements li {min-height: 51px; padding: 15px; display: flex; gap: 12px; justify-content: space-between; border-bottom: 1px solid #c7cdd1}
++.hx-announcements li:last-child {border: 0}
++.hx-announcements time {color: #51616d}
++.hx-announcement-body {max-width: 850px; white-space: pre-line; line-height: 1.6}
++.hx-progress {display: grid; grid-template-columns: minmax(170px, 230px) 1fr; gap: 26px}
++.hx-progress aside {border: 1px solid #c7cdd1}
++.hx-progress aside h2, .hx-progress section h2 {padding: 12px}
++.hx-progress aside button {display: block; padding: 10px 13px; width: 100%; text-align: left; border-top: 1px solid #c7cdd1; color: #0374b5}
++.hx-progress [aria-pressed=true] {background: #edf5f9; font-weight: 700}
++.hx-progress section div {border: 1px solid #c7cdd1; margin-bottom: 12px; display: flex; justify-content: space-between; padding: 15px}
++
++.hx-module .module-header-left small {
++  padding: 3px 10px;
++  border: 1px solid #c7cdd1;
++  border-radius: 14px;
++  font-weight: 600;
++  line-height: 16px;
++}
++.hx-module-item {
++  position: relative;
++}
++.hx-module-item:has(a)::before {
++  content: '';
++  position: absolute;
++  inset: 0 auto 0 0;
++  width: 3px;
++  background: #198754;
++}
++.hx-module-item:not(:has(a)) {
++  color: #52616b;
++  background: #f7f7f7;
++}
++.hx-grade-tray .hx-radio:last-of-type {
++  background: #fcf5e1;
++  border-radius: 3px;
++}
++.hx-progress aside, .hx-progress section div {
++  background: #f5f5f5;
++  border-radius: 3px;
++}
++.hx-progress [aria-pressed=true] {
++  background: white;
++  color: #0374b5;
++}
+diff --git a/src/pages/Dashboard.jsx b/src/pages/Dashboard.jsx
+--- a/src/pages/Dashboard.jsx
++++ b/src/pages/Dashboard.jsx
+@@ -4,6 +4,7 @@
+ import { useAppContext } from '../context/AppContext';
+ import CourseColorModal from '../components/CourseColorModal';
+ import './Dashboard.css';
++import {DashboardAnnouncements} from './GlobalAnnouncements';
+ 
+ export default function Dashboard() {
+   const { state, setState } = useAppContext();
+@@ -64,8 +65,9 @@
+ 
+   return (
+     <div className="dashboard-page">
++      {state.globalAnnouncements && <DashboardAnnouncements />}
+       <div className="dashboard-header">
+-        <h1>Dashboard</h1>
++        <h1 tabIndex={-1}>Dashboard</h1>
+         <div className="pill-toggle">
+           <button
+             className={dashboardView === 'cards' ? 'active' : ''}
+diff --git a/src/pages/GlobalAnnouncements.jsx b/src/pages/GlobalAnnouncements.jsx
+new file mode 100644
+--- /dev/null
++++ b/src/pages/GlobalAnnouncements.jsx
+@@ -0,0 +1,88 @@
++import React, {useLayoutEffect, useRef, useState} from 'react';
++import {Link} from 'react-router-dom';
++import {useAppContext} from '../context/AppContext';
++import closeIcon from '../components/canvas-close.svg';
++import informationIcon from '../components/canvas-information.svg';
++import './GlobalAnnouncements.css';
++
++function visibleNotices(state) {
++  return state.globalAnnouncements.filter(notice => notice.role === state.currentUser.role);
++}
++
++function Notice({notice, onClose}) {
++  return (
++    <article className="account-notice">
++      <div className="account-notice-icon" aria-hidden="true"><img src={informationIcon} alt="" /></div>
++      <div className="account-notice-content">
++        <h2>{notice.subject}</h2>
++        <p>{notice.message}</p>
++        <small>This is an announcement from <strong>{notice.account}</strong></small>
++      </div>
++      {onClose && <button type="button" className="account-notice-close"
++        aria-label="Close announcement" title="Close" onClick={onClose}><img src={closeIcon} alt="" /></button>}
++    </article>
++  );
++}
++
++export function DashboardAnnouncements() {
++  const {state, setState} = useAppContext();
++  const [showConfirmation, setShowConfirmation] = useState(false);
++  const viewLink = useRef(null);
++  const account = state.currentUser.id;
++  const dismissed = (state.dismissedGlobalAnnouncements || {})[account] || [];
++
++  useLayoutEffect(() => {
++    if (showConfirmation) viewLink.current?.focus();
++  }, [showConfirmation]);
++
++  function dismiss(notice) {
++    setState(previous => {
++      const dismissals = previous.dismissedGlobalAnnouncements || {};
++      return {
++        ...previous,
++        dismissedGlobalAnnouncements: {
++          ...dismissals,
++          [account]: [...new Set([...(dismissals[account] || []), notice.id])],
++        },
++      };
++    });
++    setShowConfirmation(true);
++  }
++
++  return (
++    <>
++      {visibleNotices(state).filter(notice => !dismissed.includes(notice.id)).map(notice =>
++        <Notice key={notice.id} notice={notice} onClose={() => dismiss(notice)} />)}
++      {showConfirmation && (
++        <div className="account-notice" role="status">
++          <div className="account-notice-icon" aria-hidden="true"><img src={informationIcon} alt="" /></div>
++          <div className="account-notice-content">
++            <div>You can view dismissed announcements by going to Account and selecting Global Announcements from the menu.</div>
++            <Link ref={viewLink} className="account-notice-view" to="/account_notifications">View</Link>
++          </div>
++          <button type="button" className="account-notice-close" aria-label="Close confirmation"
++            onClick={() => {
++              setShowConfirmation(false);
++              document.querySelector('.dashboard-header h1')?.focus();
++            }}><img src={closeIcon} alt="" /></button>
++        </div>
++      )}
++    </>
++  );
++}
++
++export function GlobalAnnouncementsPage() {
++  const {state} = useAppContext();
++  const [recent, setRecent] = useState(false);
++  return (
++    <main className="dashboard-page global-announcements-page">
++      <h1>Global Announcements</h1>
++      <div className="announcement-tabs" role="group" aria-label="Announcement period">
++        <button type="button" aria-pressed={!recent} onClick={() => setRecent(false)}>Current</button>
++        <button type="button" aria-pressed={recent} onClick={() => setRecent(true)}>Recent</button>
++      </div>
++      <p>{recent ? 'Announcements from the past four months' : 'Active Announcements'}</p>
++      {!recent && visibleNotices(state).map(notice => <Notice key={notice.id} notice={notice} />)}
++    </main>
++  );
++}
+diff --git a/src/pages/GlobalAnnouncements.css b/src/pages/GlobalAnnouncements.css
+new file mode 100644
+--- /dev/null
++++ b/src/pages/GlobalAnnouncements.css
+@@ -0,0 +1,76 @@
++.account-notice {
++  position: relative;
++  display: flex;
++  min-height: 76px;
++  margin-bottom: 24px;
++  overflow: hidden;
++  color: #2d3b45;
++  background: #fff;
++  border: 2px solid #008ee2;
++  border-radius: 4px;
++  box-shadow: 0 2px 5px #0002;
++}
++
++.account-notice-icon {
++  display: grid;
++  flex: 0 0 48px;
++  place-items: center;
++  color: #fff;
++  background: #008bd2;
++  font-size: 23px;
++}
++.account-notice-icon img { width: 23px; height: 23px; filter: invert(1); }
++
++.account-notice-content {
++  padding: 12px 52px 6px 12px;
++  font-size: 16px;
++  line-height: 1.35;
++}
++
++.account-notice-content h2 {
++  margin: 0 0 12px;
++  font-size: 18px;
++  font-weight: 700;
++}
++
++.account-notice-content p { margin: 0 0 14px; }
++
++.account-notice-close {
++  position: absolute;
++  top: 8px;
++  right: 8px;
++  display: grid;
++  width: 32px;
++  height: 32px;
++  place-items: center;
++  color: #2d3b45;
++  border-radius: 4px;
++}
++
++.account-notice-close:hover { background: #f2f4f4; }
++.account-notice-close img { height: 12px; width: 12px; opacity: .72; }
++
++.account-notice-view {
++  display: inline-block;
++  margin: 10px 0 8px;
++  padding: 8px 13px;
++  color: #fff;
++  background: #007cbd;
++  border-radius: 4px;
++}
++
++.account-notice-view:hover { color: #fff; background: #006a9e; }
++
++.account-notice-close:focus-visible,
++.account-notice-view:focus-visible,
++.announcement-tabs button:focus-visible {
++  outline: 2px solid #006a9e;
++  outline-offset: 2px;
++}
++
++.global-announcements-page { max-width: 1000px; }
++.global-announcements-page h1 { margin-bottom: 22px; }
++.global-announcements-page > p { margin: 14px 0; }
++.announcement-tabs { border-bottom: 1px solid #c7cdd1; }
++.announcement-tabs button { padding: 10px 18px; color: #006a9e; }
++.announcement-tabs button[aria-pressed="true"] { border-bottom: 3px solid #008bd2; color: #2d3b45; }
+diff --git a/src/components/canvas-logomark.svg b/src/components/canvas-logomark.svg
+new file mode 100644
+--- /dev/null
++++ b/src/components/canvas-logomark.svg
+@@ -0,0 +1,3 @@
++<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="canvas-logomark" x="0" y="0" viewBox="0 0 200 200" width="200" height="200" xml:space="preserve">
++  <path fill="#FFFFFF" d="M29.2 100c0-14.9-11.2-26.9-25.5-28.4C1.5 80.6 0 89.6 0 100s1.5 19.4 3.7 28.4C18 126.9 29.2 114.2 29.2 100L29.2 100zM46.4 90.3c5 0 9 4 9 9s-4 9-9 9 -9-4-9-9S41.5 90.3 46.4 90.3zM170.8 100c0 14.9 11.2 26.9 25.5 28.4 2.2-9 3.7-18.7 3.7-28.4s-1.5-19.4-3.7-28.4C182 73.1 170.8 85.1 170.8 100L170.8 100zM151.3 90.3c5 0 9 4 9 9s-4 9-9 9c-5 0-9-4-9-9S146.3 90.3 151.3 90.3zM99.6 170.9c-15 0-27 11.2-28.5 25.4 9 2.2 18.7 3.7 28.5 3.7s19.5-1.5 28.5-3.7C126.6 182.1 114.6 170.9 99.6 170.9L99.6 170.9zM98.9 142.5c5 0 9 4 9 9 0 4.9-4 9-9 9 -5 0-9-4-9-9C89.9 146.5 93.9 142.5 98.9 142.5zM99.6 29.1c15 0 27-11.2 28.5-25.4 -9-2.2-18.7-3.7-28.5-3.7S80.1 1.5 71.2 3.7C72.7 17.9 84.6 29.1 99.6 29.1L99.6 29.1zM98.9 38.1c5 0 9 4 9 9s-4 9-9 9c-5 0-9-4-9-9S93.9 38.1 98.9 38.1zM149.8 150c-10.5 10.4-11.2 26.9-2.2 38.1 16.5-9.7 30.7-23.9 40.4-40.3C176.8 138.8 160.3 139.6 149.8 150L149.8 150zM136.3 127.6c5 0 9 4 9 9 0 4.9-4 9-9 9 -5 0-9-4-9-9C127.3 131.6 131.4 127.6 136.3 127.6zM49.4 50c10.5-10.4 11.2-26.9 2.2-38.1C35.2 21.6 21 35.8 11.2 52.2 22.5 61.2 39 60.4 49.4 50L49.4 50zM61.4 53c5 0 9 4 9 9s-4 9-9 9 -9-4-9-9S56.5 53 61.4 53zM149.8 50c10.5 10.4 27 11.2 38.2 2.2 -9.7-16.4-24-30.6-40.4-40.3C138.6 23.1 139.3 39.6 149.8 50L149.8 50zM136.3 53c5 0 9 4 9 9s-4 9-9 9c-5 0-9-4-9-9S131.4 53 136.3 53zM49.4 150c-10.5-10.4-27-11.2-38.2-2.2 9.7 16.4 24 30.6 40.4 40.3C60.7 176.1 59.9 160.4 49.4 150L49.4 150zM61.4 127.6c5 0 9 4 9 9 0 4.9-4 9-9 9s-9-4-9-9C52.4 131.6 56.5 127.6 61.4 127.6z"/>
++</svg>
+diff --git a/src/components/canvas-information.svg b/src/components/canvas-information.svg
+new file mode 100644
+--- /dev/null
++++ b/src/components/canvas-information.svg
+@@ -0,0 +1 @@
++<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="ic-icon-svg menu-item__icon svg-icon-information" x="0" y="0" viewBox="0 0 200 200" enable-background="new 0 0 200 200" xml:space="preserve" fill="currentColor"><path d="M94.42,139h11.15V105.58H94.42ZM83.27,150.19V94.42h33.46v55.76ZM100,72.12A11.15,11.15,0,1,1,111.15,61,11.16,11.16,0,0,1,100,72.12Zm0-33.46A22.31,22.31,0,1,0,122.31,61,22.33,22.33,0,0,0,100,38.66M100,5.2A94.8,94.8,0,1,0,194.8,100,94.91,94.91,0,0,0,100,5.2m0,178.45A83.65,83.65,0,1,1,183.65,100,83.73,83.73,0,0,1,100,183.65"/></svg>
+diff --git a/src/components/canvas-close.svg b/src/components/canvas-close.svg
+new file mode 100644
+--- /dev/null
++++ b/src/components/canvas-close.svg
+@@ -0,0 +1,7 @@
++<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
++	 viewBox="0 0 512 512" width="512" height="512" enable-background="new 0 0 512 512" xml:space="preserve">
++<g id="X">
++	<polygon points="509.5,73.2 435.2,4 254.8,184.2 74.3,4 2.5,75.8 182.9,256 2.5,436.2 76.9,505.5 254.8,327.7 435.2,508 507,436.2 
++		326.6,256 	"/>
++</g>
++</svg>

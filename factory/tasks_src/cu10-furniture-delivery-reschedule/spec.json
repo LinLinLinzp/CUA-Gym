@@ -1,0 +1,122 @@
+{
+  "task_id": "cu10-furniture-delivery-reschedule",
+  "name": "cua-hard/cu10-furniture-delivery-reschedule",
+  "version": "1.0.1",
+  "description": "Reschedule a split freight delivery against site clearance and crew windows and hand off an editable route.",
+  "keywords": [
+    "wayfair",
+    "asana",
+    "teams",
+    "drawio",
+    "delivery",
+    "routing"
+  ],
+  "sites": [
+    "wayfair",
+    "asana",
+    "microsoft_teams"
+  ],
+  "clock": "2026-11-19T09:00:00-05:00",
+  "mock_revisions": {
+    "wayfair": "77fa41779a13baac6410d4278ef0f03a5ee765f9"
+  },
+  "timezone": "America/New_York",
+  "locale": "en-US",
+  "hide_browser_debug": true,
+  "metadata": {
+    "scenario": "日常事务",
+    "subscenario": "家具交付改期与进场路线",
+    "operation_difficulty": 2,
+    "tool_type": 2,
+    "difficulty": 4,
+    "levers": [
+      "L02",
+      "L06"
+    ]
+  },
+  "additive_scoring": true,
+  "computer_mcp": {
+    "applications": [
+      "drawio"
+    ],
+    "outputs": [
+      "Maple-Reading-Room-Delivery.drawio"
+    ],
+    "attachments": {
+      "asana": [
+        "Maple-Reading-Room-Delivery.drawio"
+      ]
+    },
+    "verifier_inputs": [
+      "Maple-Reading-Room-Working.drawio"
+    ],
+    "start_paths": {
+      "wayfair": "/deliveries",
+      "asana": "/projects",
+      "microsoft_teams": "/teams/maple-house/channels/furniture-deliveries"
+    }
+  },
+  "fixture_expectations": {
+    "golden": [
+      1,
+      1
+    ],
+    "equivalent": [
+      1,
+      1
+    ],
+    "nop": [
+      0,
+      0
+    ],
+    "bypass": [
+      0.18,
+      0.18
+    ],
+    "one_core": [
+      0.32,
+      0.32
+    ],
+    "false_completion": [
+      0,
+      0
+    ],
+    "wrong_shipment": [
+      0.68,
+      0.68
+    ],
+    "wrong_window": [
+      0.9,
+      0.9
+    ],
+    "stale_driver": [
+      0.92,
+      0.92
+    ],
+    "stale_carry_route": [
+      0.81,
+      0.81
+    ],
+    "deleted_floor_detail": [
+      0.92,
+      0.92
+    ],
+    "wrong_install_date": [
+      0.9,
+      0.9
+    ],
+    "wrong_reply_thread": [
+      0.92,
+      0.92
+    ],
+    "delivery_and_route": [
+      0.59,
+      0.59
+    ],
+    "route_and_asana": [
+      0.6,
+      0.6
+    ]
+  }
+}
+

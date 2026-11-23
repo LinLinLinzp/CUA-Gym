@@ -1,0 +1,357 @@
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -17,20 +17,7 @@ function Shell() {
+   const account = person(state, actor)
+   const initials = (account?.name || 'Account').split(/\s+/).slice(0, 2).map(word => word[0]).join('')
+   const nav = pathname.startsWith('/governance') ? 'Governance' : pathname === '/tasks' ? 'Tasks' : 'Files'
+-  return <header className="top">
+-    <div className="top-content">
+-      <RouteLink className="wordmark" to="/">Box</RouteLink>
+-      <nav className="main-nav" aria-label="Workspace">
+-        {[['Files', '/'], ['Tasks', '/tasks'], ['Governance', '/governance/retention']].map(([text, path]) =>
+-          <RouteLink key={text} to={path} aria-current={nav === text ? 'page' : undefined}>{text}</RouteLink>)}
+-      </nav>
+-      <form className="global-search" role="search" onSubmit={event => { event.preventDefault(); route(`/search?q=${encodeURIComponent(term.trim())}`) }}>
+-        <button type="submit" aria-label="Search"><Icon name="search" /></button>
+-        <input type="search" aria-label="Search files and folders" placeholder="Search files and folders" value={term} onChange={event => setTerm(event.target.value)} />
+-      </form>
+-      <div className="account" title={account?.name || 'Account'} aria-label={account?.name || 'Account'}><span className="avatar">{initials}</span></div>
+-    </div>
+-  </header>
++  return <><aside className="box-nav"><RouteLink className="wordmark" to="/">box</RouteLink><nav className="main-nav" aria-label="Workspace">{[['Files','/'],['Tasks','/tasks'],['Governance','/governance/retention']].map(([text,path])=><RouteLink key={text} to={path} aria-current={nav===text?'page':undefined}>{text}</RouteLink>)}</nav></aside><header className="box-top"><form className="global-search" role="search" onSubmit={event=>{event.preventDefault();route(`/search?q=${encodeURIComponent(term.trim())}`)}}><button type="submit" aria-label="Search"><Icon name="search"/></button><input type="search" aria-label="Search files and folders" placeholder="Search files and folders" value={term} onChange={event=>setTerm(event.target.value)}/></form><span className="avatar" title={account?.name}>{initials}</span></header></>
+ }
+ 
+ export function App() {
+--- a/src/folders.jsx
++++ b/src/folders.jsx
+@@ -1,3 +1,5 @@
++import {canFolder} from './permissions.js'
++import { UploadDocument } from './closingFiles.jsx'
+ import { useMemo, useState } from 'react'
+ import { useLocation, useParams } from 'react-router-dom'
+ import { useWorkspace } from './store.jsx'
+@@ -98,7 +100,7 @@ function FolderEditor({ kind, folder, parentId, onClose, fromDetail }) {
+ 
+ function AccessDialog({ folder, onClose }) {
+   const { state, commit } = useWorkspace()
+-  const [panel, setPanel] = useState({ kind: 'list' })
++  const [panel, setPanel] = useState({ kind: 'invite' })
+   const back = () => setPanel({ kind: 'list' })
+   const tree = directory(state)
+   const entries = grants(state, folder.id)
+@@ -121,10 +123,10 @@ function AccessDialog({ folder, onClose }) {
+     }, { invite: 'Invitations saved.', role: 'Access role updated.', remove: 'Access removed.' }[kind])
+     back()
+   }
+-  const names = { list: 'Manage access', invite: 'Invite people', role: 'Change role', remove: 'Remove access' }
+-  return <Dialog title={names[kind]} onClose={kind === 'list' ? onClose : back} wide>
++  const names = { list: 'Share', invite: 'Invite people', role: 'Change role', remove: 'Remove access' }
++  return <Dialog title={['list','invite'].includes(kind) ? `Share '${folder.name}'` : names[kind]} onClose={kind === 'list' ? onClose : back} wide>
+     {kind === 'list' ? <div className="dialog-content">
+-      <div className="section-head"><p>{nameOf(folder)}</p><button className="primary" onClick={() => setPanel({ kind: 'invite' })}><Icon name="plus" />Invite people</button></div>
++      <div className="section-head"><p>{nameOf(folder)}</p><button className="primary" onClick={() => setPanel({ kind: 'invite' })}><Icon name="plus" />Invite People</button></div>
+       <ul className="clean-list">
+         <li className="record-row"><div className="record-head"><strong>{personName(state, folder.ownerId)}</strong><span className="chip">Owner</span></div></li>
+         {entries.map(item => {
+@@ -139,7 +141,7 @@ function AccessDialog({ folder, onClose }) {
+           </li>
+         })}
+       </ul>
+-    </div> : <Form key={kind} action={kind === 'invite' ? 'Send invitations' : kind === 'role' ? 'Save role' : 'Remove access'} onClose={back} onSave={save} danger={kind === 'remove'}>
++    </div> : <Form key={kind} action={kind === 'invite' ? 'Send' : kind === 'role' ? 'Save role' : 'Remove access'} onClose={back} onSave={save} danger={kind === 'remove'}>
+       {kind === 'invite' && <InviteFields users={state.users} />}
+       {kind === 'role' && <Field title="Role"><select name="role" defaultValue={entry.role}>{Object.entries(roles).map(([key, text]) => <option key={key} value={key}>{text}</option>)}</select></Field>}
+       {kind === 'remove' && <p>Remove direct access for <strong>{person(state, entry.userId)?.name || entry.inviteeEmail || 'this collaborator'}</strong>?</p>}
+@@ -158,7 +160,7 @@ function FolderContext({ state, folder, openAccess, tree }) {
+         <p>{person(state, entry.userId)?.name || entry.inviteeEmail || 'Unknown invitee'}</p>
+         <small>{roles[entry.role] || 'Unknown role'} · {entry.folderId === folder.id ? entry.status : 'Inherited'}</small>
+       </li>)}</ul>
+-      <button className="section-button" onClick={openAccess}>Manage access</button>
++      {canFolder(state,folder.id,'manage') && <button className="section-button" onClick={openAccess}>Share</button>}
+     </section>
+     {policies.length > 0 && <section className="panel panel-pad">
+       <h2><Icon name="shield" />Retention coverage</h2>
+@@ -176,7 +178,7 @@ function FolderContext({ state, folder, openAccess, tree }) {
+ }
+ 
+ function folderActions(folder, open) {
+-  return [['Manage access', 'access'], ['Rename', 'rename'], ['Move', 'move'], ['Move to trash', 'trash']].map(([label, kind]) => [label, () => open({ kind, folder })])
++  return [['Share', 'access'], ['Rename', 'rename'], ['Move', 'move'], ['Move to trash', 'trash']].map(([label, kind]) => [label, () => open({ kind, folder })])
+ }
+ 
+ export function FilesPage({ search = false }) {
+@@ -194,7 +196,7 @@ export function FilesPage({ search = false }) {
+   if (folderId && !tree.visible(folderId)) return <Empty title="Folder unavailable"><RouteLink to="/">Back to All files</RouteLink> · <RouteLink to="/trash">View Trash</RouteLink></Empty>
+ 
+   const matches = item => normalize(item.name).includes(normalize(query))
+-  const folders = filter === 'Files' ? [] : state.folders.filter(item => tree.visible(item.id) && (search ? matches(item) : (item.parentId ?? null) === parentId))
++  const folders = filter === 'Files' ? [] : state.folders.filter(item => tree.visible(item.id) && (search ? matches(item) : ((item.parentId ?? null) === parentId || (parentId==null && !tree.visible(item.parentId)))))
+   const files = filter === 'Folders' ? [] : state.files.filter(item => search ? tree.visible(item.folderId) && matches(item) : (item.folderId ?? null) === parentId)
+   const rows = [...folders.map(item => ({ item, type: 'folder' })), ...files.map(item => ({ item, type: 'file' }))].sort((a, b) =>
+     (sort === 'modified' ? String(b.item.updatedAt || '').localeCompare(String(a.item.updatedAt || '')) : 0) ||
+@@ -207,8 +209,8 @@ export function FilesPage({ search = false }) {
+       description={search ? query ? `Results for “${query}”` : 'Browse all matching items.' : folder?.description || (!folder ? 'Browse folders and documents in your workspace.' : undefined)}
+       actions={!search && <>
+         {showTrash && <RouteLink className="link-button" to="/trash"><Icon name="trash" />Trash</RouteLink>}
+-        {folder && <RowMenu name={nameOf(folder)} items={folderActions(folder, setAction)} />}
+-        <button className="primary" onClick={() => setAction({ kind: 'create' })}><Icon name="plus" />New folder</button>
++        {folder && canFolder(state,folder.id,'manage') && <RowMenu name={nameOf(folder)} items={folderActions(folder, setAction)} />}
++        <UploadDocument folderId={parentId} />{canFolder(state,parentId,'manage') && <button className="primary" onClick={() => setAction({ kind: 'create' })}><Icon name="plus" />New folder</button>}
+       </>} />
+     <div className={folder ? 'split' : undefined}>
+       <section className="panel" aria-label="Items">
+@@ -217,9 +219,9 @@ export function FilesPage({ search = false }) {
+           <label className="inline-actions">Sort by <select value={sort} onChange={event => setSort(event.target.value)}><option value="name">Name</option><option value="modified">Last modified</option></select></label>
+         </div>
+         {!rows.length ? <Empty title={search ? 'No matching items' : 'No items in this view'} /> : <>
+-          <table><thead><tr><th scope="col">Name</th><th scope="col" className="date-cell">Last modified</th><th scope="col" className="owner-cell">Owner</th><th scope="col" className="action-cell"><span className="sr-only">Actions</span></th></tr></thead>
++          <table><thead><tr><th scope="col">Name</th><th scope="col" className="date-cell">Updated</th><th scope="col" className="owner-cell">Size</th><th scope="col" className="action-cell"><span className="sr-only">Actions</span></th></tr></thead>
+             <tbody>{rows.map(({ item, type }) => {
+-              const textDocument = type === 'file' && item.mimeType?.includes('wordprocessingml')
++              const textDocument = type === 'file' && (item.mimeType?.includes('wordprocessingml') || item.mimeType?.includes('opendocument.text'))
+               return <tr key={`${type}:${item.id}`}>
+               <td><div className="item-name"><span className={`marker ${type}`}><Icon name={textDocument ? "textFile" : type} /></span><div>
+                 <RouteLink to={type === 'folder' ? folderUrl(item.id) : `/preview/${encodeURIComponent(item.id)}`}>{nameOf(item)}</RouteLink>
+@@ -227,8 +229,8 @@ export function FilesPage({ search = false }) {
+                 <small className="row-detail owner-detail">Owner {personName(state, item.ownerId)}</small>
+                 <small className="row-detail narrow-detail">Last modified {humanDate(item.updatedAt)}</small>
+               </div></div></td>
+-              <td className="date-cell">{humanDate(item.updatedAt)}</td><td className="owner-cell">{personName(state, item.ownerId)}</td>
+-              <td className="action-cell">{type === 'folder' && <RowMenu name={nameOf(item)} items={folderActions(item, setAction)} />}</td>
++              <td className="date-cell">{humanDate(item.updatedAt)}</td><td className="owner-cell">{type==="file" ? (item.sizeBytes>=1024 ? (item.sizeBytes/1024).toFixed(1)+" KB" : item.sizeBytes+" bytes") : "-"}</td>
++              <td className="action-cell">{type === 'folder' && canFolder(state,item.id,'manage') && <RowMenu name={nameOf(item)} items={folderActions(item, setAction)} />}</td>
+             </tr>})}</tbody></table>
+           <div className="table-footer">{rows.length} {rows.length === 1 ? 'item' : 'items'}</div>
+         </>}
+--- a/src/tasks.jsx
++++ b/src/tasks.jsx
+@@ -1,3 +1,5 @@
++import {canFolder} from './permissions.js'
++import { OriginalDocument } from './closingFiles.jsx'
+ import { useState } from 'react'
+ import { useParams } from 'react-router-dom'
+ import { useWorkspace } from './store.jsx'
+@@ -160,7 +162,7 @@ export function FilePreview() {
+   const [adding, setAdding] = useState(null)
+   const file = state.files.find(item => item.id === fileId)
+   const tree = directory(state)
+-  if (!file || !tree.visible(file.folderId)) return <Empty title="File unavailable"><RouteLink to="/">Back to All files</RouteLink> · <RouteLink to="/trash">View Trash</RouteLink></Empty>
++  if (!file || !tree.visible(file.folderId) || !canFolder(state,file.folderId,'preview')) return <Empty title="File unavailable"><RouteLink to="/">Back to All files</RouteLink> · <RouteLink to="/trash">View Trash</RouteLink></Empty>
+   const trail = tree.chain(file.folderId)
+   const tasks = state.tasks.filter(task => task.fileId === fileId && task.status !== 'deleted')
+   return <>
+@@ -168,10 +170,10 @@ export function FilePreview() {
+     <Heading title={nameOf(file)} description={`Owned by ${personName(state, file.ownerId)} · Updated ${humanDate(file.updatedAt)}`} />
+     <div className="split preview-split">
+       <section className="matte" aria-label="Document preview">
+-        <div className="document">
++        <div className="document"><OriginalDocument file={file} />
+           <small>{state.account?.workspaceName || 'Box'} / {file.mimeType?.includes('pdf') ? 'PDF' : 'Document'}</small>
+           <h2>{nameOf(file).replace(/\.[^.]+$/, '')}</h2>
+-          <p>{file.previewText || 'A text preview is unavailable for this document.'}</p>
++          {!file.contentDataUrl && <p>{file.previewText || 'A text preview is unavailable for this document.'}</p>}
+           {Array.isArray(file.previewRows) && file.previewRows.length > 0 && <table>
+             <thead><tr><th scope="col">Item</th><th scope="col">Review notes</th></tr></thead>
+             <tbody>{file.previewRows.map((row, i) => <tr key={i}><td>{row?.[0]}</td><td>{row?.[1]}</td></tr>)}</tbody>
+--- /dev/null
++++ b/src/closingFiles.jsx
+@@ -0,0 +1,37 @@
++import {useState,useEffect} from 'react'
++import {unzipSync,strFromU8} from 'fflate'
++import {useWorkspace} from './store.jsx'
++import {Dialog} from './ui.jsx'
++import {canFolder} from './permissions.js'
++const ODT='application/vnd.oasis.opendocument.text'
++function decoded(url){const [header,value]=url.split(',',2);return header.includes(';base64')?Uint8Array.from(atob(value),c=>c.charCodeAt(0)):new TextEncoder().encode(decodeURIComponent(value))}
++function odfElements(raw){
++ const files=unzipSync(raw),root=new DOMParser().parseFromString(strFromU8(files['content.xml']),'application/xml')
++ if(root.querySelector('parsererror'))throw new Error('This document cannot be previewed.')
++ const ns='urn:oasis:names:tc:opendocument:xmlns:text:1.0'
++ function node(n,key){if(n.nodeType===3)return n.nodeValue;const children=[...n.childNodes].map((v,i)=>node(v,i));if(n.localName==='a'){const href=n.getAttributeNS('http://www.w3.org/1999/xlink','href');return /^https?:\/\//i.test(href)?<a key={key} href={href}>{children}</a>:children}if(n.localName==='line-break')return <br key={key}/>;if(n.localName==='s')return ' '.repeat(Math.min(100,Number(n.getAttributeNS(ns,'c'))||1));if(n.localName==='tab')return '    ';return <span key={key}>{children}</span>}
++ return [...root.getElementsByTagName('*')].filter(n=>n.namespaceURI===ns&&['p','h'].includes(n.localName)).map((p,i)=><p key={i} style={{whiteSpace:'pre-wrap',marginBottom:15}}>{[...p.childNodes].map((n,j)=>node(n,j))}</p>)
++}
++function versionRecord(file){return {id:'version-'+crypto.randomUUID(),version:file.version||1,name:file.name,mimeType:file.mimeType,contentDataUrl:file.contentDataUrl,sizeBytes:file.sizeBytes,createdAt:file.versionCreatedAt||file.createdAt,createdById:file.updatedById||file.createdById}}
++function putVersion(file,incoming,contentDataUrl,meta){return {...file,...meta.update,mimeType:incoming.type||file.mimeType,sizeBytes:incoming.size,contentDataUrl,version:(file.version||1)+1,versionCreatedAt:meta.now,fileVersions:[...(file.fileVersions||[]),versionRecord(file)]}}
++function read(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
++export function UploadDocument({folderId}){
++ const {state,commit}=useWorkspace();const [open,setOpen]=useState(false),[error,setError]=useState('')
++ if(!canFolder(state,folderId,'upload'))return null
++ async function upload(event){try{for(const file of event.target.files){const contentDataUrl=await read(file);commit((s,m)=>{if(!canFolder(s,folderId,'upload'))throw new Error('You do not have permission to upload here.');const existing=s.files.find(f=>f.folderId===folderId&&f.name===file.name);if(existing){if(!canFolder(s,folderId,'write'))throw new Error('You cannot upload a new version.');return {...s,files:s.files.map(f=>f.id===existing.id?putVersion(f,file,contentDataUrl,m):f)}}return {...s,files:[...s.files,{...m.record('file'),folderId,name:file.name,mimeType:file.type||'application/octet-stream',ownerId:m.actor,sizeBytes:file.size,contentDataUrl,version:1,versionCreatedAt:m.now,fileVersions:[],previewText:'Uploaded file'}]}},'File uploaded.')}setOpen(false)}catch(e){setError(String(e.message||e))}}
++ return <><button onClick={()=>setOpen(true)}>Upload files</button>{open&&<Dialog title="Upload files" onClose={()=>setOpen(false)}><div className="dialog-content"><p>Select the originals to add to this folder.</p><input type="file" multiple onChange={upload}/><p role="alert">{error}</p></div></Dialog>}</>
++}
++export function OriginalDocument({file}){
++ const {state,commit}=useWorkspace();const [panel,setPanel]=useState(null),[error,setError]=useState(''),[preview,setPreview]=useState(null)
++ const canDownload=canFolder(state,file.folderId,'download'),canWrite=canFolder(state,file.folderId,'write')
++ useEffect(()=>{try{if(file.mimeType===ODT&&file.contentDataUrl)setPreview(odfElements(decoded(file.contentDataUrl)));else setPreview(null)}catch(e){setPreview(<p role="alert">{String(e.message)}</p>)}},[file.contentDataUrl,file.mimeType])
++ async function upload(event){try{const incoming=event.target.files[0];if(!incoming)return;if(incoming.name!==file.name)throw new Error('Choose the updated file with the same name.');const url=await read(incoming);commit((s,m)=>{if(!canFolder(s,file.folderId,'write'))throw new Error('You cannot upload a new version.');return {...s,files:s.files.map(f=>f.id===file.id?putVersion(f,incoming,url,m):f)}},'New version uploaded.');setPanel(null)}catch(e){setError(String(e.message||e))}}
++ return <section>
++ <div className="inline-actions" style={{marginBottom:22,flexWrap:'wrap'}}>{canDownload&&file.contentDataUrl&&<a className="link-button" download={file.name} href={file.contentDataUrl}>Download</a>}<button onClick={()=>setPanel('history')}>Version {file.version||1}</button>{canWrite&&<button onClick={()=>setPanel('upload')}>Upload New Version</button>}</div>
++ {file.mimeType==='application/pdf'&&file.contentDataUrl&&<iframe title="Original PDF" src={file.contentDataUrl} style={{width:'100%',height:500,border:0}}/>}
++ {preview&&<article aria-label="Document content">{preview}</article>}
++ {file.mimeType==='text/plain'&&file.contentDataUrl&&<pre style={{whiteSpace:'pre-wrap'}}>{new TextDecoder().decode(decoded(file.contentDataUrl))}</pre>}
++ {panel==='upload'&&<Dialog title="Upload New Version" onClose={()=>setPanel(null)}><div className="dialog-content"><p>Choose the updated file.</p><input type="file" onChange={upload}/><p role="alert">{error}</p></div></Dialog>}
++ {panel==='history'&&<Dialog title="Version History" onClose={()=>setPanel(null)} wide><div className="dialog-content">{[versionRecord(file),...(file.fileVersions||[]).slice().reverse()].map(v=><div className="record-row" key={v.id}><strong>Version {v.version}</strong><p>{v.createdAt} · {v.sizeBytes} bytes</p>{canDownload&&v.contentDataUrl&&<a download={file.name} href={v.contentDataUrl}>Download version {v.version}</a>}</div>)}</div></Dialog>}
++ </section>
++}
+--- a/src/ui.jsx
++++ b/src/ui.jsx
+@@ -99,8 +99,8 @@ export function InviteFields({ users, optional = false }) {
+   const matches = query ? users.filter(user => user.email && [user.name, user.email].some(value => value?.toLowerCase().includes(query))).slice(0, 6) : []
+   return <>
+     <div onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setSuggest(false) }}>
+-      <Field title={optional ? 'Invite people (optional)' : 'People or email addresses'} hint="Separate multiple emails with commas.">
+-        <textarea name="recipients" rows="2" required={!optional} placeholder="Search names or enter email addresses" value={text}
++      <Field title={optional ? 'Invite people (optional)' : 'Invite People'} >
++        <input name="recipients" required={!optional} placeholder="Add names or email addresses" value={text}
+           onFocus={() => setSuggest(true)} onChange={event => { setText(event.target.value); setSuggest(true) }} />
+       </Field>
+       {suggest && matches.length > 0 && <ul className="suggestions">{matches.map(user => <li key={user.id}><button type="button" onClick={() => {
+@@ -110,7 +110,7 @@ export function InviteFields({ users, optional = false }) {
+         setSuggest(false)
+       }}>{nameOf(user)} <small>{user.email}</small></button></li>)}</ul>}
+     </div>
+-    <Field title="Role"><select name="role" defaultValue="viewer">{Object.entries(roles).map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select></Field>
++    <Field title="Invite as"><select name="role" defaultValue="editor">{Object.entries(roles).map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select></Field>
+     <Field title="Invitation message (optional)"><textarea name="message" rows="2" /></Field>
+   </>
+ }
+--- a/src/style.css
++++ b/src/style.css
+@@ -161,3 +161,8 @@ legend { font-weight: 600; margin-bottom: 5px; }
+ .policy-marker { background: #e6eee9; color: #225744; }
+ .picker label svg { vertical-align: -3px; }
+ 
++
++/* Official Box share controls use blue actions, square inputs and sans-serif headings. */
++.wordmark{color:#0061d5}.primary{background:#0061d5;border-color:#0061d5}.page-heading h1{font-family:Arial,sans-serif;font-size:28px;font-weight:600}.dialog-head h2{font-weight:400;font-size:24px}.dialog-form input,.dialog-form select,.dialog-form textarea{border-radius:2px}.dialog-actions .primary{background:#0061d5;border-color:#0061d5}.dialog-form .field label{color:#666}.dialog-form select{color:#0061d5}a{color:#0061d5}
++
++.box-nav{position:fixed;left:0;top:0;bottom:0;width:240px;background:#0061d5;padding:12px 18px;z-index:20}.box-nav .wordmark{display:block;font-size:44px;font-weight:400;letter-spacing:-4px;color:white;margin-bottom:24px}.box-nav .main-nav{display:flex;flex-direction:column;align-items:stretch;gap:8px}.box-nav .main-nav a{color:white;padding:13px 16px;border:0;border-radius:24px}.box-nav .main-nav a[aria-current=page]{background:#004b9e}.box-top{margin-left:240px;height:80px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;padding:16px 35px}.box-top .global-search{width:70%;max-width:640px;border-radius:28px;background:#f4f4f4}#main{margin-left:240px;max-width:none;padding:24px 35px}.page-heading h1{font-family:Arial,sans-serif}.top{display:none}body{background:#fff}#main,.box-top{background:#fff}.tabs button[aria-pressed=true]{background:#edf4ff;color:#0061d5}.panel{border-color:#e3e3e3}.dialog-form .field:has(select[name=role]){display:flex;align-items:center;gap:6px}.dialog-form .field:has(select[name=role]) label{color:#0061d5;margin:0}.dialog-form select[name=role]{width:180px;border:0;padding:6px;color:#0061d5;background:white}
+--- a/src/model.js
++++ b/src/model.js
+@@ -1,3 +1,4 @@
++import {canFolder} from './permissions.js'
+ export const roles = {
+   co_owner: 'Co-owner', editor: 'Editor', viewer_uploader: 'Viewer Uploader',
+   previewer_uploader: 'Previewer Uploader', viewer: 'Viewer', previewer: 'Previewer', uploader: 'Uploader',
+@@ -41,7 +42,7 @@ export function directory(state) {
+     paths.set(id, path)
+     return path
+   }
+-  const visible = id => chain(id)?.every(folder => folder.status !== 'trashed') ?? false
++  const visible = id => (chain(id)?.every(folder => folder.status !== 'trashed') ?? false) && canFolder(state,id,'read')
+   const pathLabel = id => ['All files', ...(chain(id) || []).map(nameOf)].join(' / ')
+   return { folders, chain, visible, pathLabel }
+ }
+--- /dev/null
++++ b/src/permissions.js
+@@ -0,0 +1,8 @@
++export function canFolder(state,id,action='read'){
++ if(id==null)return true
++ const chain=[];let cursor=id,seen=new Set();
++ while(cursor&&!seen.has(cursor)){seen.add(cursor);const f=state.folders.find(x=>x.id===cursor);if(!f||f.status!=='active')return false;chain.push(f);cursor=f.parentId}
++ const actor=state.account?.currentUserId;if(chain.some(f=>f.ownerId===actor))return true
++ const allowed={read:['co_owner','editor','viewer_uploader','previewer_uploader','viewer','previewer','uploader'],preview:['co_owner','editor','viewer_uploader','previewer_uploader','viewer','previewer'],download:['co_owner','editor','viewer_uploader','viewer'],write:['co_owner','editor','viewer_uploader'],manage:['co_owner','editor'],upload:['co_owner','editor','viewer_uploader','previewer_uploader','uploader']}[action]||[]
++ return state.collaborations.some(c=>c.status==='active'&&c.userId===actor&&chain.some(f=>f.id===c.folderId)&&allowed.includes(c.role))
++}
+--- a/package.json
++++ b/package.json
+@@ -10,10 +10,11 @@
+   "dependencies": {
+     "react": "^19.1.0",
+     "react-dom": "^19.1.0",
+-    "react-router-dom": "^7.6.0"
++    "react-router-dom": "^7.6.0",
++    "fflate": "0.8.2"
+   },
+   "devDependencies": {
+     "@vitejs/plugin-react": "^6.3.0",
+     "vite": "^8.3.8"
+   }
+-}
++}
+\ No newline at end of file
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -6,6 +6,7 @@
+     "": {
+       "name": "box-workspace",
+       "dependencies": {
++        "fflate": "0.8.2",
+         "react": "^19.1.0",
+         "react-dom": "^19.1.0",
+         "react-router-dom": "^7.6.0"
+@@ -15,6 +16,29 @@
+         "vite": "^8.3.8"
+       }
+     },
++    "node_modules/@emnapi/core": {
++      "version": "2.0.0-beta.2",
++      "resolved": "https://registry.npmjs.org/@emnapi/core/-/core-2.0.0-beta.2.tgz",
++      "integrity": "sha512-MzCVoWtcg4Pm2B3je5mMvYMvj3MmBKw+fU7vbsJc9/iT8ip6/eYIHo/Dsm/mr+wsHB6SEyJDuxB09Yy6r/8+4A==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "@emnapi/wasi-threads": "2.2.0",
++        "tslib": "^2.4.0"
++      }
++    },
++    "node_modules/@emnapi/runtime": {
++      "version": "2.0.0-beta.2",
++      "resolved": "https://registry.npmjs.org/@emnapi/runtime/-/runtime-2.0.0-beta.2.tgz",
++      "integrity": "sha512-JcrSPzPvZuNZvJqPTF9Fw25LbOJ8avzFVlaf2grmH4Cku0oGP47tRgqPZadcfj3YoZMHkFVnCYFbQM8I+i5QEw==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "tslib": "^2.4.0"
++      }
++    },
+     "node_modules/@emnapi/wasi-threads": {
+       "version": "2.2.0",
+       "resolved": "https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-2.2.0.tgz",
+@@ -421,6 +445,12 @@
+         }
+       }
+     },
++    "node_modules/fflate": {
++      "version": "0.8.2",
++      "resolved": "https://registry.npmjs.org/fflate/-/fflate-0.8.2.tgz",
++      "integrity": "sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==",
++      "license": "MIT"
++    },
+     "node_modules/fsevents": {
+       "version": "2.3.3",
+       "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz",
+@@ -729,7 +759,6 @@
+       "integrity": "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==",
+       "dev": true,
+       "license": "MIT",
+-      "peer": true,
+       "engines": {
+         "node": ">=12"
+       },
+@@ -771,7 +800,6 @@
+       "resolved": "https://registry.npmjs.org/react/-/react-19.3.1.tgz",
+       "integrity": "sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==",
+       "license": "MIT",
+-      "peer": true,
+       "engines": {
+         "node": ">=0.10.0"
+       }
+@@ -781,7 +809,6 @@
+       "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-19.3.1.tgz",
+       "integrity": "sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==",
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "scheduler": "^0.28.0"
+       },
+@@ -915,7 +942,6 @@
+       "integrity": "sha512-LzOn3h9rG/0vhLdXrV4yJ4QFA9eEoqCl+Yx+kGJd7aB9w6nfNgVHKSYwLPZUHrz4ZGa+t+kXjV9itvcHDLQouA==",
+       "dev": true,
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "lightningcss": "^1.33.0",
+         "picomatch": "^4.0.7",

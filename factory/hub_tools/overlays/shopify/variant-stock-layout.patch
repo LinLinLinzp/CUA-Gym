@@ -1,0 +1,24 @@
+diff --git a/src/pages/ProductDetail.jsx b/src/pages/ProductDetail.jsx
+--- a/src/pages/ProductDetail.jsx
++++ b/src/pages/ProductDetail.jsx
+@@ -195,14 +195,14 @@
+               <div className="space-y-2">
+                 {formData.variants.map(variant => (
+                   <div key={variant.id} className="flex items-center gap-2 p-3 rounded-lg border" style={{ borderColor: '#e3e3e3' }}>
+-                    <div className="flex-1 grid grid-cols-4 gap-2">
+-                      <input type="text" className="text-[13px]" placeholder="Title" value={variant.title} onChange={e => updateVariant(variant.id, { title: e.target.value })} />
+-                      <input type="text" className="text-[13px]" placeholder="SKU" value={variant.sku} onChange={e => updateVariant(variant.id, { sku: e.target.value })} />
+-                      <div className="relative">
++                    <div className="flex-1 min-w-0 grid grid-cols-4 gap-2">
++                      <input type="text" className="min-w-0 w-full text-[13px]" placeholder="Title" value={variant.title} onChange={e => updateVariant(variant.id, { title: e.target.value })} />
++                      <input type="text" className="min-w-0 w-full text-[13px]" placeholder="SKU" value={variant.sku} onChange={e => updateVariant(variant.id, { sku: e.target.value })} />
++                      <div className="relative min-w-0">
+                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[#616161] text-[13px]">$</span>
+-                        <input type="text" className="text-[13px] pl-5" placeholder="0.00" value={variant.price} onChange={e => updateVariant(variant.id, { price: e.target.value })} />
++                        <input type="text" className="min-w-0 w-full text-[13px] pl-5" placeholder="0.00" aria-label="Variant price" value={variant.price} onChange={e => updateVariant(variant.id, { price: e.target.value })} />
+                       </div>
+-                      <input type="number" className="text-[13px]" placeholder="Qty" value={variant.inventoryQuantity} onChange={e => updateVariant(variant.id, { inventoryQuantity: parseInt(e.target.value) || 0 })} />
++                      <input type="number" className="min-w-0 w-full text-[13px]" placeholder="Qty" aria-label="Variant quantity" value={variant.inventoryQuantity} onChange={e => updateVariant(variant.id, { inventoryQuantity: parseInt(e.target.value) || 0 })} />
+                     </div>
+                     <button onClick={() => removeVariant(variant.id)} className="p-1 hover:bg-[#ffd2d2] text-[#d72c0d] rounded">
+                       <Trash2 size={14} />

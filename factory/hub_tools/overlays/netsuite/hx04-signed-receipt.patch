@@ -1,0 +1,323 @@
+--- /dev/null
++++ b/src/components/InventoryDetail.jsx
+@@ -0,0 +1,161 @@
++import { useState } from 'react'
++import { useWorkspace } from '../context/Workspace.jsx'
++import './InventoryDetail.css'
++
++export default function InventoryDetail({ itemId, locationId, quantity, assignments = [], receipt = false, onChange }) {
++  const { state } = useWorkspace()
++  const [open, setOpen] = useState(false)
++  const [rows, setRows] = useState([])
++  const [position, setPosition] = useState(null)
++  const [editing, setEditing] = useState(false)
++  const [lot, setLot] = useState('')
++  const [qty, setQty] = useState('')
++  const [error, setError] = useState('')
++  const item = state.items.find(x => x.id === itemId)
++  if (!item?.lotNumbered) return null
++
++  const available = (state.inventoryLots || []).filter(x =>
++    x.itemId === itemId && x.locationId === locationId && x.onHand > 0)
++  const selected = available.find(x => x.inventoryNumberId === lot)
++  const total = rows.reduce((sum, row) => sum + row.quantity, 0)
++  const balance = selected && selected.onHand - rows
++    .filter((row, i) => (!editing || i !== position) && row.inventoryNumberId === lot)
++    .reduce((sum, row) => sum + row.quantity, 0)
++  const numberLabel = receipt ? 'Receipt Inventory Number' : 'Issue Inventory Number'
++
++  function clear() {
++    setPosition(null)
++    setEditing(false)
++    setLot('')
++    setQty('')
++    setError('')
++  }
++
++  function start() {
++    clear()
++    setRows(assignments)
++    setQty(String(Number(quantity) - assignments.reduce((sum, row) => sum + row.quantity, 0) || ''))
++    setOpen(true)
++  }
++
++  function selectRow(row, index) {
++    setPosition(index)
++    setEditing(true)
++    setLot(receipt ? row.lotNumber : row.inventoryNumberId)
++    setQty(String(row.quantity))
++    setError('')
++  }
++
++  function add() {
++    const n = Number(qty)
++    const draftLot = lot.trim()
++    const remaining = Number(quantity) - total + (editing ? rows[position].quantity : 0)
++    if (!Number.isFinite(n) || n <= 0 || n > remaining) {
++      setError('Enter an assignment quantity within the remaining line quantity.')
++      return
++    }
++    if (receipt && !draftLot) {
++      setError('Enter the supplier lot number.')
++      return
++    }
++    if (receipt && rows.some((row, i) => (!editing || i !== position) && row.lotNumber === draftLot)) {
++      setError('Increase the quantity on the existing row for this lot number.')
++      return
++    }
++    if (!receipt && (!selected || selected.qualityStatus !== 'Released' || n > balance)) {
++      setError(!selected ? 'Select an inventory number at the source location.' :
++        selected.qualityStatus !== 'Released' ? 'This lot is quarantined and cannot be issued.' :
++        'Assignment exceeds the available quantity for this lot.')
++      return
++    }
++    const row = receipt ? { lotNumber: draftLot, quantity: n } :
++      { inventoryNumberId: selected.inventoryNumberId, lotNumber: selected.lotNumber, quantity: n }
++    const index = position ?? rows.length
++    const next = [...rows]
++    next.splice(index, editing ? 1 : 0, row)
++    setRows(next)
++    clear()
++    setQty(String(remaining - n || ''))
++  }
++
++  function insert() {
++    setEditing(false)
++    setLot('')
++    setQty(String(Number(quantity) - total || ''))
++    setError('')
++  }
++
++  function remove() {
++    setRows(rows.filter((_, index) => index !== position))
++    const remaining = Number(quantity) - total + rows[position].quantity
++    clear()
++    setQty(String(remaining || ''))
++  }
++
++  function accept() {
++    if (!rows.length || total !== Number(quantity) || lot || editing) {
++      setError('Add the assignments and match the transaction line quantity before selecting OK.')
++      return
++    }
++    onChange(rows)
++    setOpen(false)
++  }
++
++  const actions = () => <div className="hx04-detail-actions">
++    <button type="button" className="primary" onClick={accept}>OK</button>
++    <button type="button" onClick={() => setOpen(false)}>Close</button>
++  </div>
++
++  return <>
++    <button type="button" onClick={start}>Inventory Detail {assignments.length ? '✓' : ''}</button>
++    {open && <div className="hx04-detail-backdrop">
++      <div role="dialog" aria-modal="true" aria-label="Inventory Detail" className="hx04-detail">
++        <header>Inventory Detail</header>
++        {actions()}
++        <div className="hx04-detail-summary">
++          <div><small>Item</small>{item.itemId}</div>
++          <div><small>Quantity</small>{quantity}</div>
++          <div><small>Description</small>{item.displayName || item.description || item.itemId}</div>
++          <div><small>Units</small>{item.units || 'Ea'}</div>
++        </div>
++        <div className="hx04-detail-grid">
++          <h3>Inventory Assignment</h3>
++          <table>
++            <thead><tr><th>Quantity <b>*</b></th><th>{numberLabel} <b>*</b></th>
++              {!receipt && <><th>Available</th><th>Inspection Disposition</th></>}
++            </tr></thead>
++            <tbody>
++              {rows.map((row, i) => <tr key={i} className={editing && position === i ? 'hx04-selected' : ''}>
++                <td>{row.quantity}</td>
++                <td><button type="button" className="hx04-row-link" onClick={() => selectRow(row, i)}>{row.lotNumber}</button></td>
++                {!receipt && <><td>{available.find(x => x.inventoryNumberId === row.inventoryNumberId)?.onHand}</td><td>Released</td></>}
++              </tr>)}
++              <tr className="hx04-entry">
++                <td><input aria-label="Assignment Quantity" type="number" min="0" step="any" value={qty} onChange={e => setQty(e.target.value)}/></td>
++                <td>{receipt ?
++                  <input aria-label={numberLabel} value={lot} onChange={e => setLot(e.target.value)}/> :
++                  <select aria-label={numberLabel} value={lot} onChange={e => setLot(e.target.value)}>
++                    <option value="">Select an inventory number</option>
++                    {available.map(x => <option key={x.inventoryNumberId} value={x.inventoryNumberId}>
++                      {x.lotNumber} · {x.onHand} available · {x.qualityStatus}
++                    </option>)}
++                  </select>}
++                </td>
++                {!receipt && <><td>{balance ?? ''}</td><td title={selected?.sourceReceiptNumber}>{selected?.qualityStatus}</td></>}
++              </tr>
++            </tbody>
++          </table>
++          <div className="hx04-row-actions">
++            <button type="button" className="primary" onClick={add}>{editing ? 'Update' : 'Add'}</button>
++            <button type="button" onClick={clear}>Cancel</button>
++            <button type="button" disabled={!editing} onClick={insert}>Insert</button>
++            <button type="button" disabled={!editing} onClick={remove}>Remove</button>
++          </div>
++          <p className="hx04-detail-total">Total Assigned <strong>{total}</strong> &nbsp; Remaining <strong>{Number(quantity) - total}</strong></p>
++        </div>
++        {error && <p className="hx04-detail-error" role="alert">{error}</p>}
++        {actions()}
++      </div>
++    </div>}
++  </>
++}
+--- /dev/null
++++ b/src/components/InventoryDetail.css
+@@ -0,0 +1,21 @@
++.hx04-detail-backdrop { position:fixed; inset:0; z-index:100; background:#0005; display:grid; place-items:center; }
++.hx04-detail { width:740px; max-width:95vw; max-height:90vh; overflow:auto; background:#f8f7f6; color:#222; border:1px solid #8f9598; box-shadow:0 4px 20px #0005; text-align:left; }
++.hx04-detail header { position:static; display:block; padding:10px 12px; background:#465864; font-size:16px; font-weight:bold; color:#fff; }
++.hx04-detail button { border:1px solid #a2a4a5; border-radius:3px; padding:6px 14px; background:#fafafa; color:#20272b; cursor:pointer; }
++.hx04-detail button.primary { background:#316477; color:white; border-color:#316477; }
++.hx04-detail button:disabled { opacity:.45; cursor:default; }
++.hx04-detail-actions { display:flex; gap:12px; padding:10px 12px; }
++.hx04-detail-summary { display:grid; grid-template-columns:minmax(0,3fr) minmax(75px,1fr); gap:8px 12px; padding:14px 12px 22px; }
++.hx04-detail-summary small { display:block; font-size:12px; color:#465864; }
++.hx04-detail-grid { margin:8px 12px; border:1px solid #c4cbce; background:white; overflow-x:auto; }
++.hx04-detail-grid h3 { margin:0; padding:7px 10px; font-size:14px; background:#eeece9; border-bottom:1px solid #c4cbce; }
++.hx04-detail-grid table { width:100%; border-collapse:collapse; }
++.hx04-detail-grid th, .hx04-detail-grid td { text-align:left; padding:5px 8px; border-bottom:1px solid #d1d4d6; }
++.hx04-detail-grid th { color:#24343c; background:#fbfaf9; border-bottom:1px solid #48839a; }
++.hx04-detail-grid th:first-child { width:115px; }
++.hx04-detail-grid th b, .hx04-detail-error { color:#a32626; }
++.hx04-detail-grid :is(input,select) { width:100%; box-sizing:border-box; min-height:28px; }
++.hx04-entry,.hx04-selected { background:#f0f7fa; }
++.hx04-detail button.hx04-row-link { background:none; color:#236182; border:none; padding:0; text-decoration:underline; }
++.hx04-row-actions { display:flex; flex-wrap:wrap; gap:8px; padding:8px; border:1px solid #77a1b1; background:#f0f7fa; }
++.hx04-detail-total,.hx04-detail-error { margin:7px 12px; }
+--- a/src/components/SourceLines.jsx
++++ b/src/components/SourceLines.jsx
+@@ -1,3 +1,4 @@
++import InventoryDetail from './InventoryDetail.jsx'
+ import { DataTable } from './Controls.jsx'
+ import { itemCell } from './RecordUI.jsx'
+ import { useWorkspace } from '../context/Workspace.jsx'
+@@ -21,5 +22,6 @@
+     disabled={!line.selected} value={line.quantity} onChange={(event) => set(i, 'quantity', event.target.value)} /> })
+   if (code !== 'itemship') columns.push({ key: 'rate', title: 'Rate', numeric: true, render: (line) => money(line.rate) },
+     { key: 'amount', title: 'Amount', numeric: true, render: (line) => money(number(line.rate) * number(line.quantity)) })
++  if (code === 'itemrcpt') columns.push({ key:'inventoryDetail', title:'Inventory Detail', render:(line,i)=><InventoryDetail receipt itemId={line.itemId} locationId={line.locationId||locationId} quantity={line.quantity} assignments={line.inventoryAssignments} onChange={value=>set(i,'inventoryAssignments',value)}/> })
+   return <DataTable columns={columns} records={lines} rowKey={(line) => line.orderLineId} empty="No eligible items remain." />
+ }
+--- a/src/components/LineEditor.jsx
++++ b/src/components/LineEditor.jsx
+@@ -1,3 +1,4 @@
++import InventoryDetail from './InventoryDetail.jsx'
+ import { useState } from 'react'
+ import { useWorkspace } from '../context/Workspace.jsx'
+ import { DataTable, Field, Picker, pickerEntries } from './Controls.jsx'
+@@ -20,7 +21,7 @@
+   function choose(id) {
+     const item = find(state, 'items', id)
+     setEntry({ ...entry, itemId: id, rate: item ? (purchase ? item.purchasePrice ?? 0 : item.basePrice ?? 0) : '',
+-      description: (purchase ? item?.purchaseDescription : item?.salesDescription) || item?.description || item?.displayName || '' })
++      inventoryAssignments: [], description: (purchase ? item?.purchaseDescription : item?.salesDescription) || item?.description || item?.displayName || '' })
+   }
+ 
+   function add() {
+@@ -28,6 +29,7 @@
+     if (!validNumber(entry.quantity) || (stock?.signed ? number(entry.quantity) === 0 : number(entry.quantity) <= 0)) {
+       fail(stock?.signed ? 'Enter a nonzero adjustment quantity.' : 'Quantity must be greater than zero.'); return
+     }
++    if(item.lotNumbered && (!entry.inventoryAssignments?.length || entry.inventoryAssignments.reduce((n,x)=>n+Number(x.quantity),0)!==Number(entry.quantity))){fail('Configure Inventory Detail for the full line quantity.');return}
+     if (!stock && (!validNumber(entry.rate) || number(entry.rate) < 0)) { fail('Rate must be zero or greater.'); return }
+     const line = { ...entry, quantity: number(entry.quantity), rate: number(entry.rate),
+       amount: round(number(entry.quantity) * number(entry.rate)), taxable: item.taxable !== false }
+@@ -44,7 +46,7 @@
+     { key: 'rate', title: 'Rate', numeric: true, render: (line) => money(line.rate) },
+     { key: 'amount', title: 'Amount', numeric: true, render: (line) => money(line.amount) })
+   if (purchase) columns.push({ key: 'expectedReceiptDate', title: 'Expected Receipt Date', render: (line) => formatDate(line.expectedReceiptDate) })
+-  if (stock) columns.push(...stock.columns)
++  if (stock) columns.push(...stock.columns, {key:'inventoryDetail',title:'Inventory Detail',render:line=>line.inventoryAssignments?.map(x=>x.lotNumber+' / '+x.quantity).join(', ')||'—'})
+   return <>
+     <DataTable columns={columns} records={lines} rowKey={(line, i) => line.lineId || i} empty="No items added." />
+     <div className="line-editor">
+@@ -56,6 +58,7 @@
+         {stock?.entry && stock.entry(entry, locationId)}
+       </div>
+       <div className="toolbar">
++        {stock && <InventoryDetail itemId={entry.itemId} locationId={locationId} quantity={entry.quantity} assignments={entry.inventoryAssignments} onChange={value=>setEntry({...entry,inventoryAssignments:value})}/>}
+         <button type="button" className="primary" onClick={add}>{index == null ? 'Add' : 'OK'}</button>
+         {index != null && <><button type="button" onClick={reset}>Cancel Line</button>
+           <button type="button" onClick={() => { onChange(lines.filter((_, i) => i !== index)); reset() }}>Remove</button></>}
+--- a/src/utils/conversions.js
++++ b/src/utils/conversions.js
+@@ -58,6 +58,9 @@
+       lineId: original.childLineId, orderLineId: original.orderLineId, itemId: original.itemId,
+       description: original.description || item.description || item.displayName || '', quantity: qty, units: original.units || item.units || 'Ea',
+       ...(usesLocation && { locationId: original.locationId || source.shipToLocationId || source.locationId }),
++    }
++    if(code==='itemrcpt' && item.lotNumbered){
++      const assignments=entry.inventoryAssignments||[];requireValue(assignments.length>0 && assignments.every(x=>x.lotNumber?.trim()&&number(x.quantity)>0) && sum(assignments,x=>number(x.quantity))===qty,'Configure Inventory Detail for every received lot-numbered item.');row.inventoryAssignments=assignments.map(x=>({lotNumber:x.lotNumber.trim(),quantity:number(x.quantity)}))
+     }
+     if (code !== 'itemship') {
+       const rate = code === 'custinvc' ? number(entry.rate ?? original.rate) : number(original.rate)
+@@ -123,6 +126,14 @@
+         expenses: [], total, amountPaid: 0, amountRemaining: total })
+     }
+     const child = createRecord(env, code, values)
++    if(code==='itemrcpt'){
++      for(const line of child.lines){for(const [i,a] of (line.inventoryAssignments||[]).entries()){
++        const inventoryNumberId=child.id+':'+line.lineId+':'+i;a.inventoryNumberId=inventoryNumberId
++        const qualityStatus=env.state.hx04Quality?.[a.lotNumber]||'Awaiting Inspection'
++        ;(env.state.inventoryLots ||= []).push({inventoryNumberId,itemId:line.itemId,lotNumber:a.lotNumber,locationId:line.locationId,onHand:a.quantity,receivedQuantity:a.quantity,sourceReceiptId:child.id,sourceReceiptLineId:line.lineId,sourceReceiptNumber:child.tranId,qualityStatus})
++        if (qualityStatus !== 'Awaiting Inspection') (env.state.qualityInspections ||= []).push({id:'qc:'+inventoryNumberId,receiptId:child.id,receiptLineId:line.lineId,inventoryNumberId,lotNumber:a.lotNumber,quantity:a.quantity,disposition:qualityStatus,signedBy:'M. Chen',reportNumber:'QMS-1911',signedAt:env.now})
++      }}
++    }
+     applySourceDelta(env, code, source, lines)
+     return child
+   })
+--- a/src/utils/inventoryActions.js
++++ b/src/utils/inventoryActions.js
+@@ -32,7 +32,22 @@
+       requireValue(after >= 0 || !!state.preferences?.allowNegativeInventory, adjustment
+         ? `Inventory for item ${sku} at ${nameOf(state, 'locations', from.id)} cannot go below zero (new quantity: ${after}).`
+         : `Not enough inventory for item ${sku} at ${nameOf(state, 'locations', from.id)}. Available to transfer: ${stock}.`)
+-      const values = { itemId: item.id, units: item.stockUnit || item.units || 'Ea' }
++      let inventoryAssignments
++      if(item.lotNumbered){
++        requireValue(!adjustment,'Lot-numbered inventory requires a transfer with Inventory Detail.')
++        inventoryAssignments=(line.inventoryAssignments||[]).map(a=>({...a,quantity:number(a.quantity)}))
++        requireValue(inventoryAssignments.length>0&&sum(inventoryAssignments,a=>a.quantity)===qty,'Inventory Detail quantity must match the transfer line.')
++        for(const a of inventoryAssignments){
++          const source=(env.state.inventoryLots||[]).find(x=>x.inventoryNumberId===a.inventoryNumberId&&x.itemId===item.id&&x.locationId===from.id)
++          requireValue(source&&a.quantity>0&&source.onHand>=a.quantity,'Inventory number has insufficient quantity at the source location.')
++          requireValue(source.qualityStatus==='Released','Quarantined inventory cannot be issued.')
++          requireValue(a.lotNumber===source.lotNumber,'Inventory number and lot do not match.')
++          source.onHand-=a.quantity
++          let dest=env.state.inventoryLots.find(x=>x.inventoryNumberId===source.inventoryNumberId&&x.locationId===to.id)
++          if(!dest){dest={...source,locationId:to.id,onHand:0};env.state.inventoryLots.push(dest)}dest.onHand+=a.quantity
++        }
++      }
++      const values = { ...(inventoryAssignments&&{inventoryAssignments}), itemId: item.id, units: item.stockUnit || item.units || 'Ea' }
+       if (adjustment) {
+         changeStock(env, item.id, from.id, qty)
+         return { ...values, locationId: from.id, quantityOnHandBefore: stock, adjustQtyBy: qty, newQuantity: after,
+--- a/src/pages/TransactionView.jsx
++++ b/src/pages/TransactionView.jsx
+@@ -55,6 +55,24 @@
+     </div>
+     <Tabs tabs={[
+       ...(tabs || [['Items', <LineTable record={record} code={code} />]]),
++      ...(code === 'itemrcpt' && state.hx04Quality ? [['Signed Inspections', <>
++        <RecordFields title="Inspection Records" items={[['Custom Form', 'Cascade Lot Receipt']]} />
++        <DataTable records={(state.qualityInspections || []).filter(x => x.receiptId === record.id)}
++          columns={[{key:'reportNumber',title:'Report'}, {key:'lotNumber',title:'Inventory Number'},
++            {key:'quantity',title:'Inspected Quantity',numeric:true}, {key:'disposition',title:'Disposition'},
++            {key:'signedBy',title:'Signed By'}, {key:'signedAt',title:'Signed On',render:row=>formatDate(row.signedAt)}]} />
++      </>]] : []),
++      ...(record.lines?.some(line => line.inventoryAssignments?.length) ? [['Inventory Detail',
++        <DataTable records={record.lines.flatMap(line => (line.inventoryAssignments || []).map((assignment, index) => ({
++          ...assignment, id:line.lineId + ':' + index, itemId:line.itemId,
++          remaining:(state.inventoryLots || []).find(lot => lot.inventoryNumberId === assignment.inventoryNumberId && lot.locationId === location)?.onHand,
++          transferred:code === 'invtrnfr' ? (state.inventoryLots || []).find(lot => lot.inventoryNumberId === assignment.inventoryNumberId && lot.locationId === record.toLocationId)?.onHand : null,
++        })))}
++          columns={[{key:'itemId',title:'Item',render:row=>nameOf(state,'items',row.itemId)},
++            {key:'lotNumber',title:'Inventory Number'}, {key:'quantity',title:'Assigned Quantity',numeric:true},
++            {key:'remaining',title:code === 'invtrnfr' ? 'From Location On Hand' : 'Location On Hand',numeric:true},
++            ...(code === 'invtrnfr' ? [{key:'transferred',title:'To Location On Hand',numeric:true}] : [])]} />
++      ]] : []),
+       ['Related Records', <RelatedRecords record={record} />],
+       ['System Information', <Audit record={record} type={config.type} />],
+     ]} />

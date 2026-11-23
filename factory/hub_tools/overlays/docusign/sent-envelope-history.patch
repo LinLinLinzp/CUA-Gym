@@ -1,0 +1,542 @@
+--- /dev/null
++++ b/src/components/DocumentPage.jsx
+@@ -0,0 +1,32 @@
++import React, { useEffect, useState } from 'react';
++
++export default function DocumentPage({ document }) {
++  const source = document.fileUrl || '';
++  const pdf = source.startsWith('data:application/pdf');
++  const [preview, setPreview] = useState('');
++  useEffect(() => {
++    if (!pdf) return undefined;
++    let closed = false;
++    let url;
++    setPreview('');
++    fetch(source).then(response => response.blob()).then(blob => {
++      if (closed) return;
++      url = URL.createObjectURL(blob);
++      setPreview(url);
++    }).catch(() => {});
++    return () => {
++      closed = true;
++      if (url) URL.revokeObjectURL(url);
++    };
++  }, [source, pdf]);
++
++  if (pdf) {
++    return preview
++      ? <iframe title={document.name} src={preview + '#toolbar=0&navpanes=0&view=FitH'}
++          className="w-full h-[1100px] border-0 pointer-events-none" />
++      : <div className="p-6 text-sm text-gray-500">Loading document preview…</div>;
++  }
++  return <img src={source} alt={document.name}
++    className="w-full h-auto pointer-events-none select-none"
++    style={{ minHeight: '1100px', objectFit: 'contain', background: '#fff' }} />;
++}
+--- a/src/context/StoreContext.jsx
++++ b/src/context/StoreContext.jsx
+@@ -1,5 +1,6 @@
+ import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+ import { v4 as uuidv4 } from 'uuid';
++import { canCorrect, correctRecipients, issue, updateDraft, voidIssued } from '../lib/envelopeHistory';
+ import {
+   getDefaultState,
+   getSessionId,
+@@ -51,7 +52,9 @@
+       timestamp: new Date().toISOString(),
+       action,
+       details,
+-      envelopeId
++      envelopeId,
++      actorName: state.user.name,
++      actorEmail: state.user.email,
+     };
+     setState(prev => ({ ...prev, auditLog: [log, ...prev.auditLog] }));
+   };
+@@ -70,22 +73,13 @@
+       declinedAt: null,
+       lastActivityAt: new Date().toISOString(),
+       expiresAt: null,
+-      senderId: 'user_1',
++      senderId: state.user.id,
+       folderId: null,
+       templateId: envelopeData.templateId || null,
+       reminderEnabled: false,
+       reminderDays: 3,
+       reminderFrequency: 2,
+-      documents: envelopeData.documents || [
+-        {
+-          id: uuidv4(),
+-          name: envelopeData.name || 'Document.pdf',
+-          pageCount: 1,
+-          order: 1,
+-          fileUrl: envelopeData.url || `https://picsum.photos/seed/${Date.now()}/800/1100`,
+-          fileType: 'pdf'
+-        }
+-      ],
++      documents: envelopeData.documents || [],
+       recipients: envelopeData.recipients || [],
+       fields: envelopeData.fields || [],
+       history: [
+@@ -93,8 +87,8 @@
+           id: uuidv4(),
+           timestamp: new Date().toISOString(),
+           action: 'created',
+-          actorName: 'Sarah Chen',
+-          actorEmail: 'sarah.chen@acmecorp.com',
++          actorName: state.user.name,
++          actorEmail: state.user.email,
+           details: 'Envelope created'
+         }
+       ]
+@@ -110,44 +104,40 @@
+   const updateEnvelope = (id, updates) => {
+     setState(prev => ({
+       ...prev,
+-      envelopes: prev.envelopes.map(env =>
+-        env.id === id ? { ...env, ...updates, lastActivityAt: new Date().toISOString() } : env
+-      )
+-    }));
+-  };
+-
+-  const sendEnvelope = (id) => {
+-    const now = new Date().toISOString();
+-    setState(prev => ({
+-      ...prev,
+       envelopes: prev.envelopes.map(env => {
+         if (env.id !== id) return env;
+-        const expiresAt = env.expiresAt || new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString();
+-        return {
+-          ...env,
+-          status: 'sent',
+-          sentAt: now,
+-          lastActivityAt: now,
+-          expiresAt,
+-          recipients: env.recipients.map(r => ({
+-            ...r,
+-            status: r.status === 'created' ? 'sent' : r.status
+-          })),
+-          history: [
+-            ...env.history,
+-            {
+-              id: uuidv4(),
+-              timestamp: now,
+-              action: 'sent',
+-              actorName: 'Sarah Chen',
+-              actorEmail: 'sarah.chen@acmecorp.com',
+-              details: `Envelope sent to ${env.recipients.length} recipient(s)`
+-            }
+-          ]
+-        };
++        const timing = Object.fromEntries(['reminderEnabled', 'reminderDays', 'reminderFrequency', 'expiresAt']
++          .filter(key => Object.hasOwn(updates, key)).map(key => [key, updates[key]]));
++        const draft = updateDraft(env, updates);
++        return draft !== env || Object.keys(timing).length
++          ? { ...draft, ...timing, lastActivityAt: new Date().toISOString() }
++          : env;
+       })
+     }));
+-    addAuditLog('SEND_ENVELOPE', `Sent envelope ${id}`, id);
++  };
++
++  const withEnvelopeEvent = (id, action, update) => {
++    const now = new Date().toISOString();
++    const idForHistory = uuidv4();
++    const idForAudit = uuidv4();
++    setState(prev => {
++      const envelope = prev.envelopes.find(item => item.id === id);
++      if (!envelope) return prev;
++      const next = update(envelope, now, idForHistory, prev.user);
++      if (next === envelope) return prev;
++      return {
++        ...prev,
++        envelopes: prev.envelopes.map(item => item.id === id ? next : item),
++        auditLog: [{
++          id: idForAudit, timestamp: now, action, details: next.history.at(-1).details, envelopeId: id,
++          actorName: prev.user.name, actorEmail: prev.user.email,
++        }, ...prev.auditLog],
++      };
++    });
++  };
++
++  const sendEnvelope = (id, updates = {}) => {
++    withEnvelopeEvent(id, 'SEND_ENVELOPE', (env, now, eventId, actor) => issue(env, updates, now, eventId, actor));
+   };
+ 
+   const signEnvelope = (envelopeId, recipientId, fieldValues) => {
+@@ -213,39 +203,17 @@
+   };
+ 
+   const deleteEnvelope = (id) => {
+-    setState(prev => ({
+-      ...prev,
+-      envelopes: prev.envelopes.filter(e => e.id !== id)
+-    }));
+-    addAuditLog('DELETE_ENVELOPE', `Deleted envelope ${id}`, id);
++    const envelope = state.envelopes.find(item => item.id === id);
++    if (!envelope || envelope.status !== 'draft' || envelope.sentSnapshot) return;
++    setState(prev => ({
++      ...prev,
++      envelopes: prev.envelopes.filter(item => item.id !== id || item.status !== 'draft' || item.sentSnapshot)
++    }));
++    addAuditLog('DELETE_ENVELOPE', 'Deleted draft envelope ' + id, id);
+   };
+ 
+   const voidEnvelope = (id, reason) => {
+-    const now = new Date().toISOString();
+-    setState(prev => ({
+-      ...prev,
+-      envelopes: prev.envelopes.map(env => {
+-        if (env.id !== id) return env;
+-        return {
+-          ...env,
+-          status: 'voided',
+-          voidedAt: now,
+-          lastActivityAt: now,
+-          history: [
+-            ...env.history,
+-            {
+-              id: uuidv4(),
+-              timestamp: now,
+-              action: 'voided',
+-              actorName: 'Sarah Chen',
+-              actorEmail: 'sarah.chen@acmecorp.com',
+-              details: `Envelope voided: ${reason}`
+-            }
+-          ]
+-        };
+-      })
+-    }));
+-    addAuditLog('VOID_ENVELOPE', `Voided envelope ${id}: ${reason}`, id);
++    withEnvelopeEvent(id, 'VOID_ENVELOPE', (env, now, eventId, actor) => voidIssued(env, reason, now, eventId, actor));
+   };
+ 
+   const declineEnvelope = (envId, recipientId, reason) => {
+@@ -283,56 +251,21 @@
+   };
+ 
+   const correctEnvelope = (id, updates) => {
+-    const now = new Date().toISOString();
+-    setState(prev => ({
+-      ...prev,
+-      envelopes: prev.envelopes.map(env => {
+-        if (env.id !== id) return env;
+-        return {
+-          ...env,
+-          ...updates,
+-          lastActivityAt: now,
+-          history: [
+-            ...env.history,
+-            {
+-              id: uuidv4(),
+-              timestamp: now,
+-              action: 'corrected',
+-              actorName: 'Sarah Chen',
+-              actorEmail: 'sarah.chen@acmecorp.com',
+-              details: 'Envelope corrected - recipients updated'
+-            }
+-          ]
+-        };
+-      })
+-    }));
+-    addAuditLog('CORRECT_ENVELOPE', `Corrected envelope ${id}`, id);
++    withEnvelopeEvent(id, 'CORRECT_ENVELOPE',
++      (env, now, eventId, actor) => correctRecipients(env, updates.recipients, now, eventId, actor));
+   };
+ 
+   const resendEnvelope = (id) => {
+-    const now = new Date().toISOString();
+-    setState(prev => ({
+-      ...prev,
+-      envelopes: prev.envelopes.map(env => {
+-        if (env.id !== id) return env;
+-        return {
+-          ...env,
+-          lastActivityAt: now,
+-          history: [
+-            ...env.history,
+-            {
+-              id: uuidv4(),
+-              timestamp: now,
+-              action: 'resent',
+-              actorName: 'Sarah Chen',
+-              actorEmail: 'sarah.chen@acmecorp.com',
+-              details: 'Envelope resent to pending recipients'
+-            }
+-          ]
+-        };
+-      })
+-    }));
+-    addAuditLog('RESEND_ENVELOPE', `Resent envelope ${id}`, id);
++    withEnvelopeEvent(id, 'RESEND_ENVELOPE', (envelope, now, eventId, actor) => {
++      if (!canCorrect(envelope)) return envelope;
++      return {
++        ...envelope, lastActivityAt: now,
++        history: [...envelope.history, {
++          id: eventId, timestamp: now, action: 'resent', actorName: actor.name, actorEmail: actor.email,
++          details: 'Envelope resent to pending recipients',
++        }],
++      };
++    });
+   };
+ 
+   const createFromTemplate = (templateId, recipients) => {
+--- /dev/null
++++ b/src/lib/envelopeHistory.js
+@@ -0,0 +1,63 @@
++// Preserve the issued packet independently of later recipient corrections.
++export const canVoid = envelope => ['sent', 'delivered', 'signed'].includes(envelope.status);
++
++export const canCorrect = envelope => ['sent', 'delivered'].includes(envelope.status);
++
++function select(updates, keys) {
++  return Object.fromEntries(keys.filter(key => Object.hasOwn(updates, key)).map(key => [key, updates[key]]));
++}
++
++export function updateDraft(envelope, updates) {
++  if (envelope.status !== 'draft' || envelope.sentSnapshot) return envelope;
++  return { ...envelope, ...select(updates, ['subject', 'message', 'documents', 'recipients', 'fields']) };
++}
++
++const recipientPacket = ({ id, name, email, role, routingOrder }) => ({ id, name, email, role, routingOrder });
++
++export function issue(envelope, updates, now, eventId, actor) {
++  if (envelope.status !== 'draft' || envelope.sentSnapshot) return envelope;
++  const draft = updateDraft(envelope, updates);
++  if (!draft.subject.trim() || !draft.documents.length ||
++      !draft.recipients.some(recipient => recipient.role === 'signer')) return envelope;
++  const sentSnapshot = {
++    sentAt: now,
++    subject: draft.subject,
++    message: draft.message,
++    documents: draft.documents.map(doc => select(doc, ['id', 'name', 'fileSize', 'sha256', 'storedName', 'downloadUrl'])),
++    recipients: draft.recipients.map(recipientPacket),
++    fields: draft.fields.map(field => select(field, ['id', 'documentId', 'recipientId', 'type', 'required', 'x', 'y'])),
++  };
++  return {
++    ...draft, status: 'sent', sentAt: now, lastActivityAt: now, sentSnapshot,
++    expiresAt: draft.expiresAt || new Date(Date.parse(now) + 120 * 86400000).toISOString(),
++    recipients: draft.recipients.map(rec => ({ ...rec, status: rec.status === 'created' ? 'sent' : rec.status })),
++    history: [...draft.history, {
++      id: eventId, timestamp: now, action: 'sent', actorName: actor.name, actorEmail: actor.email,
++      details: 'Envelope sent to ' + draft.recipients.length + ' recipient(s)', snapshot: sentSnapshot,
++    }],
++  };
++}
++
++export function voidIssued(envelope, reason, now, eventId, actor) {
++  if (!canVoid(envelope) || !reason.trim()) return envelope;
++  return {
++    ...envelope, status: 'voided', voidedAt: now, lastActivityAt: now, voidReason: reason.trim(),
++    history: [...envelope.history, {
++      id: eventId, timestamp: now, action: 'voided', actorName: actor.name, actorEmail: actor.email,
++      details: 'Envelope voided: ' + reason.trim(),
++    }],
++  };
++}
++
++export function correctRecipients(envelope, recipients, now, eventId, actor) {
++  if (!canCorrect(envelope) || !Array.isArray(recipients)) return envelope;
++  const before = envelope.recipients.map(recipientPacket);
++  const after = recipients.map(recipientPacket);
++  return {
++    ...envelope, recipients, lastActivityAt: now,
++    history: [...envelope.history, {
++      id: eventId, timestamp: now, action: 'corrected', actorName: actor.name, actorEmail: actor.email,
++      details: 'Envelope corrected - recipients updated', before, after,
++    }],
++  };
++}
+--- a/src/pages/Agreements.jsx
++++ b/src/pages/Agreements.jsx
+@@ -1,3 +1,4 @@
++import { canVoid } from '../lib/envelopeHistory';
+ import React, { useState, useMemo } from 'react';
+ import { useStore } from '../context/StoreContext';
+ import { useNavigate, useParams } from 'react-router-dom';
+@@ -209,7 +210,7 @@
+   const bulkVoid = () => {
+     selectedIds.forEach(envId => {
+       const env = state.envelopes.find(e => e.id === envId);
+-      if (env && env.status !== 'completed' && env.status !== 'voided') {
++      if (env && canVoid(env)) {
+         voidEnvelope(envId, 'Bulk void');
+       }
+     });
+@@ -431,7 +432,9 @@
+           <div className="mb-3 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+             <span className="text-sm font-medium text-blue-800">{selectedIds.size} selected</span>
+             <button onClick={bulkVoid} className="text-xs px-3 py-1 bg-white border rounded text-gray-700 hover:bg-gray-50">Void Selected</button>
+-            <button onClick={bulkDelete} className="text-xs px-3 py-1 bg-white border border-red-200 rounded text-red-600 hover:bg-red-50">Delete Selected</button>
++            {state.envelopes.filter(envelope => selectedIds.has(envelope.id)).every(envelope => envelope.status === 'draft') && (
++              <button onClick={bulkDelete} className="text-xs px-3 py-1 bg-white border border-red-200 rounded text-red-600 hover:bg-red-50">Delete Selected</button>
++            )}
+             <div className="relative">
+               <button onClick={() => setShowMoveFolder(!showMoveFolder)} className="text-xs px-3 py-1 bg-white border rounded text-gray-700 hover:bg-gray-50 flex items-center gap-1">
+                 Move to Folder <ChevronDown className="w-3 h-3" />
+--- a/src/pages/EnvelopeDetail.jsx
++++ b/src/pages/EnvelopeDetail.jsx
+@@ -4,6 +4,7 @@
+ import { format } from 'date-fns';
+ import { useToast } from '../components/Toast';
+ import { downloadEnvelopeCopy } from '../lib/utils';
++import { canVoid as mayVoid } from '../lib/envelopeHistory';
+ import {
+   ArrowLeft, PenTool, Eye, Mail, Download, RotateCcw, XCircle,
+   Trash2, FileText, Clock, CheckCircle, AlertCircle, X, Users, Bell, CalendarDays, Plus, MessageSquare
+@@ -39,7 +40,7 @@
+ 
+   const canResend = envelope.status === 'sent' || envelope.status === 'delivered';
+   const canCorrect = envelope.status === 'sent' || envelope.status === 'delivered';
+-  const canVoid = envelope.status !== 'completed' && envelope.status !== 'voided';
++  const canVoid = mayVoid(envelope);
+ 
+   const handleVoid = () => {
+     if (!voidReason.trim()) return;
+@@ -134,6 +135,12 @@
+ 
+         {/* Action Buttons */}
+         <div className="flex items-center gap-2 flex-shrink-0">
++          {envelope.status === 'draft' && (
++            <button onClick={() => navigate('/prepare/' + envelope.id)}
++              className="px-3 py-2 text-sm bg-[#FFC829] hover:bg-[#e6b424] rounded-md text-gray-900 flex items-center gap-1">
++              <PenTool className="w-4 h-4" /> Edit Draft
++            </button>
++          )}
+           {canResend && (
+             <button
+               onClick={() => setShowResendConfirm(true)}
+@@ -178,6 +185,7 @@
+             <p className="font-medium text-red-800">VOIDED</p>
+             <p className="text-sm text-red-600">
+               This envelope was voided on {format(new Date(envelope.voidedAt), 'MMM d, yyyy')}
++              {envelope.voidReason && ' · ' + envelope.voidReason}
+             </p>
+           </div>
+         </div>
+@@ -255,7 +263,10 @@
+                   <FileText className="w-5 h-5 text-red-600" />
+                 </div>
+                 <div>
+-                  <p className="text-sm font-medium text-gray-900">{doc.name}</p>
++                  {doc.downloadUrl
++                    ? <a href={doc.downloadUrl} download={doc.name}
++                        className="text-sm font-medium text-blue-700 hover:underline">{doc.name}</a>
++                    : <p className="text-sm font-medium text-gray-900">{doc.name}</p>}
+                   <p className="text-xs text-gray-500">{doc.pageCount} page{doc.pageCount !== 1 ? 's' : ''}</p>
+                 </div>
+               </div>
+@@ -349,6 +360,18 @@
+                   </div>
+                   <div>
+                     <p className="text-sm text-gray-900">{evt.details}</p>
++                    {evt.snapshot && (
++                      <details className="my-1 text-xs text-gray-600">
++                        <summary className="cursor-pointer text-blue-700">First sent version</summary>
++                        <p className="mt-1 font-medium">{evt.snapshot.subject}</p>
++                        <p>Documents: {evt.snapshot.documents.map(doc => doc.name).join(', ')}</p>
++                        <ul className="mt-1 list-disc pl-4">
++                          {evt.snapshot.recipients.map(recipient => (
++                            <li key={recipient.id}>{recipient.routingOrder}. {recipient.name} ({recipient.email})</li>
++                          ))}
++                        </ul>
++                      </details>
++                    )}
+                     <div className="flex items-center gap-2 mt-0.5">
+                       <span className="text-xs text-gray-500">{evt.actorName}</span>
+                       <span className="text-xs text-gray-300">|</span>
+--- a/src/pages/PrepareEnvelope.jsx
++++ b/src/pages/PrepareEnvelope.jsx
+@@ -1,3 +1,4 @@
++import DocumentPage from '../components/DocumentPage';
+ import React, { useState, useEffect, useRef } from 'react';
+ import { useParams, useNavigate } from 'react-router-dom';
+ import { useStore } from '../context/StoreContext';
+@@ -116,7 +117,9 @@
+       setStep(0);
+     } else {
+       const found = state.envelopes.find(e => e.id === id);
+-      if (found) {
++      if (found && (found.status !== 'draft' || found.sentSnapshot)) {
++        navigate('/agreements/detail/' + found.id, { replace: true });
++      } else if (found) {
+         setEnvelope(found);
+         setSubject(found.subject);
+         setMessage(found.message || '');
+@@ -176,6 +179,16 @@
+       return;
+     }
+     const uploaded = await uploadFileToServer(file);
++    if (!uploaded) {
++      addToast('Could not save the uploaded document. Please try again.', 'error');
++      return;
++    }
++    const digest = globalThis.crypto?.subtle
++      ? await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
++      : null;
++    const sha256 = digest
++      ? Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
++      : undefined;
+     const reader = new FileReader();
+     reader.onload = (ev) => {
+       const dataUrl = ev.target.result;
+@@ -187,6 +200,7 @@
+         fileUrl: dataUrl,
+         downloadUrl: uploaded?.url || dataUrl,
+         fileType: file.name.split('.').pop().toLowerCase() || 'pdf',
++        sha256,
+         fileSize: uploaded?.size || file.size,
+         contentType: uploaded?.content_type || file.type || 'application/octet-stream',
+         storedName: uploaded?.stored_name
+@@ -401,8 +415,10 @@
+   };
+ 
+   const confirmSend = () => {
+-    if (subject) updateEnvelope(envelope.id, { subject });
+-    sendEnvelope(envelope.id);
++    sendEnvelope(envelope.id, {
++      subject: subject.trim() || envelope.subject, message,
++      documents: envelope.documents, recipients: envelope.recipients, fields: envelope.fields,
++    });
+     setShowConfirmSend(false);
+     navigate('/agreements/sent');
+   };
+@@ -923,14 +939,7 @@
+                 style={{ width: '800px', minHeight: '1100px' }}
+                 onClick={() => setSelectedField(null)}
+               >
+-                {activeDocObj && (
+-                  <img
+-                    src={activeDocObj.fileUrl}
+-                    alt="Document"
+-                    className="w-full h-auto select-none pointer-events-none"
+-                    style={{ minHeight: '1100px', objectFit: 'contain', background: '#fff' }}
+-                  />
+-                )}
++                {activeDocObj && <DocumentPage document={activeDocObj} />}
+                 {!activeDocObj && (
+                   <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                     <div className="text-center">
+--- a/src/pages/SigningRoom.jsx
++++ b/src/pages/SigningRoom.jsx
+@@ -1,3 +1,4 @@
++import DocumentPage from '../components/DocumentPage';
+ import React, { useState, useRef, useEffect, useMemo } from 'react';
+ import { useParams, useNavigate } from 'react-router-dom';
+ import { useStore } from '../context/StoreContext';
+@@ -304,14 +305,7 @@
+         )}
+ 
+         <div className="relative bg-white shadow-2xl" style={{ width: '800px', minHeight: '1100px' }}>
+-          {activeDocObj && (
+-            <img
+-              src={activeDocObj.fileUrl}
+-              alt="Document"
+-              className="w-full h-auto pointer-events-none select-none"
+-              style={{ minHeight: '1100px' }}
+-            />
+-          )}
++          {activeDocObj && <DocumentPage document={activeDocObj} />}
+ 
+           {/* Render Fields for active document */}
+           {visibleFields.map(field => {

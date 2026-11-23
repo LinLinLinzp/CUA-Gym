@@ -1,0 +1,407 @@
+diff --git a/index.html b/index.html
+index 0d0e5be..f2e0385 100644
+--- a/index.html
++++ b/index.html
+@@ -3,7 +3,8 @@
+   <head>
+     <meta charset="utf-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1">
+-    <meta name="theme-color" content="#F7F5EF">
++    <meta name="theme-color" content="#F7F8FB">
++    <link rel="icon" href="/smartsheet-favicon.png" type="image/png">
+     <title>Smartsheet</title>
+   </head>
+   <body>
+diff --git a/public/smartsheet-favicon.png b/public/smartsheet-favicon.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..9dd67cf6799f6c029c00ecedece1e1355b10d719
+GIT binary patch
+literal 621
+zcmV-z0+RiSP)<h;3K|Lk000e1NJLTq000mG000mO1^@s7X!Otb00001b5ch_0Itp)
+z=>Px%CrLy>R5%f1U;qMT^T7Wgn&J7YH~$%7JSMOZkYEHcV4@&4Tn5BpWMudQ*8>u`
+zdvZM^T*a)ODv%gN|9>EWnFCg#Y8lJ`RGR}*fME+r5CnFtn8cu}D2p(2UVkk^b9n{>
+z2M0StYIFdDM?@Z2A>7iW!e#~~d1;1-09S_DOE-WeK?JfD|Ctz>vTmPPI|D8YQUG%u
+zvLJ|UXJN=Ne_|cN4af?#)s+}7Uc3DdBnEc_vVt%_7lx0YzJRR<E8yehX1H@=9azn&
+z?eiJxyJrEz5iAce;nU}@3|sdcWmq)1fuU>K60ky`0&py$I1*%vibW7q0mIKbC)RVI
+zxB+PN2cW^9SeaP#fU16hRKgW7GBBQ4yKRr`os;YNZyaBJ*-(~65TpP(pg??rz~0J;
+zAtKQIpPQW-Ge|Mq20}VTgasH5Z=A*O{rgXb%+hwaJ{D{mdAK<lzI^=-m-2JBV`wNz
+zWpD_}U;u>}5J1u~kbz<V3kx$tbdU!_ZBa5<b5K$_gOQ#(LvoZqgQZV0!_S}KZ~?{v
+z6Wjo-VW6X-%&=iWH`tJ8FJ3b^g=8`O`STad2N6t6On+}5UkkPz?iaW$ka6Y4U5511
+zc80ItelU1P7s54zq6nn!-~ay*rvTYl4FD<Hd-ybifm75cU|39G=Hw6s<v36jGBPk#
+zGXDR66Ql+Nz+SNMO#A`NDJP!1c)6N^opIxx1M8kZqzRJ%n547TdvQ3100000NkvXX
+Hu0mjfaMk~&
+
+literal 0
+HcmV?d00001
+
+diff --git a/public/smartsheet-horizontal.svg b/public/smartsheet-horizontal.svg
+new file mode 100644
+index 0000000..c7b24d3
+--- /dev/null
++++ b/public/smartsheet-horizontal.svg
+@@ -0,0 +1,80 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Generator: Adobe Illustrator 24.1.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
++<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
++	 viewBox="0 0 453.3 73.9" style="enable-background:new 0 0 453.3 73.9;" xml:space="preserve">
++<style type="text/css">
++	.st0{fill:#003059;}
++</style>
++<g>
++	<g>
++		<path class="st0" d="M100.2,32.9c-0.9-1.1-2-2-3.2-2.7c-1.3-0.7-2.9-1.1-4.7-1.1c-1.7,0-3.3,0.4-4.6,1.1c-1.3,0.7-1.9,1.8-1.9,3.2
++			c0,1.1,0.4,2.1,1.1,2.8c0.7,0.7,1.6,1.3,2.6,1.7c1,0.4,2.1,0.8,3.2,1c1.1,0.2,2.1,0.4,3,0.6c1.6,0.4,3.1,0.8,4.5,1.4
++			c1.4,0.5,2.6,1.3,3.6,2.1c1,0.9,1.8,1.9,2.4,3.2c0.6,1.3,0.9,2.8,0.9,4.6c0,2.2-0.5,4.1-1.4,5.6c-0.9,1.6-2.1,2.8-3.6,3.8
++			s-3.2,1.7-5,2.1c-1.9,0.4-3.8,0.7-5.7,0.7c-3.2,0-6.1-0.5-8.5-1.5s-4.6-2.8-6.5-5.4l5.6-4.6c1.2,1.2,2.5,2.3,4,3.2
++			c1.5,0.9,3.3,1.4,5.4,1.4c0.9,0,1.9-0.1,2.8-0.3c1-0.2,1.8-0.5,2.5-0.9s1.3-0.9,1.8-1.6c0.5-0.6,0.7-1.4,0.7-2.2
++			c0-1.1-0.3-2-1-2.7s-1.5-1.3-2.5-1.7c-1-0.4-2-0.7-3-1c-1.1-0.2-2-0.5-2.8-0.6c-1.6-0.4-3.1-0.8-4.5-1.3s-2.7-1.1-3.8-2
++			c-1.1-0.8-2-1.9-2.6-3.1c-0.7-1.3-1-2.8-1-4.7c0-2,0.4-3.8,1.3-5.3c0.8-1.5,2-2.7,3.4-3.7s3-1.7,4.8-2.2s3.6-0.7,5.4-0.7
++			c2.6,0,5.1,0.5,7.5,1.5s4.3,2.6,5.7,4.9L100.2,32.9z"/>
++		<path class="st0" d="M110.4,23.1h6.9v6.1h0.2c0.2-0.5,0.6-1.2,1.3-2s1.6-1.6,2.6-2.3c1.1-0.7,2.3-1.4,3.8-1.9
++			c1.4-0.5,3-0.8,4.8-0.8c2.9,0,5.3,0.6,7.3,1.8s3.6,3,4.8,5.4c1.3-2.4,3-4.2,5.3-5.4c2.3-1.2,4.6-1.8,7-1.8c3,0,5.5,0.5,7.4,1.5
++			s3.4,2.3,4.5,3.9c1.1,1.6,1.8,3.4,2.3,5.5c0.4,2.1,0.6,4.2,0.6,6.4v22.6h-7.4V40.5c0-1.5-0.1-2.9-0.3-4.3
++			c-0.2-1.4-0.6-2.6-1.2-3.6s-1.4-1.9-2.5-2.5s-2.5-0.9-4.3-0.9c-3.6,0-6.1,1.1-7.6,3.3s-2.3,5-2.3,8.4v21.2h-7.4V41.8
++			c0-1.9-0.1-3.6-0.3-5.1c-0.2-1.5-0.6-2.9-1.1-4c-0.6-1.1-1.4-2-2.5-2.6s-2.5-0.9-4.3-0.9c-1.3,0-2.6,0.3-3.8,0.8s-2.3,1.3-3.2,2.3
++			s-1.7,2.4-2.2,4S118,39.8,118,42v20.2h-7.6V23.1z"/>
++		<path class="st0" d="M174.6,27.9c2.1-1.9,4.5-3.3,7.2-4.3c2.7-1,5.5-1.4,8.2-1.4c2.8,0,5.3,0.4,7.3,1.1c2,0.7,3.7,1.7,5,2.9
++			c1.3,1.2,2.3,2.6,2.9,4.1c0.6,1.6,0.9,3.2,0.9,4.9V55c0,1.4,0,2.6,0.1,3.8c0.1,1.1,0.1,2.2,0.2,3.3h-6.6c-0.2-2-0.2-3.9-0.2-5.9
++			h-0.2c-1.6,2.5-3.6,4.3-5.8,5.3c-2.2,1-4.8,1.6-7.8,1.6c-1.8,0-3.5-0.2-5.2-0.7c-1.6-0.5-3.1-1.2-4.3-2.2c-1.2-1-2.2-2.2-2.9-3.6
++			c-0.7-1.4-1.1-3.1-1.1-5c0-2.5,0.6-4.6,1.7-6.3c1.1-1.7,2.7-3.1,4.6-4.1c1.9-1.1,4.2-1.8,6.8-2.3s5.4-0.7,8.3-0.7h5.4v-1.6
++			c0-1-0.2-2-0.6-3s-1-1.9-1.7-2.7c-0.8-0.8-1.7-1.4-2.9-1.9c-1.1-0.5-2.5-0.7-4.1-0.7c-1.4,0-2.7,0.1-3.7,0.4c-1.1,0.3-2,0.6-2.9,1
++			s-1.7,0.9-2.4,1.4c-0.7,0.5-1.4,1.1-2,1.6L174.6,27.9z M195.4,43.3c-1.7,0-3.5,0.1-5.4,0.3c-1.8,0.2-3.5,0.6-5,1.1
++			s-2.7,1.3-3.7,2.3s-1.4,2.2-1.4,3.8c0,2.2,0.8,3.9,2.3,4.8c1.5,1,3.5,1.5,6.1,1.5c2,0,3.7-0.3,5.2-1c1.4-0.7,2.6-1.6,3.4-2.7
++			c0.9-1.1,1.5-2.3,1.9-3.6c0.4-1.3,0.6-2.7,0.6-4v-2.5L195.4,43.3L195.4,43.3z"/>
++		<path class="st0" d="M294,32.9c-0.9-1.1-2-2-3.2-2.7c-1.3-0.7-2.9-1.1-4.7-1.1c-1.8,0-3.3,0.4-4.6,1.1s-1.9,1.8-1.9,3.2
++			c0,1.1,0.4,2.1,1.1,2.8c0.7,0.7,1.6,1.3,2.6,1.7c1,0.4,2.1,0.8,3.2,1s2.1,0.4,3,0.6c1.6,0.4,3.1,0.8,4.5,1.4
++			c1.4,0.5,2.6,1.3,3.6,2.1c1,0.9,1.8,1.9,2.4,3.2c0.6,1.3,0.9,2.8,0.9,4.6c0,2.2-0.5,4.1-1.4,5.6c-0.9,1.6-2.1,2.8-3.6,3.8
++			s-3.2,1.7-5,2.1c-1.9,0.4-3.8,0.7-5.7,0.7c-3.2,0-6.1-0.5-8.5-1.5s-4.6-2.8-6.5-5.4l5.6-4.6c1.2,1.2,2.5,2.3,4,3.2
++			c1.5,0.9,3.3,1.4,5.4,1.4c0.9,0,1.9-0.1,2.8-0.3c1-0.2,1.8-0.5,2.5-0.9s1.3-0.9,1.8-1.6c0.5-0.6,0.7-1.4,0.7-2.2
++			c0-1.1-0.3-2-1-2.7s-1.6-1.2-2.6-1.6s-2-0.7-3-1c-1.1-0.2-2-0.5-2.8-0.6c-1.6-0.4-3.1-0.8-4.5-1.3s-2.7-1.1-3.8-2
++			c-1.1-0.8-2-1.9-2.6-3.1c-0.7-1.3-1-2.8-1-4.7c0-2,0.4-3.8,1.3-5.3c0.8-1.5,2-2.7,3.4-3.7s3-1.7,4.8-2.2s3.6-0.7,5.4-0.7
++			c2.6,0,5.1,0.5,7.5,1.5s4.3,2.6,5.7,4.9L294,32.9z"/>
++		<path class="st0" d="M304.5,0h7.4v29.1h0.2c0.9-2.1,2.5-3.8,4.8-5c2.3-1.3,4.9-1.9,8-1.9c1.9,0,3.6,0.3,5.4,0.9
++			c1.7,0.6,3.2,1.5,4.5,2.7s2.3,2.7,3.1,4.6c0.8,1.9,1.1,4.1,1.1,6.7v25h-7.4v-23c0-1.8-0.2-3.3-0.7-4.6c-0.5-1.3-1.1-2.3-2-3.1
++			c-0.8-0.8-1.8-1.4-2.8-1.7c-1.1-0.4-2.2-0.5-3.3-0.5c-1.5,0-3,0.2-4.3,0.7s-2.5,1.3-3.4,2.3c-1,1.1-1.8,2.4-2.3,4.1
++			c-0.5,1.6-0.8,3.6-0.8,5.8v20h-7.4L304.5,0z"/>
++		<path class="st0" d="M350.6,45.3c0,1.7,0.4,3.2,1.1,4.6s1.7,2.6,2.9,3.6c1.2,1,2.6,1.8,4.2,2.3s3.2,0.8,4.9,0.8
++			c2.3,0,4.3-0.5,6-1.6s3.3-2.5,4.7-4.2l5.6,4.3c-4.1,5.3-9.8,8-17.2,8c-3.1,0-5.8-0.5-8.3-1.6c-2.5-1-4.6-2.5-6.3-4.3
++			c-1.7-1.8-3-4-4-6.5c-0.9-2.5-1.4-5.2-1.4-8.1s0.5-5.6,1.5-8.1s2.4-4.6,4.2-6.5c1.8-1.8,3.9-3.3,6.4-4.3s5.1-1.6,8-1.6
++			c3.4,0,6.4,0.6,8.7,1.8c2.4,1.2,4.3,2.8,5.9,4.7c1.5,1.9,2.6,4.1,3.3,6.6c0.7,2.4,1,4.9,1,7.4v2.6L350.6,45.3z M373.8,39.4
++			c-0.1-1.6-0.3-3.1-0.8-4.5s-1.2-2.6-2.1-3.6s-2.1-1.8-3.5-2.4c-1.4-0.6-3-0.9-4.9-0.9c-1.8,0-3.5,0.3-5,1s-2.8,1.6-3.8,2.7
++			c-1,1.1-1.8,2.3-2.4,3.6s-0.9,2.7-0.9,4L373.8,39.4z"/>
++		<path class="st0" d="M393.7,45.3c0,1.7,0.4,3.2,1.1,4.6s1.7,2.6,2.9,3.6c1.2,1,2.6,1.8,4.2,2.3s3.2,0.8,4.9,0.8
++			c2.3,0,4.3-0.5,6-1.6s3.3-2.5,4.7-4.2l5.6,4.3c-4.1,5.3-9.8,8-17.2,8c-3.1,0-5.8-0.5-8.3-1.6c-2.5-1-4.6-2.5-6.3-4.3
++			c-1.7-1.8-3-4-4-6.5c-0.9-2.5-1.4-5.2-1.4-8.1s0.5-5.6,1.5-8.1s2.4-4.6,4.2-6.5s3.9-3.3,6.4-4.3s5.1-1.6,8-1.6
++			c3.4,0,6.4,0.6,8.7,1.8c2.4,1.2,4.3,2.8,5.9,4.7c1.5,1.9,2.6,4.1,3.3,6.6c0.7,2.4,1,4.9,1,7.4v2.6L393.7,45.3z M417,39.4
++			c-0.1-1.6-0.3-3.1-0.8-4.5s-1.2-2.6-2.1-3.6s-2.1-1.8-3.5-2.4c-1.4-0.6-3-0.9-4.9-0.9c-1.8,0-3.5,0.3-5,1s-2.8,1.6-3.8,2.7
++			c-1,1.1-1.8,2.3-2.4,3.6s-0.9,2.7-0.9,4L417,39.4z"/>
++		<g>
++			<path class="st0" d="M235,23.2c0,0-4.4-0.6-6.7-0.4c-2.8,0.2-3.8,0.6-5.3,1.4c-1,0.6-1.9,1.3-2.7,2.2c-0.8,0.8-1.5,1.8-2,2.8
++				h-0.2v-6h-7.4v38.9h7.4c0,0-0.2-16,0-19.9s0.9-8,2.9-9.9c2.1-1.9,3.1-2.3,5.6-2.7c2.4-0.3,5.5,0,5.5,0L235,23.2z"/>
++		</g>
++		<g>
++			<path class="st0" d="M262.2,55.8c-0.9,0.2-1.8,0.2-2.7,0.2c-1.4,0-2.5-0.3-3.2-0.8s-1.3-1.2-1.6-2.1c-0.4-0.8-0.6-1.8-0.6-2.9
++				c-0.1-1.1-0.1-2.1-0.1-3.2V29.4h10.6V23H254V12.2h-7.4v10.9h-7.4l-2.8,6.4h10.2v20.3c0,1.6,0.1,3.2,0.2,4.7
++				c0.1,1.6,0.6,3,1.3,4.2c0.7,1.3,1.9,2.3,3.4,3.1c1.6,0.8,3.8,1.2,6.6,1.2c0.8,0,1.8-0.1,3.2-0.3c1.4-0.2,2.5-0.5,3.4-1V55
++				C264,55.4,263.1,55.7,262.2,55.8z"/>
++		</g>
++		<g>
++			<path class="st0" d="M450.8,55.8c-0.9,0.2-1.8,0.2-2.7,0.2c-1.4,0-2.5-0.3-3.2-0.8s-1.3-1.2-1.6-2.1c-0.4-0.8-0.6-1.8-0.6-2.9
++				c-0.1-1.1-0.1-2.1-0.1-3.2V29.4h10.6V23h-10.6V12.2h-7.4v10.9h-7.4l-2.8,6.4h10.2v20.3c0,1.6,0.1,3.2,0.2,4.7
++				c0.1,1.6,0.6,3,1.3,4.2c0.7,1.3,1.9,2.3,3.4,3.1c1.6,0.8,3.8,1.2,6.6,1.2c0.8,0,1.8-0.1,3.2-0.3c1.4-0.2,2.5-0.5,3.4-1V55
++				C452.5,55.4,451.7,55.7,450.8,55.8z"/>
++		</g>
++	</g>
++	<g>
++		<path class="st0" d="M9.3,37.5c0,0,2.6-3.7,6.1-3.8c5.4-0.1,9.8,9.6,10.5,11c6-13.4,15.9-24.7,23.9-32.3H0.5
++			c0,4.6,0.1,51.5,0.1,55.3c0,3-0.4,5.2-0.6,6.2c2.2-0.3,10.5-1.8,18.9-4.8c15-5.4,20.9-11.1,20.9-11.2l0.4-0.4l0.2,0.5
++			c0,0,1.9,4.2,3.7,6.4c2.1,2.4,3.2,2.7,3.8,2.5c0.8-0.3,1.4-1.6,1.6-3.9c0.2-2.2,0.4-7.3,0.4-13.4c0-11,0-25.6,0-32.9
++			C35.5,34.5,24.8,61.3,24.8,61.3S17.7,37.3,9.3,37.5z"/>
++	</g>
++</g>
++</svg>
+diff --git a/src/components/Grid.jsx b/src/components/Grid.jsx
+index cf1373a..22b54c9 100644
+--- a/src/components/Grid.jsx
++++ b/src/components/Grid.jsx
+@@ -1,5 +1,5 @@
+ import React, { useId, useRef, useState } from 'react'
+-import { Check, ChevronDown, Ellipsis, Plus, Square, SquareCheck } from 'lucide-react'
++import { Check, ChevronDown, Ellipsis, Lock, Plus, Square, SquareCheck } from 'lucide-react'
+ import { displayCell, columnTypes } from '../data/cells.js'
+ import { changeColumn, editCells, insertRow, removeRows } from '../data/rows.js'
+ import { columnsOf, rowsOf } from '../data/sheets.js'
+@@ -51,6 +51,11 @@ export default function Grid({ sheet, rows, gantt = false, onSort }) {
+ 
+   function startEdit(row, column) {
+     select({ rowId: row.id, columnId: column.id })
++    if (row.locked && sheet.ownerId !== state.currentUserId) {
++      setProblem('This row is locked.')
++      return
++    }
++    setProblem('')
+     setEditError('')
+     setEditing({ rowId: row.id, columnId: column.id, value: row.cells?.[column.id] ?? null })
+   }
+@@ -102,10 +107,11 @@ export default function Grid({ sheet, rows, gantt = false, onSort }) {
+         <th scope="row" className="row-gutter">
+           <div className="row-controls">
+             <button className="row-number" aria-label={'Select row ' + indexById.get(row.id)} aria-pressed={marked.includes(row.id)} onClick={() => setMarks(marked.includes(row.id) ? marked.filter(id => id !== row.id) : [...marked, row.id])}>{indexById.get(row.id)}</button>
++            {row.locked && <span className="row-lock" title="Locked row"><Lock size={11} aria-label="Locked row" /></span>}
+             <Menu floating title={'Row ' + indexById.get(row.id) + ' menu'} label={<Ellipsis size={13} />}>
+               <button onClick={() => addRow({ referenceId: row.id, placement: 'above' })}>Insert row above</button>
+               <button onClick={() => addRow({ referenceId: row.id, placement: 'below' })}>Insert row below</button>
+-              <button onClick={() => openDelete(row.id)}>{marked.includes(row.id) && marked.length > 1 ? 'Delete selected rows' : 'Delete row'}</button>
++              <button disabled={row.locked && sheet.ownerId !== state.currentUserId} onClick={() => openDelete(row.id)}>{marked.includes(row.id) && marked.length > 1 ? 'Delete selected rows' : 'Delete row'}</button>
+             </Menu>
+           </div>
+         </th>
+diff --git a/src/components/ProjectSettings.jsx b/src/components/ProjectSettings.jsx
+index b411dcb..5714e8f 100644
+--- a/src/components/ProjectSettings.jsx
++++ b/src/components/ProjectSettings.jsx
+@@ -8,7 +8,8 @@ const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+ const datePairs = [['startColumnId', 'Start date column'], ['endColumnId', 'End date column']]
+ 
+ export default function ProjectSettings({ sheet, close }) {
+-  const { commit } = useStore()
++  const { state, commit } = useStore()
++  const editable = sheet.ownerId === state.currentUserId
+   const columns = columnsOf(sheet)
+   const dates = columns.filter(column => column.type === 'date')
+   const settings = sheet.projectSettings ?? {}
+@@ -34,11 +35,13 @@ export default function ProjectSettings({ sheet, close }) {
+   return <Dialog title="Project Settings" onClose={close}>
+     <form className="stack" onSubmit={event => {
+       event.preventDefault()
++      if (!editable) return
+       try {
+         commit(current => saveProjectSettings(current, sheet, { ...draft, holidays: draft.holidays.split(/[\n,]+/).map(date => date.trim()).filter(Boolean) }))
+         close()
+       } catch (failure) { setError(failure.message) }
+     }}>
++      <fieldset className="project-fields" disabled={!editable}>
+       <div className="form-columns">{datePairs.map(([key, label]) => field(key, label, 'date'))}</div>
+       {field('percentColumnId', 'Percent complete column', 'percent', true)}
+       <label className="check"><input type="checkbox" checked={draft.dependenciesEnabled} onChange={event => patch({ dependenciesEnabled: event.target.checked })} /> Enable dependencies</label>
+@@ -50,8 +53,9 @@ export default function ProjectSettings({ sheet, close }) {
+         </fieldset>
+         <label className="field">Holidays<textarea rows="2" placeholder="YYYY-MM-DD, one per line" value={draft.holidays} onChange={event => patch({ holidays: event.target.value })} /></label>
+       </>}
++      </fieldset>
+       <Problem message={error} />
+-      <div className="actions"><Button onClick={close}>Cancel</Button><Button variant="primary" type="submit">Save</Button></div>
++      <div className="actions"><Button onClick={close}>{editable ? 'Cancel' : 'Close'}</Button>{editable && <Button variant="primary" type="submit">Save</Button>}</div>
+     </form>
+   </Dialog>
+ }
+diff --git a/src/components/SheetFrame.jsx b/src/components/SheetFrame.jsx
+index 33b2539..c69081c 100644
+--- a/src/components/SheetFrame.jsx
++++ b/src/components/SheetFrame.jsx
+@@ -12,7 +12,7 @@ export function SheetFrame() {
+ }
+ 
+ function SheetLayout({ sheet }) {
+-  const { state, commit } = useStore()
++  const { state, commit, saveStatus, retrySave } = useStore()
+   const navigate = useAppNavigate()
+   const { formId, workflowId } = useParams()
+   const gridRoute = useMatch('/sheets/:sheetId')
+@@ -52,11 +52,15 @@ function SheetLayout({ sheet }) {
+         <button onClick={() => open('rename')}><Pencil size={14} /> Rename</button>
+         <button onClick={() => open('delete')}><Trash2 size={14} /> Delete sheet</button>
+       </Menu>
++      <span className="sheet-save-status" role="status">{saveStatus}</span>
++      {saveStatus === 'Save failed' && <Button onClick={retrySave}>Retry save</Button>}
+     </div>
+     <div className="sheet-toolbar">
+       <div className="tabs" aria-label="Sheet views">
+-        <AppTab end to={root}><Grid2X2 size={16} /> Grid</AppTab>
+-        <AppTab to={root + '/gantt'}><ChartNoAxesGantt size={17} /> Gantt</AppTab>
++        <Menu title="Sheet views" label={<MenuLabel>{ganttRoute ? <ChartNoAxesGantt size={17} /> : <Grid2X2 size={16} />}{ganttRoute ? 'Gantt View' : 'Grid View'}</MenuLabel>}>
++          <AppLink to={root} aria-current={gridRoute ? 'page' : undefined}><Grid2X2 size={16} /> Grid View</AppLink>
++          <AppLink to={root + '/gantt'} aria-current={ganttRoute ? 'page' : undefined}><ChartNoAxesGantt size={17} /> Gantt View</AppLink>
++        </Menu>
+       </div>
+       <div className="toolbar-actions">
+         {(gridRoute || ganttRoute) && <Button className={filter ? 'filter-active' : ''} onClick={() => setFilterOpen(!filterOpen)} aria-expanded={filterOpen}><Filter size={15} /> Filter{filter && <span className="active-dot" />}<ChevronDown size={12} /></Button>}
+diff --git a/src/components/Shell.jsx b/src/components/Shell.jsx
+index 26d32e0..1e4867f 100644
+--- a/src/components/Shell.jsx
++++ b/src/components/Shell.jsx
+@@ -13,7 +13,7 @@ export default function Shell() {
+   const unread = (state.approvalRequests ?? []).filter(item => item.approverId === state.currentUserId && !item.readAt && item.status !== 'canceled').length
+   return <>
+     <header className="topbar">
+-      <AppLink className="brand" to="/">Smartsheet</AppLink>
++      <AppLink className="brand" to="/" aria-label="Smartsheet"><img src="/smartsheet-horizontal.svg" alt="" /></AppLink>
+       <nav className="nav nav-main" aria-label="Workspace navigation">
+         <AppTab end to="/" aria-label="Home"><House size={17} /> <span>Home</span></AppTab>
+         <AppTab to="/browse" aria-label="Browse" className={({ isActive }) => isActive || location.pathname.startsWith('/workspaces/') ? 'active' : ''}><FolderOpen size={18} /> <span>Browse</span></AppTab>
+diff --git a/src/components/Timeline.jsx b/src/components/Timeline.jsx
+index 8cbac9e..f273e93 100644
+--- a/src/components/Timeline.jsx
++++ b/src/components/Timeline.jsx
+@@ -47,7 +47,11 @@ export default function Timeline({ sheet, rows, allRows, viewportRef, zoom, toda
+   const x = day => (day - from) * dayWidth
+   const weekends = []
+   if (zoom === 'Days' || zoom === 'Weeks') {
+-    for (let day = from; day <= to; day++) if (weekday(day) >= 6) weekends.push(day)
++    const holidays = new Set(settings?.holidays ?? [])
++    const weekdays = new Set(settings?.workingWeekdays ?? [1, 2, 3, 4, 5])
++    for (let day = from; day <= to; day++) {
++      if (!weekdays.has(weekday(day)) || holidays.has(dayDate(day))) weekends.push(day)
++    }
+   }
+   const spans = rows.map(row => scheduleSpan(settings, row.cells))
+   const indexById = new Map(rows.map((row, index) => [row.id, index]))
+diff --git a/src/data/rows.js b/src/data/rows.js
+index d21c997..2bff65b 100644
+--- a/src/data/rows.js
++++ b/src/data/rows.js
+@@ -45,6 +45,7 @@ export function removeRows(state, sheetId, rowIds) {
+   const current = rowsOf(state, sheetId)
+   const deleted = current.filter(row => rowIds.includes(row.id))
+   if (!deleted.length) return state
++  if (sheet.ownerId !== state.currentUserId && deleted.some(row => row.locked)) throw new Error('Locked rows cannot be deleted.')
+   const remaining = current.filter(row => !rowIds.includes(row.id))
+   if (sheet.projectSettings?.dependenciesEnabled) {
+     const column = sheet.projectSettings.predecessorsColumnId
+@@ -69,6 +70,7 @@ export function editCells(state, sheetId, rowId, edits, options = {}) {
+   const rows = rowsOf(state, sheetId)
+   const row = byId(rows, rowId)
+   if (!row) throw new Error('This row is unavailable.')
++  if (row.locked && sheet.ownerId !== state.currentUserId) throw new Error('This row is locked.')
+   const cells = { ...row.cells }
+   const directIds = []
+   for (const [columnId, raw] of Object.entries(edits)) {
+@@ -98,6 +100,7 @@ export function editCells(state, sheetId, rowId, edits, options = {}) {
+     .filter((item, index) => item !== rows[index] && JSON.stringify(item.cells ?? {}) !== JSON.stringify(rows[index].cells ?? {}))
+     .map(item => ({ ...item, ...update }))
+   if (!changedRows.length) return state
++  if (sheet.ownerId !== state.currentUserId && changedRows.some(item => item.locked)) throw new Error('This edit would change a locked row.')
+   return { ...writeRows(state, sheetId, changedRows, update), approvalRequests: result.approvalRequests }
+ }
+ 
+diff --git a/src/pages/Gantt.jsx b/src/pages/Gantt.jsx
+index 2c9ca76..839fb9a 100644
+--- a/src/pages/Gantt.jsx
++++ b/src/pages/Gantt.jsx
+@@ -48,6 +48,10 @@ export default function Gantt() {
+   function startDrag(event, row, span, mode, dayWidth) {
+     if (event.button !== 0 || gesture.current) return
+     event.stopPropagation()
++    if (row.locked && sheet.ownerId !== state.currentUserId) {
++      setError('This row is locked.')
++      return
++    }
+     const links = row.cells?.[settings.predecessorsColumnId]
+     if (settings.dependenciesEnabled && mode !== 'end' && Array.isArray(links) && links.length) {
+       setError('Change the predecessors to move this task’s start date.')
+diff --git a/src/store.jsx b/src/store.jsx
+index 8ac70f2..b2856a1 100644
+--- a/src/store.jsx
++++ b/src/store.jsx
+@@ -8,6 +8,16 @@ const Store = createContext(null)
+ export function StoreProvider({ children }) {
+   const current = useRef({ state: null, raw: null })
+   const [state, setState] = useState(null)
++  const [saveStatus, setSaveStatus] = useState('')
++  const saveVersion = useRef(0)
++  function persist(snapshot) {
++    const version = ++saveVersion.current
++    setSaveStatus('Saving changes…')
++    saveState(APP, snapshot).then(
++      () => { if (version === saveVersion.current) setSaveStatus('All changes saved') },
++      () => { if (version === saveVersion.current) setSaveStatus('Save failed') },
++    )
++  }
+   const [loadError, setLoadError] = useState(false)
+   // Observe the current-state key written by the shared Harbor client.
+   const [storageKey] = useState(() => APP + ':current:' + (getSessionId() || '_default'))
+@@ -47,13 +57,13 @@ export function StoreProvider({ children }) {
+       return false
+     }
+     const savedRaw = JSON.stringify(next)
+-    saveState(APP, next)
++    persist(next)
+     receive(next, savedRaw)
+     return true
+   }
+ 
+   if (!state) return <main className="loading" role="status">{loadError ? 'Unable to load Smartsheet. Reload the page to try again.' : 'Loading Smartsheet…'}</main>
+-  return <Store.Provider value={{ state, commit }}>{children}</Store.Provider>
++  return <Store.Provider value={{ state, commit, saveStatus, retrySave: () => persist(current.current.state) }}>{children}</Store.Provider>
+ }
+ 
+ export function useStore() {
+diff --git a/src/styles.css b/src/styles.css
+index d84a6a4..896da2b 100644
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -290,3 +290,31 @@ dialog::backdrop { background: rgb(23 39 35 / 35%); }
+   .nav .count { position: absolute; min-width: 16px; height: 16px; font-size: 10px; top: 5px; right: -2px; }
+   .create-menu summary { padding-inline: 7px; }
+ }
++
++/* Field workspace palette and compact project views. */
++:root {
++  color: #202536;
++  background: #f7f8fb;
++  font-family: Arial, sans-serif;
++  --brand: #174eb6;
++  --canvas: #f7f8fb;
++  --surface-subtle: #f1f4fb;
++  --text: #202536;
++  --text-muted: #5b6476;
++  --accent: #2859bd;
++  --accent-hover: #204898;
++  --accent-soft: #e7efff;
++  --border: #d9dde6;
++  --field-border: #a4afc4;
++  --gantt-bar: #a9bcf4;
++  --gantt-line: #607195;
++}
++.brand img { display: block; width: 139px; height: auto; }
++.row-lock { color: var(--text-muted); display: inline-flex; align-items: center; }
++.row-controls .row-number { min-width: 23px; }
++.project-fields { display: grid; min-width: 0; gap: 12px; border: 0; margin: 0; padding: 0; }
++
++.sheet-toolbar .tabs summary { background: #e8e8e8; border-color: transparent; }
++.sheet-toolbar .tabs summary:hover { background: #dcdcdc; }
++.sheet-toolbar .tabs .menu-popover { left: 0; right: auto; }
++.sheet-save-status { font-size: 12px; color: var(--text-muted); }
+diff --git a/src/utils/dataManager.js b/src/utils/dataManager.js
+index 08abf94..7f63037 100644
+--- a/src/utils/dataManager.js
++++ b/src/utils/dataManager.js
+@@ -61,14 +61,22 @@ export async function loadState(app, createInitialData) {
+   return state
+ }
+ 
++// Send full snapshots in edit order. Concurrent keepalive payloads share a browser size limit.
++let writes = Promise.resolve()
++
+ export function saveState(app, state) {
+   const sid = getSessionId()
+   localStorage.setItem(KEY(app, sid, 'current'), JSON.stringify(state))
+   const body = JSON.stringify({ action: 'set_current', state })
+-  fetch(sid ? `/post?sid=${encodeURIComponent(sid)}` : '/post', {
+-    method: 'POST',
+-    keepalive: body.length < 60000, // browsers cap keepalive bodies at 64 KB
+-    headers: { 'Content-Type': 'application/json' },
+-    body,
+-  }).catch(() => {})
++  const sent = writes.then(async () => {
++    const response = await fetch(sid ? `/post?sid=${encodeURIComponent(sid)}` : '/post', {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json' },
++      body,
++    })
++    if (!response.ok) throw new Error('Unable to save changes.')
++    await response.json()
++  })
++  writes = sent.catch(() => {})
++  return sent
+ }

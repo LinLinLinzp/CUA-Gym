@@ -1,0 +1,452 @@
+diff --git a/src/components/CardModal.jsx b/src/components/CardModal.jsx
+--- a/src/components/CardModal.jsx
++++ b/src/components/CardModal.jsx
+@@ -1,5 +1,5 @@
+ import React, { useEffect, useRef, useState } from 'react';
+-import { X, CreditCard, AlignLeft, CheckSquare, Clock, Tag, User, Paperclip, Activity, Trash2, Plus, ChevronLeft, ChevronRight, Image as ImageIcon, List as ListIcon, Type, Bold, Italic, ArrowRight, Copy, Eye } from 'lucide-react';
++import { X, CreditCard, AlignLeft, CheckSquare, Clock, Tag, User, Paperclip, Activity, Trash2, Plus, ChevronLeft, ChevronRight, Image as ImageIcon, List as ListIcon, Type, Bold, Italic, ArrowRight, Copy, Eye, MoreHorizontal } from 'lucide-react';
+ import { useStore } from '../context/StoreContext';
+ import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday, isPast, addDays } from 'date-fns';
+ import { v4 as uuidv4 } from 'uuid';
+@@ -32,6 +32,16 @@
+   const [copyListId, setCopyListId] = useState(card.listId);
+   const [moveBoardId, setMoveBoardId] = useState(card.boardId);
+   const [moveListId, setMoveListId] = useState(card.listId);
++  const [movePosition, setMovePosition] = useState(list.cardIds.indexOf(cardId));
++  const [imagePreview, setImagePreview] = useState(null);
++  const [attachmentMenu, setAttachmentMenu] = useState(null);
++  const moveCandidates = (state.lists[moveListId]?.cardIds ?? []).filter(id => id !== cardId);
++
++  const chooseDestination = (listId) => {
++    setMoveListId(listId);
++    const targetIds = state.lists[listId]?.cardIds ?? [];
++    setMovePosition(listId === card.listId ? targetIds.indexOf(cardId) : targetIds.length);
++  };
+   const [editingLabelId, setEditingLabelId] = useState(null);
+   const [editingLabelName, setEditingLabelName] = useState('');
+   const [editingLabelColor, setEditingLabelColor] = useState('');
+@@ -46,11 +56,15 @@
+ 
+   useEffect(() => {
+     const handleKeyDown = (e) => {
+-      if (e.key === 'Escape') onClose();
++      if (e.key !== 'Escape') return;
++      if (imagePreview) setImagePreview(null);
++      else if (attachmentMenu) setAttachmentMenu(null);
++      else if (isMovePickerOpen) setIsMovePickerOpen(false);
++      else onClose();
+     };
+     document.addEventListener('keydown', handleKeyDown);
+     return () => document.removeEventListener('keydown', handleKeyDown);
+-  }, [onClose]);
++  }, [onClose, imagePreview, attachmentMenu, isMovePickerOpen]);
+ 
+   // Calendar state
+   const [currentMonth, setCurrentMonth] = useState(new Date());
+@@ -194,7 +208,8 @@
+   };
+ 
+   const handleMoveCard = () => {
+-    if (moveListId === card.listId && moveBoardId === card.boardId) {
++    if (!state.lists[moveListId] || state.lists[moveListId].archived) return;
++    if (moveListId === card.listId && movePosition === list.cardIds.indexOf(cardId)) {
+       setIsMovePickerOpen(false);
+       return;
+     }
+@@ -204,10 +219,12 @@
+         cardId,
+         srcListId: card.listId,
+         destListId: moveListId,
+-        destBoardId: moveBoardId
++        destBoardId: moveBoardId,
++        position: movePosition
+       }
+     });
+     setIsMovePickerOpen(false);
++    onClose();
+   };
+ 
+   const handleCopyCard = () => {
+@@ -447,10 +464,10 @@
+ 
+   return (
+     <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center overflow-y-auto pt-12 pb-12" onClick={onClose}>
+-      <div className="bg-gray-100 w-full max-w-3xl rounded-lg shadow-2xl relative min-h-[600px]" onClick={e => e.stopPropagation()}>
++      <div className="bg-gray-100 w-full max-w-3xl rounded-lg shadow-2xl relative min-h-[600px]" onClick={e => { e.stopPropagation(); setAttachmentMenu(null); }}>
+         {renderCover()}
+ 
+-        <button onClick={onClose} className="absolute top-2 right-2 p-2 hover:bg-gray-200 rounded-full text-gray-600 z-10">
++        <button onClick={onClose} aria-label="Close card" className="absolute top-2 right-2 p-2 hover:bg-gray-200 rounded-full text-gray-600 z-10">
+           <X size={20} />
+         </button>
+ 
+@@ -672,43 +689,56 @@
+                       const isImage = (att.contentType || '').startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(att.name || att.url || '');
+                       return (
+                       <div key={att.id} className="flex gap-3 hover:bg-gray-200 p-2 rounded group relative">
+-                        <a href={att.url} download className="w-20 h-14 bg-gray-300 rounded overflow-hidden flex items-center justify-center text-gray-600 text-xs font-semibold">
++                        {isImage ? (
++                          <button type="button" onClick={() => setImagePreview(att)}
++                            className="w-20 h-14 shrink-0 bg-gray-300 rounded overflow-hidden"
++                            aria-label={`Preview ${att.name}`}>
++                            <img src={att.url} className="w-full h-full object-cover" alt="" />
++                          </button>
++                        ) : (
++                          <a href={att.url} download className="w-20 h-14 bg-gray-300 rounded flex items-center justify-center text-gray-600 text-xs font-semibold">
++                            {(att.name || 'File').split('.').pop()?.toUpperCase()}
++                          </a>
++                        )}
++                        <div className="flex flex-col justify-center min-w-0">
+                           {isImage ? (
+-                            <img src={att.url} className="w-full h-full object-cover" alt={att.name} />
++                            <button type="button" onClick={() => setImagePreview(att)}
++                              className="font-bold text-sm text-left text-gray-800 hover:underline truncate">{att.name}</button>
+                           ) : (
+-                            <span className="px-2 text-center break-all">{(att.name || 'File').split('.').pop()?.toUpperCase()}</span>
++                            <a href={att.url} download className="font-bold text-sm text-gray-800 hover:underline truncate">{att.name}</a>
+                           )}
+-                        </a>
+-                        <div className="flex flex-col justify-center min-w-0">
+-                          <a href={att.url} download className="font-bold text-sm text-gray-800 hover:underline truncate">{att.name}</a>
+                           <div className="text-xs text-gray-500">
+                             {att.size ? `${Math.ceil(att.size / 1024)} KB` : 'Attachment'}{att.contentType ? ` · ${att.contentType}` : ''}
+                           </div>
+-                          <div className="text-xs text-gray-500 space-x-2">
+-                            <span>{att.uploadedAt ? format(new Date(att.uploadedAt), 'MMM d') : 'Added just now'}</span>
+-                            <a
+-                              href={att.url}
+-                              download
+-                              onClick={(e) => e.stopPropagation()}
+-                              className="underline hover:text-gray-800"
+-                            >
+-                              Download
+-                            </a>
+-                            <button
+-                              onClick={(e) => { e.stopPropagation(); handleDeleteAttachment(att.id); }}
+-                              className="underline hover:text-gray-800"
+-                            >
+-                              Delete
+-                            </button>
+-                            {isImage && (
+-                              <button
+-                                onClick={(e) => { e.stopPropagation(); handleSetCover({ type: 'image', value: att.url }); }}
+-                                className="underline hover:text-gray-800"
+-                              >
+-                                Make Cover
+-                              </button>
+-                            )}
++                          <div className="text-xs text-gray-500">
++                            {att.uploadedAt ? format(new Date(att.uploadedAt), 'MMM d') : 'Added just now'}
+                           </div>
++                        </div>
++                        <div className="relative ml-auto self-center" onClick={e => e.stopPropagation()}>
++                          <button type="button" aria-label={`More actions for ${att.name}`}
++                            aria-expanded={attachmentMenu === att.id}
++                            onClick={() => setAttachmentMenu(attachmentMenu === att.id ? null : att.id)}
++                            className="grid place-items-center w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">
++                            <MoreHorizontal size={17} />
++                          </button>
++                          {attachmentMenu === att.id && (
++                            <div className="absolute top-full right-0 mt-1 z-30 w-36 py-1 rounded-lg border bg-white shadow-lg">
++                              <a href={att.url} download onClick={() => setAttachmentMenu(null)}
++                                className="block px-3 py-2 text-sm hover:bg-gray-100">Download</a>
++                              {isImage && (
++                                <button type="button" onClick={() => {
++                                  handleSetCover(card.cover?.value === att.url ? null : { type: 'image', value: att.url });
++                                  setAttachmentMenu(null);
++                                }} className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100">
++                                  {card.cover?.value === att.url ? 'Remove cover' : 'Make cover'}
++                                </button>
++                              )}
++                              <button type="button" onClick={() => {
++                                handleDeleteAttachment(att.id);
++                                setAttachmentMenu(null);
++                              }} className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100">Delete</button>
++                            </div>
++                          )}
+                         </div>
+                       </div>
+                       );
+@@ -1178,7 +1208,7 @@
+               <button
+                 onClick={() => {
+                   setMoveBoardId(card.boardId);
+-                  setMoveListId(card.listId);
++                  chooseDestination(card.listId);
+                   setIsMovePickerOpen(!isMovePickerOpen);
+                 }}
+                 className="w-full text-left bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded text-sm text-gray-700 flex items-center gap-2"
+@@ -1186,22 +1216,22 @@
+                 <ArrowRight size={16} /> Move
+               </button>
+               {isMovePickerOpen && (
+-                <div className="absolute top-full left-0 w-64 bg-white shadow-xl rounded z-20 p-3 border border-gray-200 mt-1">
++                <div className="absolute bottom-full left-0 w-64 bg-white shadow-xl rounded z-20 p-3 border border-gray-200 mb-1">
+                   <div className="flex justify-between items-center mb-3">
+-                    <h4 className="text-sm font-semibold text-gray-700">Move Card</h4>
+-                    <button onClick={() => setIsMovePickerOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={14}/></button>
++                    <h4 className="text-sm font-semibold text-gray-700">Move card</h4>
++                    <button aria-label="Close move card" onClick={() => setIsMovePickerOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={14}/></button>
+                   </div>
+                   <div className="space-y-2">
+                     <div>
+-                      <label className="text-xs font-bold text-gray-500 block mb-1">Board</label>
+-                      <select
++                      <label htmlFor="move-board" className="text-xs font-bold text-gray-500 block mb-1">Board</label>
++                      <select id="move-board"
+                         value={moveBoardId}
+                         onChange={(e) => {
+                           const newBoardId = e.target.value;
+                           setMoveBoardId(newBoardId);
+                           const newBoard = state.boards[newBoardId];
+                           if (newBoard && newBoard.listIds.length > 0) {
+-                            setMoveListId(newBoard.listIds[0]);
++                            chooseDestination(newBoard.listIds[0]);
+                           }
+                         }}
+                         className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50"
+@@ -1214,10 +1244,10 @@
+                       </select>
+                     </div>
+                     <div>
+-                      <label className="text-xs font-bold text-gray-500 block mb-1">List</label>
+-                      <select
++                      <label htmlFor="move-list" className="text-xs font-bold text-gray-500 block mb-1">List</label>
++                      <select id="move-list"
+                         value={moveListId}
+-                        onChange={(e) => setMoveListId(e.target.value)}
++                        onChange={(e) => chooseDestination(e.target.value)}
+                         className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50"
+                       >
+                         {(state.boards[moveBoardId]?.listIds || []).map(lid => {
+@@ -1225,6 +1255,16 @@
+                           if (!l) return null;
+                           return <option key={lid} value={lid}>{l.title}{lid === card.listId ? ' (current)' : ''}</option>;
+                         })}
++                      </select>
++                    </div>
++                    <div>
++                      <label htmlFor="move-position" className="text-xs font-bold text-gray-500 block mb-1">Position</label>
++                      <select id="move-position" value={movePosition}
++                        onChange={e => setMovePosition(Number(e.target.value))}
++                        className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50">
++                        {Array.from({ length: moveCandidates.length + 1 }, (_, index) => (
++                          <option key={index} value={index}>{index + 1}</option>
++                        ))}
+                       </select>
+                     </div>
+                     <button
+@@ -1252,7 +1292,7 @@
+                 <Copy size={16} /> Copy
+               </button>
+               {isCopyPickerOpen && (
+-                <div className="absolute top-full left-0 w-64 bg-white shadow-xl rounded z-20 p-3 border border-gray-200 mt-1">
++                <div className="absolute bottom-full left-0 w-64 bg-white shadow-xl rounded z-20 p-3 border border-gray-200 mb-1">
+                   <div className="flex justify-between items-center mb-3">
+                     <h4 className="text-sm font-semibold text-gray-700">Copy Card</h4>
+                     <button onClick={() => setIsCopyPickerOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={14}/></button>
+@@ -1341,6 +1381,21 @@
+             )}
+           </div>
+         </div>
++
++        {imagePreview && (
++          <div role="dialog" aria-modal="true" aria-label={imagePreview.name}
++            className="fixed inset-0 z-[70] bg-gray-950/95 flex flex-col items-center justify-center gap-3 p-6"
++            onClick={() => setImagePreview(null)}>
++            <button type="button" autoFocus aria-label="Close preview" onClick={() => setImagePreview(null)}
++              className="absolute right-4 top-4 p-2 rounded text-white hover:bg-white/20"><X size={22} /></button>
++            <img onClick={event => event.stopPropagation()} src={imagePreview.url} alt={imagePreview.name}
++              className="max-w-[90vw] max-h-[79vh] object-contain bg-white rounded" />
++            <div onClick={event => event.stopPropagation()} className="flex gap-4 text-sm text-white">
++              <span>{imagePreview.name}</span>
++              <a href={imagePreview.url} download className="underline">Download</a>
++            </div>
++          </div>
++        )}
+       </div>
+     </div>
+   );
+diff --git a/src/context/StoreContext.jsx b/src/context/StoreContext.jsx
+--- a/src/context/StoreContext.jsx
++++ b/src/context/StoreContext.jsx
+@@ -244,23 +244,29 @@
+     }
+ 
+     case 'MOVE_CARD_TO_LIST': {
+-      const { cardId, srcListId, destListId, destBoardId } = action.payload;
++      const { cardId, srcListId, destListId, destBoardId, position } = action.payload;
+       const card = state.cards[cardId];
+       const srcList = state.lists[srcListId];
+       const destList = state.lists[destListId];
+ 
+       const newSrcCardIds = srcList.cardIds.filter(id => id !== cardId);
+-      const newDestCardIds = [...destList.cardIds, cardId];
++      const newDestCardIds = destList.cardIds.filter(id => id !== cardId);
++      const insertionIndex = Number.isInteger(position)
++        ? Math.min(Math.max(position, 0), newDestCardIds.length)
++        : (srcListId === destListId ? srcList.cardIds.indexOf(cardId) : newDestCardIds.length);
++      newDestCardIds.splice(insertionIndex, 0, cardId);
++      if (srcListId === destListId) {
++        return {
++          ...state,
++          lists: { ...state.lists, [srcListId]: { ...srcList, cardIds: newDestCardIds } }
++        };
++      }
+ 
+       const updatedLists = {
+         ...state.lists,
+         [srcListId]: { ...srcList, cardIds: newSrcCardIds },
+         [destListId]: { ...destList, cardIds: newDestCardIds }
+       };
+-      // If same list, avoid double override
+-      if (srcListId === destListId) {
+-        updatedLists[srcListId] = { ...srcList, cardIds: srcList.cardIds };
+-      }
+ 
+       return {
+         ...state,
+diff --git a/vite.config.js b/vite.config.js
+--- a/vite.config.js
++++ b/vite.config.js
+@@ -192,7 +192,7 @@
+           const fp = path.join(FILES_DIR, sid, filename)
+           if (!fs.existsSync(fp)) { res.statusCode = 404; res.end('File not found'); return }
+           const ext = path.extname(filename).toLowerCase()
+-          const mimeMap = { '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.txt': 'text/plain', '.zip': 'application/zip', '.doc': 'application/msword', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
++          const mimeMap = { '.svg': 'image/svg+xml', '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.txt': 'text/plain', '.zip': 'application/zip', '.doc': 'application/msword', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+           const fileData = fs.readFileSync(fp)
+           res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream')
+           res.setHeader('Content-Length', fileData.length)
+@@ -374,7 +374,7 @@
+           const fp = path.join(FILES_DIR, sid, filename)
+           if (!fs.existsSync(fp)) { res.statusCode = 404; res.end('File not found'); return }
+           const ext = path.extname(filename).toLowerCase()
+-          const mimeMap = { '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.txt': 'text/plain', '.zip': 'application/zip', '.doc': 'application/msword', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
++          const mimeMap = { '.svg': 'image/svg+xml', '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.txt': 'text/plain', '.zip': 'application/zip', '.doc': 'application/msword', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+           const fileData = fs.readFileSync(fp)
+           res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream')
+           res.setHeader('Content-Length', fileData.length)
+diff --git a/index.html b/index.html
+--- a/index.html
++++ b/index.html
+@@ -2,7 +2,7 @@
+ <html lang="en">
+   <head>
+     <meta charset="UTF-8" />
+-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
++    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAADbUlEQVR4Ae2bP0wTURzHv7/XqvwxBRMhMBAPBxOJCWriwqBtiAMTmDh0Elx0My5uGiSOhEQ240JxqonGMjEooTgwgwMmDnKRRIyQWEz4I9D+fO96NAXa9K5GaO/dJ4Fcr7/X5Pvt7+537/X9CC5piU4au3Syj5g7CRRmQiOYG3EcEKWQYZMETGaaCEAkf8QjpquPcBrYFJ0aALhfHoZR2SSlrPGVeHfMSXBJA1qi78NpiDEp3kBVQab8N1TKiKIGGH3Tjeu1mUGZ3g9RzRA9r98UQ2Yikir4dqGTLdFpI83pd/Ldy/AEZMr7Q6TQ/eGQAZZ4ZKarL+VLUdgEkf9Cpb03xSvYymqlMf/sPgOsa96T4m3kJZ3VmH/Kxi5zY9AABkdW4zeT6jg/AwahCWSV9SyWAfa3b0Ab2MhqBoL2iX43wxvqTyBUG3AzBEurW67i287WuIr/vZnG2vqOixGW5hhly1560emw+z1teHT7PEJ1QbghPrOMBy8WHMUmnlxFV8cZuOXxqy94ObnkOD6AnXYhy17Y6YAGKfrZnQuuxSuiN1pxT5pXMu56a1niFeqLUdnpFKZgn2DmXqcDQvXuhedz6dzpkjFdHeVPLNUXFKpzfmlmmDqFnEoa0JewqgIGdEWuZQj5VHA8ixmVACsDNMc3AJrjGwDN8Q2A5vgGQHN8A6A5vgHQHN8AVBizn1Mol28rW1hacbf4WnEGqMXT4beO12hzrG3sYmBkHm75t0W+/8Twm6/W31Hg3wOgOb4B0BzfAGiObwA0xzcAmuMbgCPE7UztKBDyJ2LH808lYHbhF8pBzdbiH5dRUUjtQWJKMZzv9+8f+YSea03ouuj8V/W1jTRez3yvuAwgwKTm6IcYS13QEAJPiAzxHDSFIRIiyMEENEW12Ah7+3gS+mH1F9llkMahHVnNud3izdGpRdZkvzCBzJ/x7nZ1nHsQyiBzF5ogq97Q3nHOALV/PkMYhddhjOZ3ku17FE6fCjyV+eHZsqhSv/6P1JjHPgNSsUgqwIFblO258xRKk4CIHGyfOzQZypYGEfGUCYw5UaRtruBsUAVu14grnrgnyGtepn2kWE9xydZZ1VoigwarrUSqDFaVba85qnicQ7Rtnj6I3VkaZuJesrbak3Gc7fPEUNP5JBPN7/J2IhXvMd18xF91RDIgNtj8zQAAAABJRU5ErkJggg==" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     <title>Trello</title>
+   </head>
+diff --git a/src/components/Card.jsx b/src/components/Card.jsx
+--- a/src/components/Card.jsx
++++ b/src/components/Card.jsx
+@@ -189,6 +189,7 @@
+ 
+           {/* Hover Edit Button */}
+           <button
++            aria-label="Quick edit card"
+             onClick={handleQuickEditOpen}
+             className="absolute top-1 right-1 p-1 bg-gray-100/80 hover:bg-gray-200 rounded text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+           >
+diff --git a/src/components/Board.jsx b/src/components/Board.jsx
+--- a/src/components/Board.jsx
++++ b/src/components/Board.jsx
+@@ -6,6 +6,7 @@
+ import List from './List';
+ import CardModal from './CardModal';
+ import Navbar from './Navbar';
++import { rememberBoardVisit } from '../utils/mockData';
+ 
+ const Board = () => {
+   const { boardId } = useParams();
+@@ -16,11 +17,9 @@
+ 
+   const [selectedCardId, setSelectedCardId] = useState(null);
+ 
+-  // Track last visited time
++  // Navigation history belongs to the browser session, not the shared board.
+   useEffect(() => {
+-    if (board) {
+-      dispatch({ type: 'UPDATE_BOARD', payload: { boardId: board.id, field: 'lastVisitedAt', value: new Date().toISOString() } });
+-    }
++    if (boardId) rememberBoardVisit(boardId);
+   }, [boardId]);
+ 
+   // Handle openCard from search results
+diff --git a/src/components/Navbar.jsx b/src/components/Navbar.jsx
+--- a/src/components/Navbar.jsx
++++ b/src/components/Navbar.jsx
+@@ -1,7 +1,8 @@
+ import React, { useState, useRef, useEffect, useCallback } from 'react';
+ import { Link, useNavigate } from 'react-router-dom';
+-import { Trello, Search, Bell, HelpCircle, X, Star, Users, Clock, ChevronDown, Layout, Settings, User } from 'lucide-react';
++import { Search, Bell, HelpCircle, X, Star, Users, Clock, ChevronDown, Layout, Settings, User } from 'lucide-react';
+ import { useStore } from '../context/StoreContext';
++import { withRecentVisit } from '../utils/mockData';
+ 
+ const Navbar = () => {
+   const { state, dispatch } = useStore();
+@@ -128,7 +129,7 @@
+ 
+   // Recent boards (by lastVisitedAt or createdAt)
+   const recentBoards = [...state.boardOrder]
+-    .map(id => state.boards[id])
++    .map(id => withRecentVisit(state.boards[id]))
+     .filter(Boolean)
+     .sort((a, b) => new Date(b.lastVisitedAt || b.createdAt) - new Date(a.lastVisitedAt || a.createdAt))
+     .slice(0, 5);
+@@ -197,8 +198,8 @@
+     <nav className="h-12 bg-trello-dark flex items-center justify-between px-4 text-white relative z-20">
+       <div className="flex items-center gap-4">
+         <Link to="/" className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+-          <Trello size={20} />
+-          <span className="font-bold text-lg tracking-tight">TrelloClone</span>
++          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAADbUlEQVR4Ae2bP0wTURzHv7/XqvwxBRMhMBAPBxOJCWriwqBtiAMTmDh0Elx0My5uGiSOhEQ240JxqonGMjEooTgwgwMmDnKRRIyQWEz4I9D+fO96NAXa9K5GaO/dJ4Fcr7/X5Pvt7+537/X9CC5piU4au3Syj5g7CRRmQiOYG3EcEKWQYZMETGaaCEAkf8QjpquPcBrYFJ0aALhfHoZR2SSlrPGVeHfMSXBJA1qi78NpiDEp3kBVQab8N1TKiKIGGH3Tjeu1mUGZ3g9RzRA9r98UQ2Yikir4dqGTLdFpI83pd/Ldy/AEZMr7Q6TQ/eGQAZZ4ZKarL+VLUdgEkf9Cpb03xSvYymqlMf/sPgOsa96T4m3kJZ3VmH/Kxi5zY9AABkdW4zeT6jg/AwahCWSV9SyWAfa3b0Ab2MhqBoL2iX43wxvqTyBUG3AzBEurW67i287WuIr/vZnG2vqOixGW5hhly1560emw+z1teHT7PEJ1QbghPrOMBy8WHMUmnlxFV8cZuOXxqy94ObnkOD6AnXYhy17Y6YAGKfrZnQuuxSuiN1pxT5pXMu56a1niFeqLUdnpFKZgn2DmXqcDQvXuhedz6dzpkjFdHeVPLNUXFKpzfmlmmDqFnEoa0JewqgIGdEWuZQj5VHA8ixmVACsDNMc3AJrjGwDN8Q2A5vgGQHN8A6A5vgHQHN8AVBizn1Mol28rW1hacbf4WnEGqMXT4beO12hzrG3sYmBkHm75t0W+/8Twm6/W31Hg3wOgOb4B0BzfAGiObwA0xzcAmuMbgCPE7UztKBDyJ2LH808lYHbhF8pBzdbiH5dRUUjtQWJKMZzv9+8f+YSea03ouuj8V/W1jTRez3yvuAwgwKTm6IcYS13QEAJPiAzxHDSFIRIiyMEENEW12Ah7+3gS+mH1F9llkMahHVnNud3izdGpRdZkvzCBzJ/x7nZ1nHsQyiBzF5ogq97Q3nHOALV/PkMYhddhjOZ3ku17FE6fCjyV+eHZsqhSv/6P1JjHPgNSsUgqwIFblO258xRKk4CIHGyfOzQZypYGEfGUCYw5UaRtruBsUAVu14grnrgnyGtepn2kWE9xydZZ1VoigwarrUSqDFaVba85qnicQ7Rtnj6I3VkaZuJesrbak3Gc7fPEUNP5JBPN7/J2IhXvMd18xF91RDIgNtj8zQAAAABJRU5ErkJggg==" width="20" height="20" alt="" />
++          <span className="font-bold text-lg tracking-tight">Trello</span>
+         </Link>
+         <div className="hidden md:flex gap-1">
+           {/* Workspaces Dropdown */}
+diff --git a/src/components/BoardList.jsx b/src/components/BoardList.jsx
+--- a/src/components/BoardList.jsx
++++ b/src/components/BoardList.jsx
+@@ -2,6 +2,7 @@
+ import { Link } from 'react-router-dom';
+ import { Clock, Star, Users, Plus, Lock, Globe, X } from 'lucide-react';
+ import { useStore } from '../context/StoreContext';
++import { withRecentVisit } from '../utils/mockData';
+ import Navbar from './Navbar';
+ 
+ const BoardList = () => {
+@@ -49,7 +50,7 @@
+ 
+   // Recently viewed boards
+   const recentlyViewedBoards = [...state.boardOrder]
+-    .map(id => state.boards[id])
++    .map(id => withRecentVisit(state.boards[id]))
+     .filter(b => b && b.lastVisitedAt && !b.closed)
+     .sort((a, b) => new Date(b.lastVisitedAt) - new Date(a.lastVisitedAt))
+     .slice(0, 4);
+diff --git a/src/utils/mockData.js b/src/utils/mockData.js
+--- a/src/utils/mockData.js
++++ b/src/utils/mockData.js
+@@ -268,6 +268,18 @@
+   return sessionStorage.getItem('mock_sid') || null;
+ };
+ 
++const boardVisitKey = boardId => `trello_recent_${getSessionId() || 'default'}_${boardId}`;
++
++export function rememberBoardVisit(boardId) {
++  sessionStorage.setItem(boardVisitKey(boardId), new Date().toISOString());
++}
++
++export function withRecentVisit(board) {
++  if (!board) return board;
++  const lastVisitedAt = sessionStorage.getItem(boardVisitKey(board.id));
++  return lastVisitedAt ? { ...board, lastVisitedAt } : board;
++}
++
+ export const fetchCustomState = async (sid = null) => {
+   try {
+     const url = sid ? `/state?sid=${encodeURIComponent(sid)}` : '/state';

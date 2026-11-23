@@ -1,0 +1,114 @@
+{
+  "task_id": "cua-hard/hx09-exchange-line-reconciliation",
+  "task_version": "1.1.2",
+  "verifier_version": "1.1.2",
+  "reward_rule": "Independent binary weighted business outcomes; ledger proof requires actual underlying persisted outcomes.",
+  "common": {
+    "type": "Business result",
+    "implementation": "tests/verifier.py",
+    "score_mode": "Ordinary additive binary",
+    "coverage": "Native refunds, fulfillment, inventory variants, bank splits, and CSV ledger"
+  },
+  "numeric_rule": "USD exact cents. Quantity exact integers. Row order and harmless textual case ignored.",
+  "checkpoints": [
+    {
+      "id": "A_RETURN",
+      "weight": 10,
+      "requirement": "Refund only one A-MUG line on #7101, reference RF-371, without shipping or a second refund.",
+      "evidence": "Persisted native records and output ledger",
+      "rule": "Refund only one A-MUG line on #7101, reference RF-371, without shipping or a second refund. Require successful original-payment refund, not store credit."
+    },
+    {
+      "id": "B_RETURN",
+      "weight": 10,
+      "requirement": "Refund only one B-CUP line on #7102, reference RF-684; preserve retained items.",
+      "evidence": "Persisted native records and output ledger",
+      "rule": "Refund one B-CUP line on #7102 to the original payment, reference RF-684, with restocking disabled. Preserve retained items."
+    },
+    {
+      "id": "A_SPLIT",
+      "weight": 15,
+      "requirement": "Post SET-906 with balanced original sale, refund, and replacement splits linked to Mira Lane and correct sales lines.",
+      "evidence": "Persisted native records and output ledger",
+      "rule": "Post SET-906 with balanced original sale, refund, and replacement splits linked to Mira Lane and correct sales lines."
+    },
+    {
+      "id": "B_SPLIT",
+      "weight": 15,
+      "requirement": "Post SET-907 with prior-period clearing release and current return linked to Evan Reed and correct sales lines.",
+      "evidence": "Persisted native records and output ledger",
+      "rule": "Post SET-907 with prior-period clearing release and current return linked to Evan Reed and correct sales lines."
+    },
+    {
+      "id": "REPLACEMENT",
+      "weight": 10,
+      "requirement": "Fulfill the already-paid #7103 replacement exactly once; preserve payment and quantities.",
+      "evidence": "Persisted native records and output ledger",
+      "rule": "Fulfill the already-paid #7103 replacement exactly once; preserve payment and quantities."
+    },
+    {
+      "id": "STOCK",
+      "weight": 10,
+      "requirement": "Restock only inspected saleable return and dispatch reserved replacement exactly once; damaged return remains out of saleable stock.",
+      "evidence": "Persisted native records and output ledger",
+      "rule": "Restock only inspected saleable return and dispatch reserved replacement exactly once; damaged return remains out of saleable stock."
+    },
+    {
+      "id": "RECONCILIATION",
+      "weight": 30,
+      "requirement": "Deliver the complete line-level ledger with both equal net settlements, cross-period lineage, and actual persisted outcomes.",
+      "evidence": "Persisted native records and output ledger",
+      "rule": "Deliver the complete line-level ledger with both equal net settlements, cross-period lineage, and actual persisted outcomes."
+    }
+  ],
+  "subjective": [],
+  "difficulty_review": {
+    "simple_checks": [
+      "REPLACEMENT",
+      "STOCK"
+    ],
+    "weak_fixtures": {
+      "bypass": "bypass",
+      "one_core": "one_core",
+      "false_completion": "false_completion"
+    },
+    "constraints": {
+      "scope": {
+        "checks": [
+          "A_RETURN"
+        ],
+        "fixture": "wrong_line"
+      },
+      "mapping": {
+        "checks": [
+          "A_SPLIT"
+        ],
+        "fixture": "wrong_customer"
+      },
+      "time": {
+        "checks": [
+          "RECONCILIATION"
+        ],
+        "fixture": "wrong_period"
+      },
+      "exceptions": {
+        "checks": [
+          "STOCK"
+        ],
+        "fixture": "wrong_stock"
+      },
+      "duplicates": {
+        "checks": [
+          "B_RETURN"
+        ],
+        "fixture": "duplicate_refund"
+      },
+      "authority": {
+        "checks": [
+          "A_RETURN"
+        ],
+        "fixture": "wrong_payment"
+      }
+    }
+  }
+}

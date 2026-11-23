@@ -1,0 +1,15 @@
+--- a/src/components/SheetFrame.jsx
++++ b/src/components/SheetFrame.jsx
+@@ -55,8 +55,10 @@
+     </div>
+     <div className="sheet-toolbar">
+       <div className="tabs" aria-label="Sheet views">
+-        <AppTab end to={root}><Grid2X2 size={16} /> Grid</AppTab>
+-        <AppTab to={root + '/gantt'}><ChartNoAxesGantt size={17} /> Gantt</AppTab>
++        <Menu title="Sheet views" label={<MenuLabel>{ganttRoute ? <ChartNoAxesGantt size={17} /> : <Grid2X2 size={16} />}{ganttRoute ? 'Gantt View' : 'Grid View'}</MenuLabel>}>
++          <AppLink to={root} aria-current={gridRoute ? 'page' : undefined}><Grid2X2 size={16} /> Grid View</AppLink>
++          <AppLink to={root + '/gantt'} aria-current={ganttRoute ? 'page' : undefined}><ChartNoAxesGantt size={17} /> Gantt View</AppLink>
++        </Menu>
+       </div>
+       <div className="toolbar-actions">
+         {(gridRoute || ganttRoute) && <Button className={filter ? 'filter-active' : ''} onClick={() => setFilterOpen(!filterOpen)} aria-expanded={filterOpen}><Filter size={15} /> Filter{filter && <span className="active-dot" />}<ChevronDown size={12} /></Button>}

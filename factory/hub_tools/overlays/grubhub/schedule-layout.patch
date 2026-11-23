@@ -1,0 +1,35 @@
+diff --git a/src/components/schedule.jsx b/src/components/schedule.jsx
+index 0b7b827..82cc97b 100644
+--- a/src/components/schedule.jsx
++++ b/src/components/schedule.jsx
+@@ -129,6 +129,7 @@ export function OrderingTime({ restaurant, timing, menu = false }) {
+     </section>
+     {edit && <Modal title="Schedule delivery" className="time-modal" onClose={() => setEdit(null)}>
+       <form className="stack" onSubmit={save}>
++        <p className="schedule-help">Choose a delivery time from the restaurant’s available windows.</p>
+         <fieldset className="field-group">
+           <legend className="sr-only">Delivery timing</legend>
+           <div className="time-periods">
+@@ -147,7 +148,6 @@ export function OrderingTime({ restaurant, timing, menu = false }) {
+               onDateChange={date => setEdit({ ...edit, date, start: '' })}
+               onStartChange={start => setEdit({ ...edit, start })} />}
+         <div className="actions modal-actions">
+-          <button className="button" type="button" onClick={() => setEdit(null)}>Cancel</button>
+           <button className="button primary" type="submit" disabled={edit.period !== 'asap' && !edit.start}>Save time</button>
+         </div>
+       </form>
+diff --git a/src/workflows.css b/src/workflows.css
+index 092de7c..bf79b6d 100644
+--- a/src/workflows.css
++++ b/src/workflows.css
+@@ -172,6 +172,10 @@
+   .order-quick-actions { margin-top: 4px; }
+   .order-quick-actions .button { min-height: 36px; padding: 6px 14px; }
+   .time-modal { width: min(440px, calc(100% - 32px)); }
++  .time-modal .modal-head { flex-direction: column-reverse; align-items: flex-start; gap: 3px; border-bottom: 0; }
++  .time-modal .modal-close { min-width: 44px; min-height: 44px; border: 0; }
++  .time-modal .schedule-help { margin: 0; font-size: 14px; }
++  .time-modal .modal-actions > button { width: 100%; }
+   .modal { --dialog-inset: 22px; padding: 0 var(--dialog-inset); overscroll-behavior: contain; }
+   .modal::backdrop { background: rgb(22 16 29 / 48%); }
+   .modal-head { position: sticky; top: 0; z-index: 1; margin: 0 calc(0px - var(--dialog-inset)) 14px; padding: 12px var(--dialog-inset); background: var(--surface); border-bottom: 1px solid var(--border); }

@@ -1,0 +1,40 @@
+--- a/src/components/PostCard.jsx
++++ b/src/components/PostCard.jsx
+@@ -6,7 +6,7 @@
+ import { cn, formatNumber } from '../lib/utils';
+ import AwardModal from './AwardModal';
+ 
+-export default function PostCard({ post, showSubreddit = true, onHide, viewMode = 'card' }) {
++export default function PostCard({ post, showSubreddit = true, onHide, viewMode = 'card', expanded = false }) {
+   const { state, actions } = useStore();
+   const navigate = useNavigate();
+   const [showAwardModal, setShowAwardModal] = useState(false);
+@@ -232,7 +232,7 @@
+           </h3>
+ 
+           {post.type === 'text' && post.content && !post.isSpoiler && (
+-            <div className="text-comment-body text-[#1C1C1C] mb-2 line-clamp-3 font-normal opacity-80">
++            <div className={`text-comment-body text-[#1C1C1C] mb-2 font-normal opacity-80 ${expanded ? 'whitespace-pre-wrap' : 'line-clamp-3'}`}>
+               {post.content}
+             </div>
+           )}
+@@ -240,7 +240,7 @@
+           {post.type === 'text' && post.content && post.isSpoiler && (
+             <div className="mb-2">
+               {spoilerRevealed ? (
+-                <div className="text-comment-body text-[#1C1C1C] line-clamp-3 font-normal opacity-80">
++                <div className={`text-comment-body text-[#1C1C1C] font-normal opacity-80 ${expanded ? 'whitespace-pre-wrap' : 'line-clamp-3'}`}>
+                   {post.content}
+                 </div>
+               ) : (
+--- a/src/pages/PostPage.jsx
++++ b/src/pages/PostPage.jsx
+@@ -119,7 +119,7 @@
+           <div className="bg-white rounded-md overflow-hidden">
+             {/* Post Content */}
+             <div className="border-b border-[#EDEFF1]">
+-              <PostCard post={post} />
++              <PostCard post={post} expanded />
+             </div>
+ 
+             {/* Edit Post Mode */}

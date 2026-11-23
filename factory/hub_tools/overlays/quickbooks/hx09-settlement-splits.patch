@@ -1,0 +1,95 @@
+--- a/src/pages/Transactions.jsx
++++ b/src/pages/Transactions.jsx
+@@ -13,10 +13,39 @@
+ 
+ const ACCOUNT_COLORS = ['#0077C5', '#2CA01C', '#6366F1', '#D32F2F'];
+ 
+-function ExpandedRow({ tx, accounts, onConfirm, onExclude, onClose }) {
++function SplitTransaction({ tx, accounts, customers, onSave, onCancel }) {
++  const blank = () => ({ category:'', accountId:'', customer:'', customerId:'', description:'', amount:'' });
++  const initial = () => tx.splits?.length ? tx.splits.map(r=>({...r,accountId:r.accountId || accounts.find(a=>a.name===r.category)?.id || '',customerId:r.customerId || customers.find(c=>c.name===r.customer)?.id || ''})) : [blank(),blank()];
++  const [rows,setRows]=useState(initial);
++  const [memo,setMemo]=useState(tx.splitMemo || '');
++  const [payee,setPayee]=useState(tx.payee || '');
++  const categories=accounts.filter(a=>a.isActive!==false && a.type!=='Bank' && a.type!=='Credit Card');
++  const cents=v=> /^-?\d+(?:\.\d{1,2})?$/.test(String(v).trim()) ? Math.round(Number(v)*100) : null;
++  const total=rows.reduce((n,r)=>n+(cents(r.amount)||0),0);
++  const expected=Math.round(Number(tx.amount)*100);
++  const difference=expected-total;
++  const valid=rows.length>0 && rows.every(r=>categories.some(a=>a.id===r.accountId) && cents(r.amount)!==null && cents(r.amount)!==0 && (!r.customerId || customers.some(c=>c.id===r.customerId))) && difference===0;
++  const change=(i,key,value)=>setRows(old=>old.map((r,j)=>i===j?{...r,[key]:value}:r));
++  const save=()=>{if(valid)onSave(rows.map(r=>({...r,category:categories.find(a=>a.id===r.accountId).name,customer:customers.find(c=>c.id===r.customerId)?.name || '',amount:(cents(r.amount)/100).toFixed(2)})),memo,payee);};
++  return <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6" role="presentation">
++    <section role="dialog" aria-modal="true" aria-labelledby="split-title" className="bg-white w-full max-w-5xl max-h-[94vh] rounded shadow-xl flex flex-col overflow-hidden">
++      <header className="px-6 pt-5 pb-3 flex justify-between border-b"><div><h2 id="split-title" className="text-xl font-semibold">Split Transaction</h2><p className="text-xs text-gray-600 mt-1">Downloaded transaction</p><p className="text-sm">{tx.description} on {tx.date}</p></div><div className="text-right"><button aria-label="Close split transaction" onClick={onCancel} className="float-right ml-6 text-gray-500">×</button><div className="text-3xl">${Number(tx.amount).toFixed(2)}</div></div></header>
++      <div className="px-6 py-4 overflow-y-auto">
++        <label className="block text-xs font-medium mb-1">Payee</label><select aria-label="Split payee" className="border rounded px-2 py-2 text-sm w-64 mb-4" value={payee} onChange={e=>setPayee(e.target.value)}><option value="">Select payee (optional)</option>{customers.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select>
++        <table className="w-full text-sm table-fixed"><thead><tr className="border-b text-left text-xs text-gray-600"><th className="w-[24%] pb-2">CATEGORY</th><th className="w-[31%] pb-2">DESCRIPTION</th><th className="w-[24%] pb-2">CUSTOMER</th><th className="w-[16%] pb-2 text-right">AMOUNT (USD)</th><th className="w-[5%]"></th></tr></thead><tbody>{rows.map((r,i)=><tr key={i} className="border-b"><td className="py-2 pr-2"><select aria-label={`Split ${i+1} category`} className="w-full border rounded p-2 min-w-0" value={r.accountId} onChange={e=>change(i,'accountId',e.target.value)}><option value="">Select category</option>{categories.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></td><td className="py-2 pr-2"><input aria-label={`Split ${i+1} description`} className="w-full min-w-0 border rounded p-2" value={r.description} onChange={e=>change(i,'description',e.target.value)}/></td><td className="py-2 pr-2"><select aria-label={`Split ${i+1} customer`} className="w-full border rounded p-2 min-w-0" value={r.customerId} onChange={e=>change(i,'customerId',e.target.value)}><option value="">Select customer</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></td><td className="py-2"><input aria-label={`Split ${i+1} amount`} inputMode="decimal" className="w-full min-w-0 border rounded p-2 text-right" value={r.amount} onChange={e=>change(i,'amount',e.target.value)}/></td><td><button aria-label={`Delete split ${i+1}`} onClick={()=>setRows(old=>old.filter((_,j)=>j!==i))} className="text-gray-500 px-2">×</button></td></tr>)}</tbody></table>
++        <div className="flex justify-between items-start mt-3"><div className="flex gap-4 text-sm"><button className="text-blue-700" onClick={()=>setRows(old=>[...old,blank()])}>Add lines</button><button className="text-blue-700" onClick={()=>{setRows([blank(),blank()]);setMemo('');}}>Reset</button></div><dl className="text-sm text-right grid grid-cols-2 gap-x-8 gap-y-1"><dt>Split amount</dt><dd>${(total/100).toFixed(2)}</dd><dt>Original amount</dt><dd>${(expected/100).toFixed(2)}</dd><dt>Difference</dt><dd className={difference===0?'text-green-700':'text-red-600'} aria-live="polite">${(difference/100).toFixed(2)}</dd></dl></div>
++        <label className="block text-xs mt-4 mb-1">Memo</label><textarea aria-label="Split memo" className="w-full border rounded p-2 text-sm" rows="2" value={memo} onChange={e=>setMemo(e.target.value)}/>
++        {!valid && <p className="text-xs text-gray-500 mt-1">Select valid accounts and enter signed amounts to match the downloaded transaction. Each amount must be nonzero with no more than two decimal places.</p>}
++      </div>
++      <footer className="border-t px-6 py-4 flex justify-between bg-gray-50"><button onClick={onCancel} className="border border-gray-500 rounded px-5 py-2 text-sm">Cancel</button><button disabled={!valid} onClick={save} className="bg-qb-green text-white rounded px-6 py-2 text-sm font-medium disabled:opacity-40">Save and add</button></footer>
++    </section></div>;
++}
++
++function ExpandedRow({ tx, accounts, customers, onConfirm, onExclude, onClose }) {
+   const [category, setCategory] = useState(tx.category || 'Uncategorized Expense');
+   const [payee, setPayee] = useState(tx.payee || '');
+   const [tags, setTags] = useState('');
++  const [showSplit,setShowSplit]=useState(false);
+ 
+   const handleConfirm = () => {
+     onConfirm(tx.id, category, payee);
+@@ -26,6 +55,7 @@
+   return (
+     <tr className="bg-blue-50">
+       <td colSpan={8} className="px-6 py-4">
++        {showSplit && <SplitTransaction tx={tx} accounts={accounts} customers={customers} onCancel={()=>setShowSplit(false)} onSave={(rows,memo,selectedPayee)=>{onConfirm(tx.id,'Split',selectedPayee,rows,memo);onClose();}}/>}
+         <div className="grid grid-cols-4 gap-4 items-end">
+           <div>
+             <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+@@ -57,11 +87,12 @@
+             />
+           </div>
+           <div className="flex items-end gap-2">
++            <button onClick={()=>setShowSplit(true)} className="border border-gray-400 rounded text-sm px-4 py-1.5">Split</button>
+             <button
+               onClick={handleConfirm}
+               className="bg-qb-green text-white text-sm px-4 py-1.5 rounded font-medium hover:bg-qb-green-hover"
+             >
+-              Confirm
++              Add
+             </button>
+             <button
+               onClick={() => { onExclude(tx); onClose(); }}
+@@ -136,10 +167,10 @@
+     });
+   };
+ 
+-  const handleConfirm = (txId, category, payee) => {
++  const handleConfirm = (txId, category, payee, splits = [], splitMemo = '') => {
+     const tx = data.transactions.find(t => t.id === txId);
+     if (tx) {
+-      updateTransaction({ ...tx, category, payee, status: 'posted' });
++      updateTransaction({ ...tx, category, payee, splits, splitMemo, status: 'posted' });
+     }
+   };
+ 
+@@ -421,7 +452,7 @@
+               <div className="flex -mb-px">
+                 {[
+                   { key: 'pending', label: 'For Review', count: pendingCount },
+-                  { key: 'posted', label: 'Reviewed', count: postedCount },
++                  { key: 'posted', label: 'Categorized', count: postedCount },
+                   { key: 'excluded', label: 'Excluded', count: excludedCount },
+                 ].map(tab => (
+                   <button
+@@ -577,6 +608,7 @@
+                         <ExpandedRow
+                           tx={tx}
+                           accounts={data.accounts}
++                          customers={data.customers}
+                           onConfirm={handleConfirm}
+                           onExclude={handleExclude}
+                           onClose={() => setExpandedTxId(null)}

@@ -1,0 +1,135 @@
+{
+  "task_id": "cua-hard/cu10-furniture-delivery-reschedule",
+  "task_version": "1.0.1",
+  "verifier_version": "1.0.0",
+  "reward_rule": "Independent binary weighted business outcomes",
+  "common": {
+    "type": "Business result",
+    "implementation": "tests/verifier.py",
+    "score_mode": "Ordinary additive binary",
+    "coverage": "Persisted native records, editable geometry, and actual attachment bytes"
+  },
+  "checkpoints": [
+    {
+      "id": "W1",
+      "weight": 14,
+      "requirement": "Reschedule only the matching Wayfair freight shipment",
+      "evidence": "Original WF-9400461 long-sideboard appointment and replacement chain",
+      "rule": "Require the prior appointment to be rescheduled with bidirectional references and one new confirmed replacement by the account holder for the same shipment and order. Preserve all other appointments and order, shipment, cancellation, return and claim records. Slot and driver text are evaluated independently."
+    },
+    {
+      "id": "W2",
+      "weight": 10,
+      "requirement": "Use the carrier window fully contained in the lift and crew overlap",
+      "evidence": "Native replacement for the target shipment with matching offered slot and start/end",
+      "rule": "Require Tuesday Nov 24, 12–4 pm America/New_York. The morning window merely touches crew availability. An untouched original booking does not pass."
+    },
+    {
+      "id": "W3",
+      "weight": 8,
+      "requirement": "Give the driver the approved entry and handling directions",
+      "evidence": "Instructions on the new target shipment appointment",
+      "rule": "Require South Gate, check-in at Receiving, Service Hall, Freight Lift, Reading Room 103 and upright handling. Accept equivalent wording and reject contradictory instructions."
+    },
+    {
+      "id": "D1",
+      "weight": 19,
+      "requirement": "Revise the active route in the editable drawing",
+      "evidence": "Native draw.io graph and routable connected geometry",
+      "rule": "One active directed carry path from Freight truck through South Gate, Service Hall and Freight Lift to Reading Room 103. Superseded Northern route must be gone and the route must avoid the courtyard keep-clear area. Accept equivalent connector IDs, bend locations or equivalent draw.io serialization if the drawing displays the same connected path."
+    },
+    {
+      "id": "D2",
+      "weight": 8,
+      "requirement": "Retain the editable source floor plan",
+      "evidence": "Retained native vertices, labels, and relative plan layout",
+      "rule": "Keep the original page and protected floor plan, including both surveyed gates and turns, Receiving, keep-clear geometry, the lift, and reading room. Accept semantically identical style serialization and compression. Ignore the active route for this check."
+    },
+    {
+      "id": "A1",
+      "weight": 10,
+      "requirement": "Move the existing installation task to the crew's date",
+      "evidence": "Asana project, original task ID, due date and protected record fields",
+      "rule": "Require Nov 25 on the existing incomplete long-sideboard task, keeping its owner and section. Protect sibling tasks and the prior comment. A new, completed or substituted task does not qualify."
+    },
+    {
+      "id": "A2",
+      "weight": 9,
+      "requirement": "Record the correct crew handoff in the existing task notes",
+      "evidence": "Native Asana description on the existing task",
+      "rule": "Keep the original installation details and add the confirmed Nov 24 noon–4 pm Eastern delivery and path from South Gate via Service Hall and Freight Lift to Reading Room 103. Accept concise equivalent prose and time notation."
+    },
+    {
+      "id": "A3",
+      "weight": 14,
+      "requirement": "Attach the submitted editable draw.io file to the original Asana task",
+      "evidence": "Native attachment relationship and persisted upload bytes",
+      "rule": "The required filename must be attached to the original task by the signed-in user. Verify the active attachment ID and blob and compare against the submitted file bytes. Evaluate route and plan in D1 and D2."
+    },
+    {
+      "id": "T1",
+      "weight": 8,
+      "requirement": "Reply in the original sideboard thread",
+      "evidence": "New visible Teams reply by Avery Quinn",
+      "rule": "Require the right root and channel, confirmed Nov 24 noon–4 pm Eastern window, South Gate and a usable pointer to the editable drawing on the existing Asana task. Protect all earlier Teams posts. Accept clear project/task names or an applicable link."
+    }
+  ],
+  "difficulty_review": {
+    "simple_checks": [
+      "D2",
+      "A1",
+      "T1"
+    ],
+    "weak_fixtures": {
+      "bypass": "bypass",
+      "one_core": "one_core",
+      "false_completion": "false_completion"
+    },
+    "constraints": {
+      "scope": {
+        "checks": [
+          "W1"
+        ],
+        "fixture": "wrong_shipment"
+      },
+      "time": {
+        "checks": [
+          "W2"
+        ],
+        "fixture": "wrong_window"
+      },
+      "authority": {
+        "checks": [
+          "W3"
+        ],
+        "fixture": "stale_driver"
+      },
+      "mapping": {
+        "checks": [
+          "D1"
+        ],
+        "fixture": "stale_carry_route"
+      },
+      "protection": {
+        "checks": [
+          "D2"
+        ],
+        "fixture": "deleted_floor_detail"
+      },
+      "delivery": {
+        "checks": [
+          "A1"
+        ],
+        "fixture": "wrong_install_date"
+      },
+      "exceptions": {
+        "checks": [
+          "T1"
+        ],
+        "fixture": "wrong_reply_thread"
+      }
+    }
+  },
+  "subjective": []
+}
+

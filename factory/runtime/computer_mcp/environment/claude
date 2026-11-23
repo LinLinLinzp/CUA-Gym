@@ -1,0 +1,53 @@
+#!/bin/bash
+set -euo pipefail
+
+print_mode=false
+for arg in "$@"; do
+    case "$arg" in
+        --) break ;;
+        -p|--print) print_mode=true ;;
+    esac
+done
+
+if "$print_mode" && (( EUID == 0 )); then
+    # Harbor 0.1.45 has one container user for setup, agent and verifier.
+    session_dir=/logs/agent/sessions
+    install -d -m 700 -o agent -g agent "$session_dir"
+    chown -R agent:agent "$session_dir"
+    exec runuser -u agent -- env HOME=/home/agent USER=agent LOGNAME=agent \
+        CLAUDE_CONFIG_DIR="$session_dir" /usr/local/bin/claude "$@"
+fi
+
+if "$print_mode"; then
+    if [[ "$(id -un)" != agent ]]; then
+        echo "The desktop agent must run as the unprivileged agent user." >&2
+        exit 1
+    fi
+    session_dir="${CLAUDE_CONFIG_DIR:-/logs/agent/sessions}"
+    printf '{"effective_uid": %d, "required_tool": "mcp__desktop__computer"}\n' "$EUID" \
+        > "$session_dir/cua-launch.json"
+fi
+
+args=()
+while (( $# )); do
+    case "$1" in
+        --tools|--mcp-config)
+            shift
+            while (( $# )) && [[ "$1" != -* ]]; do shift; done
+            ;;
+        --tools=*|--mcp-config=*|--strict-mcp-config|--strict-mcp-config=*)
+            shift
+            ;;
+        --)
+            break
+            ;;
+        *)
+            args+=("$1")
+            shift
+            ;;
+    esac
+done
+
+exec /usr/local/bin/claude-native \
+    --tools "" --strict-mcp-config --mcp-config /etc/cua-smoke/mcp.json \
+    --allowedTools mcp__desktop__computer "${args[@]}" "$@"

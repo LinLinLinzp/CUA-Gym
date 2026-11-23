@@ -1,0 +1,148 @@
+--- a/src/utils/helpers.js
++++ b/src/utils/helpers.js
+@@ -162,6 +162,7 @@
+   const calendarId = VALID_CALENDAR_IDS.has(event.calendarId) ? event.calendarId : 'c1';
+   const calendarColors = { c1: 'bg-blue-500', c2: 'bg-green-500', c3: 'bg-purple-500', c4: 'bg-yellow-500' };
+   return {
++    ...event,
+     id: event.id || generateId(),
+     calendarId,
+     title: event.title || '(No Title)',
+--- a/src/context/StoreContext.jsx
++++ b/src/context/StoreContext.jsx
+@@ -96,7 +96,7 @@
+   const initDone = useRef(false);
+   const [readyToSave, setReadyToSave] = React.useState(false);
+ 
+-  const [state, dispatch] = useReducer(reducer, defaultState, (initial) => {
++  const [state, rawDispatch] = useReducer(reducer, defaultState, (initial) => {
+     // Session-aware: check localStorage with session key BEFORE any async fetch
+     const sid = sidRef.current;
+     const stored = localStorage.getItem(sid ? `gcal_mock_state_${sid}` : 'gcal_mock_state');
+@@ -148,6 +148,35 @@
+     return diff;
+   };
+ 
++  const [scopeEdit, setScopeEdit] = React.useState(null);
++  const dispatch = (action) => {
++    const ident = action.type === 'MOVE_EVENT' ? action.payload.eventId : action.type === 'DELETE_EVENT' ? action.payload : action.payload?.id;
++    const original = state.events.find(e => e.id === ident);
++    if (original?.recurringEventId && ['UPDATE_EVENT','DELETE_EVENT','MOVE_EVENT'].includes(action.type)) {
++      setScopeEdit({ action, original, scope: 'one' });
++    } else rawDispatch(action);
++  };
++  const commitScope = () => {
++    const {action, original, scope} = scopeEdit;
++    let changed = action.payload;
++    if (action.type === 'MOVE_EVENT') {
++      const delta = Date.parse(action.payload.newStart) - Date.parse(original.start);
++      changed = {...original, start: new Date(Date.parse(original.start)+delta).toISOString(), end: new Date(Date.parse(original.end)+delta).toISOString()};
++    }
++    const selected = state.events.filter(e => e.id === original.id || (scope !== 'one' && e.recurringEventId === original.recurringEventId && (scope === 'all' || e.originalStartTime >= original.originalStartTime)));
++    for (const entry of selected) {
++      if (action.type === 'DELETE_EVENT') rawDispatch({type:'UPDATE_EVENT', payload:{...entry,status:'cancelled'}});
++      else {
++        const out = {...entry};
++        for (const key of Object.keys(changed)) {
++          if (['id','originalStartTime','recurringEventId'].includes(key) || JSON.stringify(changed[key]) === JSON.stringify(original[key])) continue;
++          out[key] = ['start','end'].includes(key) ? new Date(Date.parse(entry[key])+Date.parse(changed[key])-Date.parse(original[key])).toISOString() : changed[key];
++        }
++        rawDispatch({type:'UPDATE_EVENT',payload:out});
++      }
++    }
++    setScopeEdit(null);
++  };
+   const value = {
+     state,
+     dispatch,
+@@ -158,6 +187,7 @@
+   return (
+     <StoreContext.Provider value={value}>
+       {children}
++      {scopeEdit && <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center"><div role="dialog" aria-label="Edit recurring event" className="bg-white rounded-lg p-6 shadow-xl w-96"><h2 className="text-lg mb-4">Edit recurring event</h2>{[['one','This event'],['following','This and following events'],['all','All events']].filter(([v]) => v !== 'following' || state.events.some(e => e.recurringEventId === scopeEdit.original.recurringEventId && Date.parse(e.originalStartTime) < Date.parse(scopeEdit.original.originalStartTime))).map(([v,label])=><label className="block py-2" key={v}><input type="radio" name="scope" checked={scopeEdit.scope===v} onChange={()=>setScopeEdit({...scopeEdit,scope:v})}/> {label}</label>)}<div className="flex justify-end gap-4 mt-4"><button onClick={()=>setScopeEdit(null)}>Cancel</button><button className="text-blue-700" onClick={commitScope}>OK</button></div></div></div>}
+     </StoreContext.Provider>
+   );
+ };
+--- a/src/components/MonthView.jsx
++++ b/src/components/MonthView.jsx
+@@ -24,7 +24,7 @@
+   rawEvents.forEach(event => {
+     events.push(event); // Add original event
+ 
+-    if (event.recurring && event.recurring !== 'none') {
++    if (!event.recurringEventId && event.recurring && event.recurring !== 'none') {
+       let currentEventDate = new Date(event.start);
+       // Limit recurrence expansion to the current view range + buffer
+       const viewEnd = addMonths(endDate, 1); 
+--- a/src/components/WeekView.jsx
++++ b/src/components/WeekView.jsx
+@@ -11,7 +11,7 @@
+   rawEvents.forEach(event => {
+     events.push(event);
+ 
+-    if (event.recurring && event.recurring !== 'none') {
++    if (!event.recurringEventId && event.recurring && event.recurring !== 'none') {
+       let currentDate = new Date(event.start);
+       let i = 0;
+       while (currentDate < extendedEnd && i < 200) {
+@@ -492,6 +492,16 @@
+                       <div
+                         key={event.id}
+                         data-event-chip
++                        onDragOver={handleDragOver}
++                        onDrop={(e) => {
++                          e.preventDefault(); e.stopPropagation();
++                          const eventId = e.dataTransfer.getData('eventId');
++                          if (!eventId) return;
++                          const grid = e.currentTarget.parentElement.getBoundingClientRect();
++                          const minutes = Math.max(0, Math.floor(((e.clientY-grid.top)/HOUR_HEIGHT)*2)*30);
++                          const target = new Date(day); target.setHours(Math.floor(minutes/60), minutes%60, 0, 0);
++                          dispatch({type:'MOVE_EVENT',payload:{eventId,newStart:target.toISOString()}});
++                        }}
+                         draggable={isOriginalId}
+                         onDragStart={(e) => {
+                           e.stopPropagation();
+--- a/src/components/AgendaView.jsx
++++ b/src/components/AgendaView.jsx
+@@ -16,7 +16,7 @@
+       events.push(event);
+     }
+ 
+-    if (event.recurring && event.recurring !== 'none') {
++    if (!event.recurringEventId && event.recurring && event.recurring !== 'none') {
+       let currentDate = new Date(event.start);
+       let i = 0;
+       while (currentDate <= extendedEnd && i < 400) {
+--- a/src/components/EventPopover.jsx
++++ b/src/components/EventPopover.jsx
+@@ -52,6 +52,7 @@
+         overflow: 'hidden',
+       }}
+     >
++      {event.status === 'cancelled' && <div className="p-3 bg-gray-100 text-gray-700 font-medium">Canceled</div>}
+       {/* Colored strip + action buttons */}
+       <div
+         style={{ backgroundColor: color, height: '8px', borderRadius: '8px 8px 0 0' }}
+--- a/src/components/Header.jsx
++++ b/src/components/Header.jsx
+@@ -319,11 +319,15 @@
+             </div>
+           )}
+           </div>
+-          <img 
+-            src={state.user.avatar} 
+-            alt="User" 
+-            className="w-8 h-8 rounded-full border border-google-border"
+-          />
++          {state.user.avatar ? (
++            <img src={state.user.avatar} alt={state.user.username || 'User'}
++              className="w-8 h-8 rounded-full border border-google-border" />
++          ) : (
++            <span className="w-8 h-8 shrink-0 rounded-full bg-violet-700 text-white grid place-items-center text-sm font-medium"
++              role="img" aria-label={state.user.username || 'User'}>
++              {(state.user.username || state.user.email || '?').charAt(0).toUpperCase()}
++            </span>
++          )}
+         </div>
+       </div>
+     </header>

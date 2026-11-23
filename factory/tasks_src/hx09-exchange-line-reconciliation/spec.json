@@ -1,0 +1,120 @@
+{
+  "hide_browser_debug": true,
+  "qwen_raw_score_below": 0.4,
+  "task_id": "hx09-exchange-line-reconciliation",
+  "name": "cua-hard/hx09-exchange-line-reconciliation",
+  "version": "1.1.2",
+  "description": "Reconcile equal-net deposits through actual returned sales lines and replacement dispatch.",
+  "keywords": [
+    "shopify",
+    "quickbooks",
+    "returns",
+    "settlement"
+  ],
+  "sites": [
+    "shopify",
+    "quickbooks"
+  ],
+  "clock": "2026-11-19T14:00:00Z",
+  "timezone": "America/New_York",
+  "locale": "en-US",
+  "additive_scoring": true,
+  "metadata": {
+    "scenario": "\u4ea7\u4e1a\u8fd0\u8425",
+    "subscenario": "\u6362\u8d27\u9000\u8d27\u9010\u884c\u7ed3\u7b97\u52fe\u7a3d",
+    "operation_difficulty": 3,
+    "tool_type": 2,
+    "difficulty": 6,
+    "levers": [
+      "L05",
+      "L13"
+    ]
+  },
+  "computer_mcp": {
+    "applications": [
+      "libreoffice_calc"
+    ],
+    "outputs": [
+      "November-return-reconciliation.csv"
+    ],
+    "start_paths": {
+      "shopify": "/orders",
+      "quickbooks": "/transactions"
+    },
+    "mock_overlays": {
+      "quickbooks": "hx09-settlement-splits",
+      "shopify": "hx09-refund-controls"
+    },
+    "site_scope": "workflow"
+  },
+  "fixture_expectations": {
+    "golden": [
+      1,
+      1
+    ],
+    "equivalent": [
+      1,
+      1
+    ],
+    "nop": [
+      0,
+      0
+    ],
+    "bypass": [
+      0,
+      0
+    ],
+    "one_core": [
+      0.35,
+      0.35
+    ],
+    "false_completion": [
+      0,
+      0
+    ],
+    "wrong_line": [
+      0.6,
+      0.6
+    ],
+    "wrong_customer": [
+      0.55,
+      0.55
+    ],
+    "wrong_period": [
+      0.7,
+      0.7
+    ],
+    "wrong_stock": [
+      0.6,
+      0.6
+    ],
+    "duplicate_refund": [
+      0.6,
+      0.6
+    ],
+    "partial_returns": [
+      0.2,
+      0.2
+    ],
+    "totals_only": [
+      0.2,
+      0.2
+    ],
+    "wrong_payment": [
+      0.6,
+      0.6
+    ],
+    "wrong_account": [
+      0.55,
+      0.55
+    ],
+    "damaged_restock_corrected": [
+      0.6,
+      0.6
+    ]
+  },
+  "mock_revisions": {
+    "shopify": "77fa41779a13baac6410d4278ef0f03a5ee765f9",
+    "quickbooks": "77fa41779a13baac6410d4278ef0f03a5ee765f9"
+  }
+}

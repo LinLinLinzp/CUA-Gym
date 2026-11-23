@@ -1,0 +1,295 @@
+--- a/src/pages/WorkbookPage.jsx
++++ b/src/pages/WorkbookPage.jsx
+@@ -1,4 +1,5 @@
+ import React, { useState } from 'react'
++import FulfilmentWorkbook from '../components/FulfilmentWorkbook'
+ import { useApp } from '../context/AppContext'
+ import ChartWidget from '../components/ChartWidget'
+ 
+@@ -20,6 +21,8 @@
+       </div>
+     )
+   }
++
++  if (workbook.fulfilment) return <FulfilmentWorkbook workbook={workbook} />
+ 
+   const activeSheet = workbook.sheets?.find(s => s.id === uiState.selectedSheet) || workbook.sheets?.[0]
+   const isDashboard = workbook.sheets?.length > 1
+--- /dev/null
++++ b/src/components/FulfilmentWorkbook.jsx
+@@ -0,0 +1,94 @@
++import React,{useState} from 'react'
++import {useApp} from '../context/AppContext'
++import {rawRows,modelPairs} from '../utils/fulfilmentEngine'
++import {evaluateMetric,materialize} from '../utils/calculationLevels'
++import RelationshipEditor from './RelationshipEditor'
++import './FulfilmentWorkbook.css'
++const channels=['All','Direct','Retail','Partner'];const dimensions=['Order key','Order number','Channel','Quarter','Status','Parcel ID'];const measures=['Ordered units','Parcel units','Delivered day','Promised day','On-time units','Eligible orders','Complete orders'];
++export default function FulfilmentWorkbook({workbook}){
++ const {state,updateState}=useApp(),f=workbook.fulfilment;const [editing,setEditing]=useState(false),[tab,setTab]=useState('Quarterly Fulfilment'),[dialog,setDialog]=useState(null),[calc,setCalc]=useState('Eligible orders'),[calcName,setCalcName]=useState(''),[formula,setFormula]=useState(''),[error,setError]=useState(''),[selected,setSelected]=useState(null),[message,setMessage]=useState(''),[relationshipOpen,setRelationshipOpen]=useState(false),[fileOpen,setFileOpen]=useState(false),[copyName,setCopyName]=useState(''),[copyError,setCopyError]=useState(''),[preview,setPreview]=useState('Orders');
++ const model=editing?f.model:f.publishedModel
++ let universe=rawRows(f,model,null,'All'),totals={den:0,num:0}
++ const forView = row=>row.Quarter===f.quarter&&(f.channel==='All'||row.Channel===f.channel)
++ let source=universe.filter(forView)
++ try {
++   universe=materialize(model,universe)
++   source=universe.filter(forView)
++   totals={den:evaluateMetric(model.calculations['Eligible orders'],source,universe),num:evaluateMetric(model.calculations['Complete orders'],source,universe)}
++ } catch {}
++ const orderRows=[...new Map(source.map(r=>[r['Order key'],r])).values()]
++ const ordersByKey=new Map(f.orders.map(order=>[order.key,order]))
++ const orderHeaders=['Order key','Order number','Channel','Quarter','Ordered units','Promised day','Status']
++ const parcelHeaders=['Parcel ID','Order key','Order number','Parcel units','Delivered day']
++ const previewHeaders=preview==='Orders'?orderHeaders:parcelHeaders
++ const previewRows=preview==='Orders'?f.orders.map(o=>[o.key,o.number,o.channel,o.quarter,o.units,o.promised,o.status]):
++   f.parcels.map(p=>[p.id,p.key,ordersByKey.get(p.key)?.number,p.units,p.delivered])
++ const change=fn=>updateState(s=>({...s,workbooks:s.workbooks.map(w=>w.id===workbook.id?{...w,fulfilment:fn(structuredClone(w.fulfilment))}:w)}));
++ const published = g => ({...g,publishedModel:structuredClone(g.model),publishedRevision:g.revision,publishedShelves:structuredClone(g.shelves||{})})
++ function publish() {
++   change(published)
++   setFileOpen(false)
++   setMessage('Workbook published.')
++ }
++ function closeEditor() {
++   setFileOpen(false)
++   setEditing(false)
++   setRelationshipOpen(false)
++   setTab('Quarterly Fulfilment')
++ }
++ function openCopy() {
++   setFileOpen(false)
++   setCopyName(workbook.name)
++   setCopyError('')
++   setDialog('publishAs')
++ }
++ function publishCopy() {
++   const name = copyName.trim()
++   if (!name) return
++   if (state.workbooks.some(item => item.projectId === workbook.projectId && item.name === name)) {
++     setCopyError('A workbook with this name already exists in this project.')
++     return
++   }
++   const id = crypto.randomUUID()
++   updateState(s => ({...s,workbooks:[...s.workbooks,{...workbook,id,name,fulfilment:published(workbook.fulfilment)}],
++     uiState:{...s.uiState,selectedWorkbook:id}
++   }))
++   setDialog(null)
++   closeEditor()
++   setMessage('Workbook published.')
++ }
++ const fields=[...new Set([...measures,...Object.keys(f.model.calculations)])]
++ const openCalc=name=>{setCalc(name);setCalcName(name||'');setFormula(f.model.calculations[name]||'');setError('');setDialog('calculation')}
++ function refresh(){change(g=>{const n=g.revision+1;if(n>2)return g;if(n===1){g.parcels.find(p=>p.id==='PK-05').units=1;g.parcels.push({id:'PK-12',key:'R-101',units:1,delivered:19})}if(n===2){g.orders.push({key:'D-106',number:'106',channel:'Direct',quarter:'2026 Q4',units:2,promised:20,status:'Confirmed'});g.parcels.push({id:'PK-13',key:'D-106',units:2,delivered:23})}g.revision=n;g.refreshHistory.push({revision:n,orders:g.orders.length,parcels:g.parcels.length});return g});setMessage('Extract refresh completed.');setDialog(null)}
++ function saveCalc() {
++   try {
++     const name=calcName.trim()
++     if (!name || (!calc && [...dimensions,...fields].includes(name))) throw Error('Enter a unique field name')
++     const model={...f.model,calculations:{...f.model.calculations,[name]:formula}}
++     const calculated=materialize(model,rawRows(f,model,null,'All'))
++     if (['Eligible orders','Complete orders'].includes(name)) evaluateMetric(formula,calculated)
++     change(g=>({...g,model}))
++     setDialog(null)
++   } catch (e) {setError(e.message)}
++ }
++ function drop(e,shelf){e.preventDefault();const field=e.dataTransfer.getData('text/plain');if(![...dimensions,...fields].includes(field))return;change(g=>{g.shelves={...g.shelves,[shelf]:field};return g})}
++ const pill=(text)=><span className={'hx-pill '+(fields.includes(text)?'green':'')}>{text}<span>▾</span></span>;
++ function channelTable(){const shelf=(editing?f.shelves:f.publishedShelves)||{},dimension=dimensions.includes(shelf.rows)?shelf.rows:'Channel',groups=[...new Set(source.map(r=>r[dimension]))],display=shelf.columns||'Measure Values';return <table className="hx-summary"><thead><tr><th>{dimension}</th><th>Eligible orders</th><th>Complete orders</th><th>{display==='Measure Values'?'Fulfilment rate':display}</th></tr></thead><tbody>{groups.map(value=>{const subset=source.filter(r=>r[dimension]===value);let d=0,n=0;try{d=evaluateMetric(model.calculations['Eligible orders'],subset,universe);n=evaluateMetric(model.calculations['Complete orders'],subset,universe)}catch{}const bar=display==='Eligible orders'?d:display==='Complete orders'?n:100*n/(d||1),max=display==='Measure Values'?100:Math.max(1,totals.den);return <tr key={value} onClick={()=>setSelected({channel:dimension==='Channel'?value:undefined,order:dimension==='Order key'?value:undefined})}><td>{value}</td><td>{d}</td><td>{n}</td><td><div className="hx-bar-track"><div style={{width:Math.min(100,100*bar/max)+'%'}}/></div><span>{display==='Measure Values'?(d?(100*n/d).toFixed(1)+'%':'—'):bar}</span></td></tr>})}</tbody></table>}
++
++ return <div className="hx-workbook"><div className="hx-view-toolbar"><span>Operations / <strong>{workbook.name}</strong></span><div>{editing?<><button onClick={()=>setDialog('refresh')}>⟳ Refresh</button><button className="hx-primary" onClick={publish}>Publish</button><button onClick={closeEditor}>Close</button></>:<><button onClick={()=>{setEditing(true);setTab('Channel performance')}}>Edit</button><button onClick={()=>setDialog('refresh')}>⟳ Refresh</button><button onClick={()=>setDialog('data')}>View Data</button></>}</div></div>{message&&<div className="hx-status">✓ {message}</div>}
++ {editing&&<><div className="hx-menubar"><div className="hx-file-menu"><button aria-expanded={fileOpen===true} onClick={()=>setFileOpen(fileOpen!==true)}>File ▾</button>{fileOpen===true&&<div className="hx-file-actions"><button onClick={publish}>Publish</button><button onClick={openCopy}>Publish As…</button><button onClick={closeEditor}>Close</button></div>}</div><button onClick={()=>setTab('Data Source')}>Data ▾</button><button onClick={()=>setTab('Channel performance')}>Worksheet ▾</button><button onClick={()=>setTab('Quarterly Fulfilment')}>Dashboard ▾</button><div className="hx-file-menu"><button onClick={()=>setFileOpen(fileOpen==='analysis'?false:'analysis')}>Analysis ▾</button>{fileOpen==='analysis'&&<div className="hx-file-actions"><button onClick={()=>{setFileOpen(false);openCalc(null)}}>Create Calculated Field…</button></div>}</div><span>Map</span><span>Format</span><span>Help</span></div><div className="hx-iconbar">↶　↷　│　▣　　↔　│　▤　　▥　　│　<span>Standard ▾</span><button onClick={()=>setDialog('refresh')}>⟳</button></div></>}
++ <div className="hx-work-area">{editing&&tab!=='Data Source'&&<aside className="hx-data-pane"><div className="hx-data-tabs"><strong>Data</strong><span>Analytics</span></div><div className="hx-datasource-name">▤ Fulfilment extract</div><input placeholder="⌕ Search" onChange={e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.hx-field').forEach(x=>x.hidden=!x.textContent.toLowerCase().includes(q))}}/><h4>Tables</h4><div className="hx-table-title">▾ Orders</div>{dimensions.map(d=><div className="hx-field" key={d} draggable onDragStart={e=>e.dataTransfer.setData('text/plain',d)}><span>Abc</span>{d}</div>)}<hr/>{fields.map(m=><div className={'hx-field '+(f.model.calculations[m]?'calculated':'')} key={m} draggable onDragStart={e=>e.dataTransfer.setData('text/plain',m)} onDoubleClick={()=>f.model.calculations[m]&&openCalc(m)}><span>{m==='Complete on time'?'T|F':'#'}</span>{m}{f.model.calculations[m]&&<button title={'Edit '+m} onClick={()=>openCalc(m)}>▾</button>}</div>)}</aside>}
++ {editing&&tab==='Data Source'?<div className="hx-source"><aside><h3>Connections</h3><p>▤ Operations exports</p><small>Text files (extract)</small><hr/><h3>Tables</h3><button className="hx-source-table" onClick={()=>setPreview('Orders')}>▤ Orders</button><button className="hx-source-table" onClick={()=>setPreview('Parcels')}>▤ Parcels</button></aside><main><div className="hx-source-header"><h2>Fulfilment extract</h2><label><input type="radio" checked={false} readOnly/> Live</label><label><input type="radio" checked readOnly/> Extract <button onClick={()=>setDialog('refresh')}>Edit…</button></label></div><div className="hx-model-canvas"><button className="hx-logical-table" onClick={()=>setPreview('Orders')}>▤ Orders</button><button className={'hx-relationship '+(relationshipOpen?'active':'')} onClick={()=>setRelationshipOpen(!relationshipOpen)} title="Edit relationship">────────────</button><button className="hx-logical-table" onClick={()=>setPreview('Parcels')}>▤ Parcels</button></div>
++ {relationshipOpen&&<RelationshipEditor pairs={modelPairs(f.model)} close={()=>setRelationshipOpen(false)} save={pairs=>change(g=>({...g,model:{...g.model,pairs}}))}/>}
++ <div className="hx-source-grid"><h3>{preview} <small>{previewRows.length} rows</small></h3><table><thead><tr>{previewHeaders.map(title=><th key={title}>{title}</th>)}</tr></thead><tbody>{previewRows.map(row=><tr key={row[0]}>{row.map((value,i)=><td key={i}>{value}</td>)}</tr>)}</tbody></table></div></main></div>:<>
++ {editing&&<div className="hx-cards"><div className="hx-card"><h4>Pages</h4></div><div className="hx-card"><h4>Filters</h4>{pill('Quarter')}{pill('Status')}</div><div className="hx-card hx-marks"><h4>Marks　▾</h4><select><option>Automatic</option><option>Bar</option><option>Text</option></select><div><button>◉<br/>Color</button><button>●<br/>Size</button><button>Abc<br/>Label</button><button>▦<br/>Detail</button><button>▤<br/>Tooltip</button></div>{pill('AGG(Fulfilment rate)')}</div></div>}
++ <main className="hx-viz">{editing&&<div className="hx-shelves"><div onDragOver={e=>e.preventDefault()} onDrop={e=>drop(e,'columns')}><label>▥ Columns</label>{pill(f.shelves?.columns||'Measure Values')}</div><div onDragOver={e=>e.preventDefault()} onDrop={e=>drop(e,'rows')}><label>▤ Rows</label>{pill(f.shelves?.rows||'Channel')}</div></div>}<div className="hx-dashboard-title"><h2>{tab==='Order detail'?'Order detail':tab==='Channel performance'?'Channel performance':'Quarterly Fulfilment'}</h2><p>{f.quarter} · Order-level delivery completion</p></div><div className="hx-kpis">{[['Eligible orders',totals.den],['Complete on time',totals.num],['Fulfilment rate',totals.den?(100*totals.num/totals.den).toFixed(1)+'%':'—']].map(([a,b])=><div key={a}><span>{a}</span><strong>{b}</strong></div>)}</div>{tab==='Order detail'?<table className="hx-summary"><thead><tr>{['Order key','Order number','Channel','Ordered units','Delivered units','On-time units','Complete on time'].map(k=><th key={k}>{k}</th>)}</tr></thead><tbody>{orderRows.map(r=><tr key={r['Order key']} onClick={()=>setSelected({order:r['Order key']})}>{['Order key','Order number','Channel','Ordered units','Delivered units','On-time units','Complete on time'].map(k=><td key={k}>{String((k==='Complete on time'&&r['On-time units']!=null?r['On-time units']>=r['Ordered units']:r[k])??'—')}</td>)}</tr>)}</tbody></table>:channelTable()}{selected&&<div className="hx-mark-tooltip"><strong>{selected.channel||selected.order}</strong><p>Selected mark</p><button onClick={()=>setDialog('data')}>View Data</button><button onClick={()=>{if(selected.channel)change(g=>({...g,channel:selected.channel}));setTab('Order detail');setSelected(null)}}>Go to Order detail</button><button onClick={()=>setSelected(null)}>✕</button></div>}<div className="hx-viz-footer">{orderRows.length} orders</div></main><aside className="hx-filters"><label>Quarter<select value={f.quarter} onChange={e=>change(g=>({...g,quarter:e.target.value}))}>{['2026 Q3','2026 Q4'].map(q=><option key={q}>{q}</option>)}</select></label><label>Channel<select value={f.channel} onChange={e=>change(g=>({...g,channel:e.target.value}))}>{channels.map(c=><option key={c}>{c}</option>)}</select></label><h4>Measure Names</h4><p><i/> Eligible orders</p><p><i style={{background:'#70a6b1'}}/> Complete orders</p></aside></>}
++ </div><div className="hx-sheetbar"><button onClick={()=>{setTab('Data Source');setEditing(true)}} className={tab==='Data Source'?'active':''}>▤ Data Source</button>{['Channel performance','Order detail','Quarterly Fulfilment'].map(t=><button key={t} className={tab===t?'active':''} onClick={()=>{setTab(t);setSelected(null)}}>{t==='Quarterly Fulfilment'?'▦':'▤'} {t}</button>)}<span>▤＋　▦＋</span></div>
++ {dialog&&<div className="hx-modal-backdrop"><div className={'hx-modal '+(dialog==='calculation'?'wide':'')} role="dialog"><header><strong>{dialog==='calculation'?(calc||'Calculation'):dialog==='refresh'?'Refresh Extracts Now':dialog==='publishAs'?'Publish Workbook':'View Data — Quarterly Fulfilment'}</strong><button onClick={()=>setDialog(null)}>✕</button></header>
++ {dialog==='calculation'&&<><input className="hx-calc-name" value={calcName} readOnly={Boolean(calc)} onChange={e=>setCalcName(e.target.value)} placeholder="Name"/><div className="hx-calc-editor"><textarea spellCheck={false} value={formula} onChange={e=>setFormula(e.target.value)}/><aside><h4>Functions</h4><p>COUNTD(expression)<br/>SUM(expression)<br/>COUNT(expression)</p><hr/><p>FIXED level of detail</p><p>{'{ FIXED [dimension] : aggregate expression }'}</p><hr/><p>IF condition THEN expression ELSE expression END</p></aside></div><div className="hx-calc-valid">{error}</div><footer><button onClick={()=>setDialog(null)}>Cancel</button><button className="hx-primary" onClick={saveCalc}>OK</button></footer></>}
++ {dialog==='refresh'&&<><p>Data source: <strong>Fulfilment extract</strong></p><footer><button onClick={()=>setDialog(null)}>Cancel</button><button className="hx-primary" onClick={refresh}>Full Refresh</button></footer></>}
++ {dialog==='publishAs'&&<><label>Project<select defaultValue={workbook.project}><option>{workbook.project}</option></select></label><label>Name<input value={copyName} onChange={e=>{setCopyName(e.target.value);setCopyError('')}}/></label>{copyError&&<p role="alert">{copyError}</p>}<footer><button onClick={()=>setDialog(null)}>Cancel</button><button className="hx-primary" onClick={publishCopy} disabled={!copyName.trim()}>Publish</button></footer></>}
++ {dialog==='data'&&<><div className="hx-data-dialog-tabs">Summary　│　Full Data</div><div className="hx-scroll-data"><table><thead><tr>{['Order key','Order number','Channel','Parcel ID','Ordered units','Parcel units','Delivered day','Promised day','On-time units'].map(k=><th key={k}>{k}</th>)}</tr></thead><tbody>{source.filter(r=>!selected?.channel||r.Channel===selected.channel).filter(r=>!selected?.order||r['Order key']===selected.order).map((r,i)=><tr key={i}>{['Order key','Order number','Channel','Parcel ID','Ordered units','Parcel units','Delivered day','Promised day','On-time units'].map(k=><td key={k}>{r[k]}</td>)}</tr>)}</tbody></table></div><p>{source.length} source rows in this view.</p><footer><button onClick={()=>setDialog(null)}>Close</button></footer></>}
++ </div></div>}
++ </div>
++}
+--- /dev/null
++++ b/src/components/FulfilmentWorkbook.css
+@@ -0,0 +1,29 @@
++.hx-workbook{height:100%;display:flex;flex-direction:column;font-size:12px;color:#333;background:white}.hx-workbook button,.hx-workbook select,.hx-workbook input{font:inherit}.hx-workbook button{cursor:pointer;border:1px solid #ccc;background:#fff;padding:6px 12px;color:#333}.hx-workbook button:hover{background:#eef4f7}.hx-workbook .hx-primary{background:#297aa3;color:white;border-color:#297aa3}.hx-view-toolbar{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;border-bottom:1px solid #ccc;min-height:48px}.hx-view-toolbar button{margin-left:6px}.hx-status{background:#edf6ec;border-bottom:1px solid #cae0c5;padding:8px 18px;color:#397536}.hx-menubar{display:flex;gap:18px;align-items:center;height:32px;padding:0 12px;background:#f6f6f6;border-bottom:1px solid #ccc}.hx-menubar button{padding:0;border:0;background:none}.hx-iconbar{height:36px;border-bottom:1px solid #ccc;padding:5px 18px;font-size:16px;color:#666}.hx-iconbar button{float:right;padding:0 10px}.hx-work-area{display:flex;flex:1;min-height:0;position:relative}.hx-data-pane{width:215px;background:#f6f6f6;border-right:1px solid #bdbdbd;flex-shrink:0;padding:0 10px;overflow:auto}.hx-data-tabs{display:flex;gap:25px;border-bottom:1px solid #ccc;padding:13px 5px}.hx-data-tabs strong{color:#26779a}.hx-datasource-name{padding:13px 2px;font-size:11px;font-weight:bold}.hx-data-pane input{width:100%;height:25px;border:1px solid #ddd;padding-left:8px}.hx-data-pane h4{margin:12px 0 7px;color:#777;font-weight:normal}.hx-table-title{padding:6px 0}.hx-field{padding:3px 1px;cursor:grab;display:flex;gap:7px;align-items:center;white-space:nowrap}.hx-field[hidden]{display:none}.hx-field:hover{background:#e1e8ed}.hx-field span{color:#3885a7;font-size:10px;width:22px}.hx-field button{margin-left:auto;border:0;padding:0 4px;background:none}.hx-field.calculated span{color:#268857}.hx-data-pane hr{border:0;border-top:1px solid #ccc;margin:10px 0}.hx-pane-hint{font-size:10px;color:#777;padding-top:18px;line-height:1.6}.hx-cards{background:#f4f4f4;width:170px;flex-shrink:0;border-right:1px solid #ccc;padding:8px}.hx-card{border:1px solid #ccc;background:#fafafa;margin-bottom:10px;min-height:56px;padding:8px}.hx-card h4{font-size:11px;margin-bottom:10px;font-weight:normal}.hx-pill{display:inline-flex;align-items:center;justify-content:space-between;gap:20px;background:#4b91b2;color:#fff;border-radius:12px;padding:4px 10px;font-size:11px;min-width:105px;margin:2px;white-space:nowrap}.hx-pill.green{background:#479476}.hx-pill>span{font-size:9px}.hx-marks select{width:100%;padding:4px;border:1px solid #bbb;background:white}.hx-marks>div{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin:8px 0}.hx-marks button{font-size:10px;padding:5px 3px;line-height:1.7}.hx-marks .hx-pill{min-width:110px;font-size:9px;gap:3px;white-space:normal}.hx-viz{flex:1;min-width:0;position:relative;padding:10px 20px;overflow:auto}.hx-shelves{margin:-10px -20px 16px}.hx-shelves>div{display:flex;align-items:center;border-bottom:1px solid #ccc;min-height:39px;padding-left:12px}.hx-shelves label{width:105px;color:#666}.hx-dashboard-title{padding:10px 0 16px;border-bottom:1px solid #ddd}.hx-dashboard-title h2{font-size:21px;font-weight:normal;color:#333}.hx-dashboard-title p{color:#777;font-size:11px;margin-top:7px}.hx-kpis{display:flex;padding:24px 0 22px;justify-content:space-around;text-align:center}.hx-kpis>div{flex:1;border-right:1px solid #e7e7e7}.hx-kpis>div:last-child{border:0}.hx-kpis span{display:block;color:#777;font-size:11px}.hx-kpis strong{display:block;margin-top:10px;font-size:30px;font-weight:normal;color:#356d91}.hx-summary{border-collapse:collapse;width:100%;font-size:11px;margin-top:15px}.hx-summary th{font-weight:normal;color:#666;text-align:left;border-bottom:1px solid #aaa;padding:10px}.hx-summary td{padding:17px 10px;border-bottom:1px solid #e1e1e1}.hx-summary tbody tr{cursor:pointer}.hx-summary tbody tr:hover{background:#edf4f8}.hx-summary td:last-child{white-space:nowrap}.hx-bar-track{display:inline-block;width:100px;background:#eee;height:19px;vertical-align:middle;margin-right:12px}.hx-bar-track>div{height:100%;background:#5489a8}.hx-viz-footer{font-size:10px;color:#777;border-top:1px solid #ddd;margin-top:28px;padding:8px 0}.hx-filters{width:160px;flex-shrink:0;padding:15px 14px;border-left:1px solid #ddd;background:#fafafa}.hx-filters label{display:block;font-size:11px;margin-bottom:22px}.hx-filters select{display:block;width:100%;margin-top:7px;border:1px solid #ccc;background:white;padding:5px}.hx-filters h4{font-weight:normal;font-size:11px;margin-top:30px}.hx-filters p{font-size:10px;margin-top:10px}.hx-filters i{display:inline-block;width:10px;height:10px;background:#5489a8;margin-right:7px}.hx-sheetbar{display:flex;align-items:center;min-height:36px;background:#eee;border-top:1px solid #aaa;flex-shrink:0}.hx-sheetbar button{border:0;border-right:1px solid #ccc;background:transparent;height:35px;font-size:11px;padding:8px 15px}.hx-sheetbar button.active{background:white;border-top:3px solid #4386a8;padding-top:5px}.hx-sheetbar span{color:#777;padding-left:20px}.hx-source{display:flex;width:100%;background:#fafafa}.hx-source aside{width:210px;flex-shrink:0;padding:16px;border-right:1px solid #ccc}.hx-source h3{font-size:13px;font-weight:normal;margin-bottom:20px}.hx-source aside p{margin:12px 0}.hx-source aside small{color:#777}.hx-source aside hr{border:0;border-top:1px solid #ccc;margin:22px 0}.hx-source-table{padding:10px;cursor:grab}.hx-source main{flex:1;overflow:auto}.hx-source-header{display:flex;align-items:center;gap:25px;padding:18px;border-bottom:1px solid #ccc;background:white}.hx-source-header h2{font-size:17px;font-weight:normal;margin-right:auto}.hx-source-header button{border:0;color:#287799;padding:0}.hx-model-canvas{height:230px;background:#f5f5f5;padding:75px 50px;position:relative;white-space:nowrap}.hx-logical-table{display:inline-block;padding:18px 30px;border:1px solid #989898;background:white;min-width:145px;box-shadow:1px 1px 3px #ddd}.hx-model-canvas button{padding:4px;border:0;background:none;color:#858585}.hx-model-canvas p{font-size:10px;color:#777;margin-top:20px}.hx-source-grid{border-top:1px solid #ccc;background:white;min-height:220px;padding:14px}.hx-source-grid h3{margin-bottom:15px}.hx-source-grid small{font-size:10px;color:#777;margin-left:20px}.hx-source-grid table,.hx-scroll-data table{border-collapse:collapse;width:100%;font-size:11px;white-space:nowrap}.hx-source-grid th,.hx-source-grid td,.hx-scroll-data th,.hx-scroll-data td{padding:9px 12px;border:1px solid #ddd;text-align:left}.hx-source-grid th,.hx-scroll-data th{font-weight:normal;background:#f1f1f1;color:#555}.hx-mark-tooltip{position:absolute;top:210px;left:35%;padding:16px;background:#fff;box-shadow:1px 2px 9px #aaa;border:1px solid #bbb;z-index:10}.hx-mark-tooltip p{font-size:10px;color:#777;margin:10px 0}.hx-mark-tooltip button{font-size:10px;margin-right:8px}.hx-modal-backdrop{position:fixed;inset:0;background:#0004;display:flex;align-items:center;justify-content:center;z-index:999}.hx-modal{width:650px;background:#fff;box-shadow:0 4px 24px #0005;border:1px solid #888;padding:0 22px 0;font-size:12px;max-height:85vh;overflow:auto}.hx-modal.wide{width:850px}.hx-modal header{margin:0 -22px 18px;padding:14px 20px;border-bottom:1px solid #ccc;display:flex;justify-content:space-between;align-items:center;font-size:14px}.hx-modal header button{border:0;padding:0 3px;font-size:17px}.hx-modal p{margin:15px 0;line-height:1.6}.hx-modal footer{margin:22px -22px 0;padding:12px 20px;background:#f8f8f8;border-top:1px solid #ddd;text-align:right}.hx-modal footer button{margin-left:9px;min-width:74px}.hx-modal label{display:block;margin:16px 0}.hx-modal label>select,.hx-modal label>input:not([type]){display:block;width:100%;padding:8px;border:1px solid #bbb;margin-top:7px}.hx-calc-name{border:0;border-bottom:1px solid #aaa;padding:8px;width:100%;font-size:14px!important;margin-bottom:12px}.hx-calc-editor{display:flex;border:1px solid #bbb;min-height:260px}.hx-calc-editor textarea{resize:none;border:0;width:70%;padding:15px;font:13px/1.8 Consolas,monospace;color:#185f88;outline:0}.hx-calc-editor aside{width:30%;border-left:1px solid #bbb;background:#f8f8f8;padding:14px;color:#666;font-size:11px}.hx-calc-editor aside h4{font-size:12px}.hx-calc-editor aside hr{border:0;border-top:1px solid #ddd}.hx-calc-valid{padding-top:14px;font-size:11px;color:#777}.hx-relation-tables{display:flex;justify-content:space-around;background:#f5f5f5;padding:20px;margin:5px 0 25px}.hx-match-row{display:flex;gap:20px;align-items:center;justify-content:center;padding:12px}.hx-match-row select{padding:8px;width:220px;border:1px solid #bbb;background:white}.hx-muted{color:#777}.hx-modal details{margin-top:25px;padding:12px 0;border-top:1px solid #ddd;color:#777;font-size:11px}.hx-data-dialog-tabs{padding:10px 0;color:#337a9f;border-bottom:1px solid #ccc;margin-bottom:20px}.hx-scroll-data{overflow:auto;max-height:380px}
++
++.hx-file-menu{position:relative}
++.hx-file-actions{position:absolute;top:20px;left:-6px;z-index:12;min-width:150px;background:#fff;border:1px solid #bcbcbc;box-shadow:0 2px 5px #0002;padding:4px 0}
++.hx-file-actions button{display:block;width:100%;padding:7px 12px;text-align:left}
++.hx-model-canvas{height:174px;padding:51px 50px}
++.hx-model-canvas .hx-relationship{color:#999}
++.hx-model-canvas .hx-relationship.active{color:#dc8525}
++.hx-relationship-panel{position:relative;z-index:2;margin:-15px 0 10px 34px;width:min(514px,calc(100% - 60px));border:1px solid #bdbdbd;background:#fff;box-shadow:1px 2px 5px #0002;padding:10px 12px}
++.hx-relationship-panel header,.hx-relationship-panel footer{display:flex;align-items:center;gap:8px}
++.hx-relationship-panel header{justify-content:space-between;font-size:14px;margin-bottom:12px}
++.hx-relationship-panel header strong,.hx-relation-fields strong{font-weight:500}
++.hx-relationship-panel button{border:0;background:transparent;padding:4px 7px;text-align:left}
++.hx-relationship-panel button:hover,.hx-relationship-panel button.active{background:#e9edf0}
++.hx-relationship-panel button:disabled{color:#aaa;cursor:default}
++.hx-relation-body{display:grid;grid-template-columns:minmax(100px,1fr) auto minmax(100px,1fr);gap:9px}
++.hx-relation-fields,.hx-relation-operators{display:flex;flex-direction:column;min-width:0}
++.hx-relation-fields strong,.hx-relation-operators>span{height:24px;color:#555;padding:3px 7px}
++.hx-relation-fields>button,.hx-relation-operators select{height:24px;min-height:24px;border-bottom:1px solid #ddd}
++.hx-relation-operators select{background:#fff;border:1px solid #ddd;text-align:center}
++.hx-relation-fields input{height:25px;border:1px solid #bdbdbd;margin:8px 0 3px;padding:3px 7px}
++.hx-relation-list{height:90px;overflow:auto}
++.hx-relation-list button{display:block;width:100%}
++.hx-relation-fields button span{display:inline-block;width:24px;color:#427b9a;font-size:10px}
++.hx-relationship-panel footer{margin-top:8px;border-top:1px solid #ddd;padding-top:4px}
++.hx-relationship-panel footer button:last-child{margin-left:auto}
++
++.hx-source .hx-source-table{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:8px 10px}
++.hx-model-canvas .hx-logical-table{border:1px solid #989898;background:white;color:#333;padding:18px 30px;text-align:left}
+--- /dev/null
++++ b/src/components/RelationshipEditor.jsx
+@@ -0,0 +1,53 @@
++import React, {useState} from 'react'
++import {fieldTypes, operators} from '../utils/fulfilmentEngine'
++
++function FieldList({side, active, pairs, choose, setActive}) {
++ const [search, setSearch] = useState('')
++ const fields = fieldTypes[side]
++ return <div className="hx-relation-fields">
++   <strong>{side === 'left' ? 'Orders' : 'Parcels'}</strong>
++   {pairs.map((pair, index) => <button key={index} className={active === index ? 'active' : ''} onClick={() => setActive(index)}>
++     {pair[side] && <span>{fields[pair[side]]}</span>}{pair[side] || 'Select a field'}
++   </button>)}
++   <input type="search" aria-label={side === 'left' ? 'Search Orders fields' : 'Search Parcels fields'} placeholder="Search" value={search} onChange={e => setSearch(e.target.value)}/>
++   <div className="hx-relation-list">
++     {Object.entries(fields).filter(([name]) => name.toLowerCase().includes(search.trim().toLowerCase())).map(([name, type]) =>
++       <button key={name} onClick={() => choose(side, name)} disabled={Boolean(pairs[active][side === 'left' ? 'right' : 'left'] && type !== fieldTypes[side === 'left' ? 'right' : 'left'][pairs[active][side === 'left' ? 'right' : 'left']])}><span>{type}</span>{name}</button>)}
++   </div>
++ </div>
++}
++
++export default function RelationshipEditor({pairs, save, close}) {
++ const [active, setActive] = useState(0)
++ const [pending, setPending] = useState(pairs)
++ const complete = pending.every(pair => pair.left && pair.right)
++ function edit(changes) {
++   const next = pending.map((pair, index) => index === active ? {...pair, ...changes} : pair)
++   setPending(next)
++   if (next.every(pair => pair.left && pair.right)) save(next)
++ }
++ function remove() {
++   const next = pending.filter((_, index) => index !== active)
++   setActive(0)
++   setPending(next)
++   if (next.every(pair => pair.left && pair.right)) save(next)
++ }
++ return <section className="hx-relationship-panel" aria-label="Edit Relationship">
++   <header><strong>Edit Relationship</strong><button aria-label="Dismiss relationship editor" onClick={close}>×</button></header>
++   <div className="hx-relation-body">
++     <FieldList side="left" active={active} pairs={pending} choose={(side, name) => edit({[side]: name})} setActive={setActive}/>
++     <div className="hx-relation-operators"><span>Operator</span>{pending.map((pair, index) =>
++       <select key={index} aria-label={'Operator for pair ' + (index + 1)} value={pair.operator} onChange={e => {
++         const next = pending.map((clause, position) => position === index ? {...clause, operator: e.target.value} : clause)
++         setPending(next)
++         if (complete) save(next)
++       }}>{operators.map(operator => <option key={operator}>{operator}</option>)}</select>)}</div>
++     <FieldList side="right" active={active} pairs={pending} choose={(side, name) => edit({[side]: name})} setActive={setActive}/>
++   </div>
++   <footer>
++     <button disabled={!complete} onClick={() => {setActive(pending.length);setPending([...pending,{left:'',operator:'=',right:''}])}}>Add more fields</button>
++     <button disabled={pending.length < 2} onClick={remove}>Remove pair</button>
++     <button onClick={close}>Close</button>
++   </footer>
++ </section>
++}
+--- /dev/null
++++ b/src/utils/fulfilmentEngine.js
+@@ -0,0 +1,42 @@
++// Aggregate the joined source rows using the supported Tableau calculation grammar.
++export function expression(text,context){
++ const tokens=text.match(/\[[^\]]+\]|"(?:[^"\\]|\\.)*"|'[^']*'|>=|<=|<>|[=<>+\-*/(),]|\d+(?:\.\d+)?|[A-Za-z_]+/g)||[];let i=0;
++ function atom(){let t=tokens[i++];if(t===undefined)throw Error('Expected expression');if(t==='('){const v=condition();if(tokens[i++]!==')')throw Error('Expected )');return v}if(t.toUpperCase()==='IF'){const yes=condition();if(tokens[i++].toUpperCase()!=='THEN')throw Error('Expected THEN');const a=condition();let b=null;if(tokens[i]?.toUpperCase()==='ELSE'){i++;b=condition()}if(tokens[i++]?.toUpperCase()!=='END')throw Error('Expected END');return yes?a:b}if(t.startsWith('[')){const field=t.slice(1,-1);if(!Object.hasOwn(context,field))throw Error('Unknown field '+t);return context[field]}if(t.startsWith('"')||t.startsWith("'"))return t.slice(1,-1);if(/^\d/.test(t))return Number(t);if(t.toUpperCase()==='TRUE')return true;if(t.toUpperCase()==='FALSE')return false;throw Error('Unknown expression '+t)}
++ function term(){let v=atom();while(['*','/'].includes(tokens[i])){const op=tokens[i++],b=atom();v=op==='*'?v*b:v/b}return v}
++ function math(){let v=term();while(['+','-'].includes(tokens[i])){const op=tokens[i++],b=term();v=op==='+'?v+b:v-b}return v}
++ function compare(){let a=math();if(['=','<>','<','>','<=','>='].includes(tokens[i])){let op=tokens[i++],b=math();return op==='='?a===b:op==='<>'?a!==b:op==='<'?a<b:op==='>'?a>b:op==='<='?a<=b:a>=b}return a}
++ function condition(){let v=compare();while(['AND','OR'].includes(tokens[i]?.toUpperCase())){const op=tokens[i++].toUpperCase(),b=compare();v=op==='AND'?Boolean(v&&b):Boolean(v||b)}return v}
++ const result=condition();if(i!==tokens.length)throw Error('Unexpected '+tokens[i]);return result
++}
++export function aggregate(formula,rows){const m=formula.trim().match(/^(COUNTD|COUNT|SUM|AVG|MIN|MAX)\s*\(([\s\S]*)\)$/i);if(!m)throw Error('Use an aggregate calculation such as COUNTD(...) or SUM(...)');const values=rows.map(r=>expression(m[2],r)).filter(v=>v!==null&&v!==undefined);switch(m[1].toUpperCase()){case 'COUNTD':return new Set(values).size;case 'COUNT':return values.length;case 'SUM':return values.reduce((a,v)=>a+Number(v),0);case 'AVG':return values.reduce((a,v)=>a+Number(v),0)/values.length;case 'MIN':return Math.min(...values);case 'MAX':return Math.max(...values)}}
++export const fieldTypes = {
++ left: {'Order key':'Abc','Order number':'Abc',Channel:'Abc',Quarter:'Abc',Status:'Abc','Ordered units':'#','Promised day':'#'},
++ right: {'Order key':'Abc','Order number':'Abc','Parcel ID':'Abc','Parcel units':'#','Delivered day':'#'},
++}
++export const operators = ['=', '<>', '<', '<=', '>', '>=']
++export function modelPairs(model) {
++ return model.pairs || [{left:model.key, operator:'=', right:model.key}]
++}
++function compareFields(a, op, b) {
++ if (a == null || b == null || typeof a !== typeof b) return false
++ switch (op) {
++  case '=': return a === b
++  case '<>': return a !== b
++  case '<': return a < b
++  case '<=': return a <= b
++  case '>': return a > b
++  case '>=': return a >= b
++  default: return false
++ }
++}
++export function rawRows(f,model,q,c) {
++ const numbers = new Map(f.orders.map(o => [o.key,o.number]))
++ const parcels = f.parcels.map(p => ({...p, fields:{'Order key':p.key,'Order number':numbers.get(p.key),'Parcel ID':p.id,'Parcel units':p.units,'Delivered day':p.delivered}}))
++ const pairs = modelPairs(model)
++ return f.orders.filter(o => o.status==='Confirmed' && (q===null||o.quarter===q) && (c==='All'||o.channel===c)).flatMap(o => {
++  const fields = {'Order key':o.key,'Order number':o.number,Channel:o.channel,Quarter:o.quarter,Status:o.status,'Ordered units':o.units,'Promised day':o.promised}
++  const ps = parcels.filter(p => pairs.every(pair => compareFields(fields[pair.left], pair.operator, p.fields[pair.right])))
++  const delivered = ps.reduce((a,p)=>a+p.units,0)
++  return (ps.length?ps:[null]).map(p=>({...fields,'Parcel ID':p?.id??null,'Parcel units':p?.units??0,'Delivered day':p?.delivered??999,'Delivered units':delivered}))
++ })
++}
+--- /dev/null
++++ b/src/utils/calculationLevels.js
+@@ -0,0 +1,45 @@
++import {aggregate,expression} from './fulfilmentEngine'
++
++function expandFixed(formula, rows, universe=rows) {
++ let dataset = rows
++ let index = 0
++ const template = formula.replace(/\{\s*FIXED\s+((?:\[[^\]]+\]\s*,?\s*)+)\s*:\s*([^{}]+)\}/gi, (_, fields, calculation) => {
++   const names = [...fields.matchAll(/\[([^\]]+)\]/g)].map(match => match[1])
++   const alias = '__fixed' + index++
++   const groups = new Map()
++   const keyFor = row => {
++     if (names.some(name => !Object.hasOwn(row,name))) throw Error('Unknown FIXED dimension')
++     return JSON.stringify(names.map(name => row[name]))
++   }
++   universe.forEach(row => {
++     const key = keyFor(row)
++     if (!groups.has(key)) groups.set(key, [])
++     groups.get(key).push(row)
++   })
++   const values = new Map([...groups].map(([key,group]) => [key,aggregate(calculation,group)]))
++   dataset = dataset.map(row => ({...row,[alias]:values.get(keyFor(row))}))
++   return '['+alias+']'
++ })
++ return {template,dataset}
++}
++
++export function evaluateMetric(formula, rows, universe=rows) {
++ const {template,dataset} = expandFixed(formula,rows,universe)
++ return aggregate(template,dataset)
++}
++
++export function materialize(model, rows) {
++ const pending = Object.entries(model.calculations).filter(([name]) => !['Eligible orders','Complete orders'].includes(name))
++ let data = rows
++ while (pending.length) {
++   const index = pending.findIndex(([,formula]) => {
++     const references = [...formula.matchAll(/\[([^\]]+)\]/g)].map(match => match[1])
++     return references.every(name => !pending.some(([pendingName]) => pendingName===name))
++   })
++   if (index < 0) throw Error('Circular calculated field reference')
++   const [[name,formula]] = pending.splice(index,1)
++   const {template,dataset} = expandFixed(formula,data)
++   data = data.map((row,i) => ({...row,[name]:expression(template,dataset[i])}))
++ }
++ return data
++}

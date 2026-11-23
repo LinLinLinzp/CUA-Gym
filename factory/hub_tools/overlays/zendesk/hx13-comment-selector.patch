@@ -1,0 +1,48 @@
+--- a/src/index.css
++++ b/src/index.css
+@@ -938,6 +938,16 @@
+   border-bottom: 1px solid var(--border-color);
+ }
+ 
++.hx13-comment-type {
++  margin: 5px 12px;
++  padding: 5px 8px;
++  border: 1px solid var(--border-color);
++  border-radius: 4px;
++  background: var(--card-bg);
++  color: var(--text-primary);
++  font: inherit;
++}
++
+ .reply-mode-btn {
+   padding: 8px 16px;
+   border: none;
+--- a/src/pages/TicketDetail.jsx
++++ b/src/pages/TicketDetail.jsx
+@@ -580,18 +580,15 @@
+         {/* Reply Composer */}
+         <div className="reply-composer">
+           <div className="reply-mode-toggle">
+-            <button
+-              className={`reply-mode-btn ${replyMode === 'public' ? 'active public' : ''}`}
+-              onClick={() => setReplyMode('public')}
++            <select
++              aria-label="Comment type"
++              className="hx13-comment-type"
++              value={replyMode}
++              onChange={event => setReplyMode(event.target.value)}
+             >
+-              Public reply
+-            </button>
+-            <button
+-              className={`reply-mode-btn ${replyMode === 'internal' ? 'active internal' : ''}`}
+-              onClick={() => setReplyMode('internal')}
+-            >
+-              Internal note
+-            </button>
++              <option value="public">Public reply</option>
++              <option value="internal">Internal note</option>
++            </select>
+           </div>
+ 
+           {replyMode === 'public' && requester && (

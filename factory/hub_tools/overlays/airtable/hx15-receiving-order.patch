@@ -1,0 +1,90 @@
+--- a/src/components/KanbanView.jsx
++++ b/src/components/KanbanView.jsx
+@@ -4,7 +4,17 @@
+ import { cn } from '../lib/utils';
+ 
+ const KanbanView = ({ table, view }) => {
+-  const { dispatch, ACTIONS } = useStore();
++  const { state, dispatch, ACTIONS } = useStore();
++  const dropCard = (event, column, beforeId=null) => {
++    event.preventDefault(); event.stopPropagation();
++    const id=event.dataTransfer.getData('text/plain');
++    if (!table.records.some(r=>r.id===id) || beforeId===id) return;
++    const order=[...(view.cardOrder||table.records.map(r=>r.id))].filter(x=>x!==id);
++    const at=beforeId?order.indexOf(beforeId):-1;
++    if(at<0)order.push(id);else order.splice(at,0,id);
++    const updated={...table,records:table.records.map(r=>r.id===id?{...r,fields:{...r.fields,[groupFieldId]:column==='Uncategorized'?'':column}}:r),views:table.views.map(v=>v.id===view.id?{...v,cardOrder:order}:v)};
++    dispatch({type:ACTIONS.SET_STATE,payload:{...state,tables:{...state.tables,[table.id]:updated}}});
++  };
+   
+   // Find the grouping field (default to first single select if not specified)
+   const groupFieldId = view.groupFieldId || table.fields.find(f => f.type === 'single_select')?.id;
+@@ -28,33 +38,33 @@
+       const val = r.fields[groupFieldId];
+       if (colName === 'Uncategorized') return !val;
+       return val === colName;
+-    });
++    }).sort((a,b)=>(view.cardOrder||table.records.map(r=>r.id)).indexOf(a.id)-(view.cardOrder||table.records.map(r=>r.id)).indexOf(b.id));
+   };
+ 
+   const primaryField = table.fields.find(f => f.primary) || table.fields[0];
+   const coverField = table.fields.find(f => f.type === 'attachment');
++  const addRecord = column => {
++    const initialFields = column === 'Uncategorized' ? {} : { [groupFieldId]: column };
++    dispatch({ type: ACTIONS.ADD_RECORD, payload: { tableId: table.id, initialFields } });
++  };
+ 
+   return (
+-    <div className="flex h-full overflow-x-auto bg-gray-100 p-6 gap-6">
++    <div className="flex h-full items-start overflow-x-auto bg-gray-100 px-4 py-4 gap-3">
+       {columns.map(col => {
+         const records = getRecordsForColumn(col.name);
+         return (
+-          <div key={col.id} className="flex-shrink-0 w-72 flex flex-col max-h-full">
+-            <div className="flex items-center justify-between mb-3 px-1">
++          <div key={col.id} className="flex-shrink-0 w-60 flex flex-col max-h-full rounded-lg border border-gray-200 bg-gray-50">
++            <div className="flex items-center min-h-10 px-3 border-b border-gray-200">
+               <div className="flex items-center gap-2">
+                 <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", col.color || "bg-white text-gray-800")}>
+                   {col.name}
+                 </span>
+-                <span className="text-gray-400 text-xs">{records.length}</span>
+-              </div>
+-              <div className="flex gap-1">
+-                <button className="text-gray-400 hover:text-gray-600"><Plus size={16} /></button>
+               </div>
+             </div>
+             
+-            <div className="flex-1 overflow-y-auto space-y-3 min-h-[100px]">
++            <div onDragOver={e=>e.preventDefault()} onDrop={e=>dropCard(e,col.name)} className="flex-1 overflow-y-auto space-y-2 min-h-[100px] px-3 pt-3 pb-2">
+               {records.map(record => (
+-                <div key={record.id} className="bg-white p-3 rounded shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
++                <div key={record.id} draggable onDragStart={e=>{e.dataTransfer.setData("text/plain",record.id);e.dataTransfer.effectAllowed="move"}} onDragOver={e=>e.preventDefault()} onDrop={e=>dropCard(e,col.name,record.id)} className="bg-white p-3 rounded border border-gray-200 hover:shadow-sm transition-shadow cursor-pointer">
+                   {coverField && record.fields[coverField.id]?.[0] && (
+                     <div className="h-32 -mx-3 -mt-3 mb-3 bg-gray-100 rounded-t overflow-hidden">
+                       <img src={record.fields[coverField.id][0].url} className="w-full h-full object-cover" />
+@@ -79,15 +89,15 @@
+                   </div>
+                 </div>
+               ))}
+-              <button 
+-                className="w-full py-2 text-gray-400 hover:bg-gray-200 rounded border border-transparent hover:border-gray-300 border-dashed flex items-center justify-center gap-2 text-sm"
+-                onClick={() => {
+-                  const initialFields = col.name === 'Uncategorized' ? {} : { [groupFieldId]: col.name };
+-                  dispatch({ type: ACTIONS.ADD_RECORD, payload: { tableId: table.id, initialFields } });
+-                }}
+-              >
+-                <Plus size={14} /> New
+-              </button>
++            </div>
++            <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200">
++              <span className="text-xs text-gray-600">{records.length} {records.length === 1 ? 'record' : 'records'}</span>
++              <button
++                type="button"
++                className="flex items-center gap-1 rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
++                aria-label={'New record in ' + col.name}
++                onClick={() => addRecord(col.name)}
++              ><Plus size={14} /> New</button>
+             </div>
+           </div>
+         );

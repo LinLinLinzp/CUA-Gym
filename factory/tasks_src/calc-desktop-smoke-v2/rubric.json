@@ -1,0 +1,33 @@
+{
+  "task_id": "cua-smoke/calc-desktop-smoke",
+  "task_version": "0.2.0",
+  "verifier_version": "0.2.0",
+  "reward_file": "/logs/verifier/reward.txt",
+  "reward_rule": "各业务区按可重新计算的完整结果分别得分，权重合计 100。",
+  "numeric_rule": "各公式结果须为正确的整件数量。验证器按初始条件及新条件演算公式，不依赖缓存值。",
+  "common": {
+    "type": "客观业务结果",
+    "implementation": "tests/verifier.py:evaluate",
+    "evidence": "桌面输出 result.xlsx 的原生公式及输入单元格",
+    "score_mode": "按业务区独立计分",
+    "coverage": "初始值与三组变化情景正反例"
+  },
+  "checkpoints": [
+    {"id": "R1.dock", "weight": 27, "requirement": "算出三个码头 SKU 的准入库存及可用量", "rule": "Dock Stock!D6:E8 均为公式。匹配 SKU、码头和 Released 状态，准入时间含截止点，扣除保留量并避免负值。"},
+    {"id": "R2.clinic", "weight": 27, "requirement": "完成诊所订单计算和缺货量", "rule": "Clinic Dispatch!E6:G8 均为公式。只计同 SKU 同路线、Confirmed 且符合优先级上限，按保留量限制出库并报差额。"},
+    {"id": "R3.transfer", "weight": 27, "requirement": "完成三条整箱调拨和未满足数量", "rule": "Transfer Control!G6:I8 均为公式，按 SKU、起点、终点、批次和清放状态配载。保留库存后按件数上限发整箱并算未满足数量。"},
+    {"id": "R4.handover", "weight": 16, "requirement": "汇总真实联动的主管交接", "rule": "三个业务区正确，并由 Shift!F5:F8 公式汇总可用库存、诊所出库、调拨量及两类未满足件数。"},
+    {"id": "R5.preservation", "weight": 3, "requirement": "工作推进时保留原始记录和控制", "rule": "至少完成一个业务区，原始控制、来源单元格和非目标值保持。"}
+  ],
+  "difficulty_review": {
+    "simple_checks": ["R5.preservation"],
+    "weak_fixtures": {"bypass": "all_rectangles_totals_only", "one_core": "single_complete_transfer", "false_completion": "constant_formula_snapshot"},
+    "constraints": {
+      "time": {"checks": ["R1.dock"], "fixture": "miss_dock_cutoff"},
+      "mapping": {"checks": ["R2.clinic"], "fixture": "ignore_order_route"},
+      "calculation": {"checks": ["R3.transfer"], "fixture": "send_partial_carton"},
+      "delivery": {"checks": ["R4.handover"], "fixture": "missing_handover"},
+      "protection": {"checks": ["R5.preservation"], "fixture": "overwrite_source_note"}
+    }
+  }
+}

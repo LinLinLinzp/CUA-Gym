@@ -1,0 +1,28 @@
+services:
+  main:
+    platform: linux/amd64
+    depends_on:
+      desktop:
+        condition: service_healthy
+    volumes:
+      - grading:/run/cua-grading:ro
+    networks: [default, gui]
+  desktop:
+    platform: linux/amd64
+    build:
+      context: ./desktop
+    shm_size: 512m
+    healthcheck:
+      test: ["CMD", "/usr/bin/python3", "/usr/local/lib/cua-smoke/ready.py", "--check"]
+      interval: 2s
+      timeout: 4s
+      start_period: 8s
+      retries: 50
+    volumes:
+      - grading:/run/cua-grading
+    networks: [gui]
+networks:
+  gui:
+    internal: true
+volumes:
+  grading:

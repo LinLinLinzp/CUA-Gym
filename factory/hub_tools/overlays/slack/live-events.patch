@@ -1,0 +1,119 @@
+--- a/src/context/AppContext.jsx
++++ b/src/context/AppContext.jsx
+@@ -1,6 +1,6 @@
+ 
+ import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+-import { initializeData, getInitialState, fetchCustomState, getSessionId, saveState } from '../utils/dataManager';
++import { initializeData, getInitialState, fetchCustomState, getSessionId, saveState, cacheState, mergeLiveMessages } from '../utils/dataManager';
+ 
+ const AppContext = createContext();
+ 
+@@ -52,6 +52,35 @@
+       setLoading(false);
+     }
+   }, []);
++
++  useEffect(() => {
++    if (loading || !sidRef.current) return;
++    const abort = new AbortController();
++    const params = new URLSearchParams({ sid: sidRef.current, live: '1' });
++    let timer;
++    async function poll() {
++      try {
++        const result = await fetch(`/state?${params}`, { signal: abort.signal });
++        if (!result.ok || abort.signal.aborted) return;
++        const { messages } = await result.json();
++        if (abort.signal.aborted) return;
++        setState(previous => {
++          const next = mergeLiveMessages(previous, messages);
++          if (next !== previous) cacheState(next, sidRef.current);
++          return next;
++        });
++      } catch {
++        // The next poll retries transient offline-server errors.
++      } finally {
++        if (!abort.signal.aborted) timer = setTimeout(poll, 1000);
++      }
++    }
++    poll();
++    return () => {
++      abort.abort();
++      clearTimeout(timer);
++    };
++  }, [loading]);
+ 
+   const updateState = (updates) => {
+     setState(prev => {
+--- a/src/utils/dataManager.js
++++ b/src/utils/dataManager.js
+@@ -47,9 +47,29 @@
+   return null;
+ };
+ 
+-// Save current state to session-specific localStorage
++export const cacheState = (state, sid = null) => {
++  localStorage.setItem(storageKey(sid), JSON.stringify(state));
++};
++
++// A poll adds incoming messages without replacing the channel, thread or composer.
++export const mergeLiveMessages = (state, incoming) => {
++  if (!state || !incoming) return state;
++  let messages = state.messages;
++  for (const [channel, arrivals] of Object.entries(incoming)) {
++    const existing = messages[channel] || [];
++    const ids = new Set(existing.map(row => row.messageId));
++    const added = arrivals.filter(row => !ids.has(row.messageId));
++    if (added.length === 0) continue;
++    messages = {
++      ...messages,
++      [channel]: [...existing, ...added].sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
++    };
++  }
++  return messages === state.messages ? state : { ...state, messages };
++};
++
+ export const saveState = (state, sid = null) => {
+-  localStorage.setItem(storageKey(sid), JSON.stringify(state));
++  cacheState(state, sid);
+   const url = sid ? `/post?sid=${encodeURIComponent(sid)}` : '/post';
+   fetch(url, {
+     method: 'POST',
+--- a/src/components/MessageList.jsx
++++ b/src/components/MessageList.jsx
+@@ -1,7 +1,6 @@
+ 
+-import React from 'react';
++import React, { useLayoutEffect, useRef } from 'react';
+ import { format, isToday, isYesterday, parseISO } from 'date-fns';
+-import { useApp } from '../context/AppContext';
+ import Message from './Message';
+ import './MessageList.css';
+ 
+@@ -18,7 +17,17 @@
+ }
+ 
+ function MessageList({ messages, channelId, dmId }) {
+-  const { state } = useApp();
++  const list = useRef(null);
++  const nearLatest = useRef(false);
++
++  useLayoutEffect(() => {
++    if (nearLatest.current && list.current) list.current.scrollTop = list.current.scrollHeight;
++  }, [messages.length]);
++
++  function rememberScroll(event) {
++    const { scrollHeight, clientHeight, scrollTop } = event.currentTarget;
++    nearLatest.current = scrollHeight - clientHeight - scrollTop < 40;
++  }
+ 
+   // Group messages by date for date separators
+   const messagesWithSeparators = [];
+@@ -42,7 +51,7 @@
+   }
+ 
+   return (
+-    <div className="message-list">
++    <div className="message-list" ref={list} onScroll={rememberScroll}>
+       {messagesWithSeparators.map(item => {
+         if (item.type === 'date-separator') {
+           return (

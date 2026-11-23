@@ -1,0 +1,17 @@
+# GUI author plan
+
+1. Start in Teams' Furniture Deliveries channel. Inspect Jamie Silva's crew availability and Carla Ngo's Facilities clearance posts for Reading Room 103. Record the difference from the earlier North Gate recommendation and locate the original long-sideboard delivery post for the final threaded reply. The later chair post is a separate freight shipment with different clearance needs.
+2. Open the provided Maple-Reading-Room-Working.drawio in draw.io Desktop. Read the annotated narrow points along each branch. The gate widths alone do not decide clearance. Establish South Gate to Service Hall to Freight Lift to Reading Room 103 as the active route and keep the Receiving and courtyard labels.
+3. In Wayfair Deliveries, open the long sideboard’s freight record. Confirm order WF-9400461 and use Reschedule delivery. Select Tue Nov 24, 12–4 pm Eastern. Replace the old North instruction with the South gate, Receiving check-in, Service Hall, Freight Lift, room, and upright guidance. Review, confirm, and capture the new appointment with the prior appointment shown as rescheduled. Reload to verify persistence.
+4. Edit the carry-route arrows in the native drawing. Use View → Layers to select the Crew carry route layer if needed. Retain the lift-to-room arrow. Either reconnect the first three arrows through the southern branch and move their waypoints clear of the courtyard, or remove those three and draw fresh connected orthogonal arrows. Use Save As to the requested output file. Reopen it to verify editable routed connectors and the retained base. Record the source and final canvas screenshots.
+5. In Asana, open Maple House Fit-out and the existing long-sideboard installation task. Set its original task due date to Wed Nov 25, retaining Jamie and its open status. Add the truck window and route to the description while preserving the installation details. Upload the output drawing to that task using the attachment chooser. Reload and confirm the date, description, and attachment persist, and that the attachment downloads as the actual editable file.
+6. Reply once under the original posting in Teams. Give the carrier window and South Gate, and point to the Asana task’s editable file. Reload and confirm the reply is under the long-sideboard thread. Capture the linked final records and the confirmation.
+
+## Geometry check
+
+The active route goes from the truck east to the bend just before the South Gate, south to gate height, east through the Service Hall, north after the end of the keep-clear area, and east through the freight lift to Room 103. Route-only changes should not alter the surveyed width labels. Alternative connector IDs, plan encoding, small waypoint movements, and equivalent prose are represented in the legal fixture.
+
+## Fixture notes
+
+The generated fixture JSON and files represent expected persisted state and editable outputs. NOP, an unchanged drawing with administrative updates, booking-only, a false claim, seven independent mistake fixtures, two partial completions, and a legal alternative are generated. Two WSL generations matched across all 120 files. The attachment blobs matched their output file bytes. Exercising Wayfair's actual booking mutation with the authored seed confirmed old and new appointment linkage and unchanged sibling bookings. Native GUI interaction, upload, capture, and save behavior remain to be exercised in the author run.
+

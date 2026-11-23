@@ -1,0 +1,133 @@
+diff --git "a/src/App.jsx" "b/src/App.jsx"
+index f3f1340..ca16b18 100644
+--- "a/src/App.jsx"
++++ "b/src/App.jsx"
+@@ -21,6 +21,7 @@ import UploadPage from './pages/UploadPage';
+ import StateInspector from './pages/StateInspector';
+ import MiniPlayer from './components/MiniPlayer';
+ import './App.css';
++import CaptionStudio from './pages/CaptionStudio';
+ 
+ function RedirectWithQuery({ to }) {
+   const [searchParams] = useSearchParams();
+@@ -77,6 +78,8 @@ function AppContent() {
+     }
+   };
+ 
++  if (location.pathname === "/studio/subtitles") return <CaptionStudio />;
++
+   return (
+     <div className="app">
+       <Header
+@@ -91,6 +94,7 @@ function AppContent() {
+         />
+         <main className={`main-content ${sidebarOpen ? (sidebarMini ? 'sidebar-mini' : 'sidebar-open') : 'sidebar-closed'}`}>
+           <Routes>
++            <Route path="/studio/subtitles" element={<CaptionStudio />} />
+             <Route path="/" element={<HomePage />} />
+             <Route path="/shorts" element={<ShortsPage />} />
+             <Route path="/watch/:videoId" element={<VideoPlayerPage />} />
+--- /dev/null
++++ b/src/pages/CaptionStudio.jsx
+@@ -0,0 +1,84 @@
++import React,{useLayoutEffect,useState,useRef} from 'react';
++import {useData} from '../context/DataContext';
++const names={en:'English',es:'Spanish'};
++const timing=n=>{let ms=Math.round(n*1000);return `${String(Math.floor(ms/3600000)).padStart(2,'0')}:${String(Math.floor(ms/60000)%60).padStart(2,'0')}:${String(Math.floor(ms/1000)%60).padStart(2,'0')},${String(ms%1000).padStart(3,'0')}`};
++export default function CaptionStudio(){
++ const {data,updateData}=useData();const [video,setVideo]=useState('quay-r2'),[language,setLanguage]=useState('en'),[added,setAdded]=useState(['en']),[panel,setPanel]=useState(''),[languageMenu,setLanguageMenu]=useState(false),[pending,setPending]=useState(null),[message,setMessage]=useState(''),[selected,setSelected]=useState('en'),[clock,setClock]=useState(0),[withTiming,setWithTiming]=useState(true),[pauseWhileTyping,setPauseWhileTyping]=useState(false),[saving,setSaving]=useState(false);
++ const input=useRef(null),mediaRef=useRef(null),publishRef=useRef(null),addRef=useRef(null),cueListRef=useRef(null),focusNewCue=useRef(false);const tracks=(data.captionTracks||[]).filter(t=>t.videoId===video);const media=data.videos.find(v=>v.videoId===video);const languages=[...new Set([...added,...tracks.map(t=>t.language)])].filter(l=>names[l]);
++ useLayoutEffect(()=>{
++  if(!focusNewCue.current)return;
++  focusNewCue.current=false;
++  Array.from(cueListRef.current?.querySelectorAll('textarea')||[]).at(-1)?.focus();
++ },[pending?.cues.length]);
++ const parse=text=>text.trim().split(/\n\s*\n/).map(b=>{const l=b.split(/\r?\n/);let i=l.findIndex(x=>x.includes('-->'));if(i<0)return null;const sec=x=>x.trim().replace(',','.').split(':').reduce((n,v)=>n*60+Number(v),0);const [a,z]=l[i].split('-->');return {start:sec(a),end:sec(z),text:l.slice(i+1).join('\n')}}).filter(Boolean);
++ async function sendFile(file){
++  const form=new FormData();
++  form.append('file',file);
++  const sid=new URLSearchParams(location.search).get('sid')||sessionStorage.getItem('mock_sid');
++  const response=await fetch('/upload'+(sid?'?sid='+encodeURIComponent(sid):''),{method:'POST',body:form});
++  const result=await response.json();
++  if(!response.ok||!result.files?.[0]?.url)throw Error(result.error||'Subtitle upload failed');
++  return result.files[0];
++ }
++ async function upload(file){if(!file)return;try{const cues=parse(await file.text());if(!cues.length||cues.some(c=>!Number.isFinite(c.start)||c.start<0||c.end<=c.start))throw Error('Invalid timed subtitle file');const source=await sendFile(file);setPending({id:'captions-'+Date.now(),videoId:video,language,status:'draft',source,cues});setPanel('editor');setMessage('File uploaded. Review the timings before publishing.');setTimeout(()=>publishRef.current?.focus(),50)}catch(e){setMessage(e.message)}}
++ function startManual(){
++  setPending({id:'captions-'+Date.now(),videoId:video,language,status:'draft',dirty:true,cues:[]});
++  setMessage('');
++  addCue();
++ }
++ function addCue(){
++  focusNewCue.current=true;
++  const duration=mediaRef.current?.duration;
++  const limit=Number.isFinite(duration)?duration:Infinity;
++  const playhead=mediaRef.current?.currentTime||0;
++  setPending(current=>{
++   const previousEnd=current.cues.at(-1)?.end||0;
++   const start=Math.round(Math.min(Math.max(playhead,previousEnd),Math.max(0,limit-.25))*1000)/1000;
++   const end=Math.round(Math.min(start+2,limit)*1000)/1000;
++   return {...current,dirty:true,cues:[...current.cues,{start,end,text:''}]};
++  });
++ }
++ function editCue(index,changes){
++  setPending(current=>({...current,dirty:true,cues:current.cues.map((cue,i)=>i===index?{...cue,...changes}:cue)}));
++ }
++ function removeCue(index){
++  setPending(current=>({...current,dirty:true,cues:current.cues.filter((_,i)=>i!==index)}));
++ }
++ async function publish(status='published'){
++  if(!pending||saving)return;
++  const cues=pending.cues.map(c=>({...c,text:c.text.trim()}));
++  if(!cues.length||cues.some(c=>!c.text||!Number.isFinite(c.start)||!Number.isFinite(c.end)||c.start<0||c.end<=c.start)){
++   setMessage('Enter caption text and valid start and end times for each cue.');
++   return;
++  }
++  setSaving(true);
++  try{
++   let source=pending.source;
++   if(pending.dirty){
++    cues.sort((left,right)=>left.start-right.start);
++    const text=cues.map((c,i)=>`${i+1}\n${timing(c.start)} --> ${timing(c.end)}\n${c.text}\n`).join('\n');
++    source=await sendFile(new File([text],`Quay-R2-${language}.srt`,{type:'application/x-subrip'}));
++   }
++   const {dirty,...track}=pending;
++   const saved={...track,status,source,cues};
++   updateData({captionTracks:[...(data.captionTracks||[]).filter(t=>!(t.videoId===video&&t.language===language)),saved]});
++   setPending(null);setPanel('');setMessage(status==='published'?'Subtitles published':'Draft saved');
++   setTimeout(()=>addRef.current?.focus(),50);
++  }catch(e){setMessage(e.message)}
++  finally{setSaving(false)}
++ }
++ async function download(track){try{const res=await fetch(track.source.url);if(!res.ok)throw Error('Download failed');const url=URL.createObjectURL(await res.blob()),a=document.createElement('a');a.href=url;a.download=video==='quay-r2'?`Quay-R2-${track.language}.srt`:`Assembly-${track.language}.srt`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);if(track.status==='published'){const receipt={trackId:track.id,sourceUrl:track.source.url};const history=data.captionDownloads||[];if(!history.some(row=>row.trackId===receipt.trackId&&row.sourceUrl===receipt.sourceUrl))updateData({captionDownloads:[...history,receipt]})}}catch(e){setMessage(e.message)}}
++ function edit(lang){setLanguage(lang);const old=tracks.find(t=>t.language===lang);setPending(old?.cues?{...old}:null);setPanel('editor');setMessage('')}
++ const active=panel==='viewer'?tracks.find(t=>t.language===selected&&t.status==='published'):pending;const cue=(active?.cues||[]).find(c=>clock>=c.start&&clock<c.end);
++ const player=<div className='cs-player'><video ref={mediaRef} controls preload='auto' src={media?.videoUrl} onTimeUpdate={e=>setClock(e.target.currentTime)}/><div className='cs-caption'>{cue?.text||' '}</div></div>;
++ return <div className='cs'>
++ <style>{`.cs{position:fixed;inset:0;z-index:1000;background:#fff;color:#202124;font:14px Arial,sans-serif;overflow:auto}.cs *{box-sizing:border-box}.cs button,.cs select,.cs input{font:inherit}.cs button{cursor:pointer;border:0;background:none;color:#065fd4;font-weight:600;padding:10px 14px;border-radius:2px}.cs button:hover{background:#edf3fb}.cs button:focus-visible,.cs select:focus-visible{outline:2px solid #065fd4}.cs button:disabled{color:#999;cursor:default}.cs .primary{color:#fff;background:#065fd4}.cs .primary:hover{background:#034bb0}.cs-head{height:64px;border-bottom:1px solid #ddd;display:flex;align-items:center;padding:0 26px;gap:22px}.cs-logo{font-size:25px;letter-spacing:-1px;font-weight:bold}.cs-logo b{background:#f00;border-radius:6px;color:white;font-size:18px;padding:3px 8px;margin-right:4px}.cs-search{margin-left:145px;border:1px solid #ddd;border-radius:3px;padding:10px 22px;width:430px;color:#777}.cs-side{position:absolute;top:64px;bottom:0;left:0;width:230px;border-right:1px solid #ddd;background:#fff;padding-top:20px}.cs-back{color:#606060;padding:4px 22px 20px}.cs-thumb{margin:0 20px;width:190px;height:106px;background:#173e50;display:grid;place-items:center;color:#b8e7e3}.cs-side p{padding:0 22px;font-size:13px}.cs-side select{width:190px;margin:0 20px 18px;border:1px solid #ddd;padding:8px;background:#fff}.cs-nav{padding:15px 24px;color:#606060}.cs-nav.active{color:#c00;background:#f1f1f1;border-left:3px solid #c00}.cs-body{margin-left:230px;padding:27px 32px}.cs-body h1{font-size:25px;font-weight:500;margin:0 0 28px}.cs-table{width:100%;border-collapse:collapse;margin:0 0 22px}.cs-table th{text-align:left;font-size:12px;font-weight:500;color:#606060;border-block:1px solid #ddd;padding:18px 15px}.cs-table td{padding:19px 15px;border-bottom:1px solid #ddd}.cs-table td:first-child{width:27%}.cs-sub{display:block;font-size:12px;color:#777;margin-top:5px}.cs-lang{position:relative;display:inline-block}.cs-language-menu{position:absolute;top:43px;left:0;background:white;box-shadow:0 3px 13px #0004;z-index:3;width:220px;padding:10px 0}.cs-language-menu button{display:block;width:100%;text-align:left;color:#222;padding:12px 20px}.cs-status{font-size:13px;color:#555;margin-top:22px;min-height:18px}.cs-overlay{position:fixed;inset:0;z-index:1100;background:#0009;display:flex;align-items:center;justify-content:center;padding:26px}.cs-dialog{background:#fff;border-radius:7px;box-shadow:0 8px 35px #0007;width:1060px;max-height:calc(100vh - 52px);overflow:auto}.cs-dialog-header{height:64px;padding:12px 22px;display:flex;align-items:center;border-bottom:1px solid #ddd;gap:14px}.cs-dialog-header h2{font-size:18px;font-weight:500;margin:0;flex:1}.cs-editor-content{display:grid;grid-template-columns:1fr 1fr;min-height:330px}.cs-editor-left{padding:14px 18px;border-right:1px solid #ddd;max-height:390px;overflow:auto}.cs-method{display:block!important;width:100%;text-align:left;padding:17px 10px!important;border-bottom:1px solid #e5e5e5!important;color:#222!important;font-weight:500!important}.cs-method:disabled{color:#777!important}.cs-method span{font-size:20px;margin-right:20px;color:#606060}.cs-editor-right{padding:0;background:#fafafa}.cs-player video{width:100%;display:block;max-height:330px;background:#000}.cs-caption{background:#111;color:#fff;text-align:center;min-height:36px;padding:7px 12px;white-space:pre-line;font-size:16px}.cs-cue{display:grid;grid-template-columns:1fr 82px;gap:10px;margin-bottom:13px}.cs-cue textarea{width:100%;resize:vertical;border:1px solid #ddd;border-radius:4px;min-height:65px;padding:9px;font:14px Arial;color:#222;background:#fff}.cs-cue-toolbar{position:sticky;top:-14px;z-index:1;background:white;display:flex;gap:8px;padding:4px 0;margin-bottom:10px}.cs-cue-times button{font-size:11px;padding:4px 0}.cs-cue-times input{width:80px;border:1px solid #ddd;border-radius:2px;padding:5px;font-size:12px;margin-bottom:4px;color:#444}.cs-timeline{height:116px;border-top:1px solid #ddd;padding:12px 22px;overflow:hidden}.cs-scale{display:flex;justify-content:space-between;margin:8px 0 15px 40px;color:#666;font-size:11px}.cs-bars{position:relative;height:30px;border-bottom:1px solid #bbb;background:#fafafa}.cs-bar{position:absolute;top:5px;height:19px;background:#286fce;border:1px solid white}.cs-timing{width:465px;padding:25px 26px}.cs-timing h2{font-size:19px;font-weight:500;margin:0 0 23px}.cs-timing label{display:block;margin:18px 0}.cs-timing p{color:#666;font-size:13px;line-height:1.5;margin:6px 0 20px}.cs-actions{text-align:right;margin-top:25px}.cs-viewer{padding:20px}.cs-viewer label{display:block;margin-top:18px}.cs-viewer select{padding:6px;border:1px solid #ccc;margin-left:12px}.cs-checkbox{display:block;padding:20px;font-size:12px;color:#555}.cs-kebab{font-size:20px!important;padding:5px 12px!important;color:#555!important}`}</style>
++ <header className='cs-head'><span style={{fontSize:23,color:'#555'}}>☰</span><div className='cs-logo'><b>▶</b>Studio</div><div className='cs-search'>⌕ &nbsp; Search across your channel</div><span style={{marginLeft:'auto',color:'#777'}}>ⓘ &nbsp; CREATE &nbsp; ●</span></header>
++ <aside className='cs-side'><div className='cs-back'>‹ &nbsp; Channel subtitles</div><div className='cs-thumb'>NORTH QUAY LIGHTS</div><p>Your video</p><label><select aria-label='Video' value={video} onChange={e=>{setVideo(e.target.value);setAdded(['en']);setPanel('')}}>{data.videos.map(v=><option key={v.videoId} value={v.videoId}>{v.title}</option>)}</select></label><div className='cs-nav'>✎ &nbsp; Details</div><div className='cs-nav'>▥ &nbsp; Analytics</div><div className='cs-nav'>▤ &nbsp; Editor</div><div className='cs-nav'>☷ &nbsp; Comments</div><div className='cs-nav active'>▣ &nbsp; Subtitles</div><div className='cs-nav'>⚙ &nbsp; Settings</div></aside>
++ <main className='cs-body'><div style={{display:'flex',justifyContent:'space-between'}}><h1>Video subtitles</h1><button onClick={()=>{setSelected('en');setPanel('viewer')}}>View on YouTube ↗</button></div><table className='cs-table'><thead><tr><th>Language</th><th>Modified on</th><th>Title &amp; description</th><th>Subtitles</th><th></th></tr></thead><tbody>{languages.map(lang=>{const track=tracks.find(t=>t.language===lang);return <tr key={lang}><td>{names[lang]}{lang==='en'&&<span className='cs-sub'>(video language)</span>}</td><td>{track?'Nov 19, 2026':'—'}</td><td>{lang==='en'?'Published':<button>ADD</button>}</td><td>{track?.status==='published'?<button onClick={()=>edit(lang)}>Published</button>:<button aria-label={'Add '+names[lang]+' subtitles'} onClick={()=>edit(lang)}>ADD</button>}{track?.status==='draft'&&<span className='cs-sub'>Draft</span>}</td><td>{track&&<button aria-label={'Download '+names[lang]+' SRT'} onClick={()=>download(track)}>Download ▾</button>}</td></tr>})}</tbody></table><div className='cs-lang'><button className='primary' ref={addRef} onClick={()=>setLanguageMenu(!languageMenu)}>ADD LANGUAGE</button>{languageMenu&&<div className='cs-language-menu' role='menu'>{Object.entries(names).filter(([lang])=>!languages.includes(lang)).map(([lang,name])=><button autoFocus key={lang} role='menuitem' onClick={()=>{setAdded([...added,lang]);setLanguageMenu(false)}}>{name}</button>)}{languages.length===2&&<p style={{padding:'5px 15px',color:'#666'}}>All project languages added</p>}</div>}</div><div role='status' className='cs-status'>{message}</div></main>
++ {(panel==='editor'||panel==='timing')&&<div className='cs-overlay'><div className='cs-dialog' role='dialog' aria-label='Video subtitles editor'><div className='cs-dialog-header'><h2>▣ &nbsp; {names[language]}</h2><button disabled={!pending||saving} onClick={()=>publish('draft')}>SAVE DRAFT</button><button className='primary' disabled={!pending||saving} ref={publishRef} onClick={()=>publish()}>PUBLISH</button><button aria-label='Close subtitles editor' onClick={()=>setPanel('')}>✕</button></div><div className='cs-editor-content'><div className='cs-editor-left' ref={cueListRef}>{pending?<><div className='cs-cue-toolbar'><button onClick={addCue}>+ CAPTION</button><button onClick={()=>setPanel('timing')}>UPLOAD FILE</button></div><div role='status' className='cs-sub'>{message}</div>{pending.cues.map((c,i)=><div className='cs-cue' key={i}><textarea aria-label={'Caption '+(i+1)} value={c.text} onChange={e=>{if(pauseWhileTyping)mediaRef.current?.pause();editCue(i,{text:e.target.value})}} onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();addCue()}}}/><div className='cs-cue-times'><input aria-label={'Start '+(i+1)} type='number' step='.001' value={c.start} onChange={e=>editCue(i,{start:e.target.value===''?'':Number(e.target.value)})}/><input aria-label={'End '+(i+1)} type='number' step='.001' value={c.end} onChange={e=>editCue(i,{end:e.target.value===''?'':Number(e.target.value)})}/><button aria-label={'Delete caption '+(i+1)} onClick={()=>removeCue(i)}>Remove</button></div></div>)}</>:<><button autoFocus className='cs-method' onClick={()=>setPanel('timing')}><span>↥</span>Upload file</button><button className='cs-method' disabled><span>◷</span>Auto-sync</button><button className='cs-method' onClick={startManual}><span>⌨</span>Type manually</button><p style={{color:'#777',fontSize:12,padding:10}}>Add subtitles to your video</p></>}</div><div className='cs-editor-right'>{player}<label className='cs-checkbox'><input type='checkbox' checked={pauseWhileTyping} onChange={e=>setPauseWhileTyping(e.target.checked)}/> Pause while typing</label></div></div><div className='cs-timeline'><span style={{fontSize:12}}>{timing(clock).slice(3).replace(',','.')}</span><div className='cs-scale'><span>00:00</span><span>00:05</span><span>00:10</span><span>00:15</span><span>00:20</span></div><div className='cs-bars'>{(pending?.cues||[]).map((c,i)=><div className='cs-bar' key={i} style={{left:(c.start/20*100)+'%',width:((c.end-c.start)/20*100)+'%'}}/>)}</div></div></div></div>}
++ {panel==='timing'&&<div className='cs-overlay' style={{zIndex:1200}}><div className='cs-dialog cs-timing' role='dialog' aria-label='Upload file'><h2>Upload file</h2><label><input type='radio' checked={withTiming} onChange={()=>setWithTiming(true)}/> With timing</label><p>Upload a file that contains the text and timing for each subtitle.</p><label><input type='radio' checked={!withTiming} onChange={()=>setWithTiming(false)}/> Without timing</label><div role='status' className='cs-sub'>{message}</div><div className='cs-actions'><button onClick={()=>setPanel('editor')}>CANCEL</button><button className='primary' autoFocus onClick={()=>{if(!withTiming){setMessage('Use a file with timing for this video.');return}input.current?.click()}}>CONTINUE</button></div></div></div>}
++ <input ref={input} type='file' accept='.srt' hidden onChange={e=>upload(e.target.files?.[0])}/>
++ {panel==='viewer'&&<div className='cs-overlay'><div className='cs-dialog' style={{width:850}} role='dialog' aria-label='YouTube viewer'><div className='cs-dialog-header'><h2>{media?.title}</h2><button aria-label='Close player' onClick={()=>setPanel('')}>✕</button></div><div className='cs-viewer'>{player}<label>Subtitles / CC <select aria-label='Viewer subtitles' value={selected} onChange={e=>setSelected(e.target.value)}><option value=''>Off</option>{tracks.filter(t=>t.status==='published').map(t=><option key={t.id} value={t.language}>{names[t.language]||t.language}</option>)}</select></label></div></div></div>}
++ </div>
++}
+--- a/src/data/initialData.js
++++ b/src/data/initialData.js
+@@ -874,6 +874,14 @@
+ 
+   if (customState) {
+     const initialData = deepMergeWithDefaults(getDefaultData(), customState);
++    // A supplied task workspace owns its business collections and signed-in
++    // account. Demo comments/posts and nested account playlists are not UI
++    // defaults and must not leak into this seeded workspace on a cold boot.
++    // Settings still retain the stable display/control defaults from above.
++    for (const key of ['user', 'videos', 'shorts', 'channels', 'comments',
++      'playlists', 'notifications', 'communityPosts', 'categories']) {
++      if (Object.hasOwn(customState, key)) initialData[key] = customState[key];
++    }
+     localStorage.setItem(sk, JSON.stringify(initialData));
+     localStorage.setItem(ik, JSON.stringify(initialData));
+     return initialData;

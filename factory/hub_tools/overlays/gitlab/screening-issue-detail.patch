@@ -1,0 +1,76 @@
+--- a/src/pages/project/Issues.jsx
++++ b/src/pages/project/Issues.jsx
+@@ -1,11 +1,17 @@
+ import React, { useEffect, useState } from 'react';
+ import { useParams } from 'react-router-dom';
+ import { useStore } from '../../store';
+-import { Plus, MoreHorizontal } from 'lucide-react';
++import { Plus, MoreHorizontal, X } from 'lucide-react';
++import ReactMarkdown from 'react-markdown';
+ 
+-const IssueCard = ({ issue, onDragStart }) => (
++const IssueCard = ({ issue, onDragStart, onOpen }) => (
+   <div 
+     draggable
++    role="button"
++    tabIndex={0}
++    aria-label={`Open issue ${issue.id}: ${issue.title}`}
++    onClick={() => onOpen(issue.id)}
++    onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(issue.id); } }}
+     onDragStart={(e) => onDragStart(e, issue.id)}
+     className="bg-white p-3 rounded shadow-sm border border-gray-200 cursor-move hover:shadow-md transition-shadow mb-3"
+   >
+@@ -31,14 +37,16 @@
+   const { state, updateState } = useStore();
+   const issues = state.issues.filter(i => i.projectId === parseInt(projectId));
+   const [isModalOpen, setIsModalOpen] = useState(false);
++  const [selectedIssueId, setSelectedIssueId] = useState(null);
++  const selectedIssue = issues.find(issue => issue.id === selectedIssueId);
+   const [newIssue, setNewIssue] = useState({ title: '', description: '', labels: 'bug' });
+ 
+   useEffect(() => {
+-    if (!isModalOpen) return undefined;
+-    const onKeyDown = (event) => event.key === 'Escape' && setIsModalOpen(false);
++    if (!isModalOpen && !selectedIssue) return undefined;
++    const onKeyDown = (event) => { if (event.key === 'Escape') { setIsModalOpen(false); setSelectedIssueId(null); } };
+     window.addEventListener('keydown', onKeyDown);
+     return () => window.removeEventListener('keydown', onKeyDown);
+-  }, [isModalOpen]);
++  }, [isModalOpen, selectedIssueId]);
+ 
+   const handleDragStart = (e, id) => {
+     e.dataTransfer.setData('issueId', id);
+@@ -103,12 +111,32 @@
+             </div>
+             <div className="p-2 flex-1 overflow-y-auto">
+               {issues.filter(i => i.status === col.id).map(issue => (
+-                <IssueCard key={issue.id} issue={issue} onDragStart={handleDragStart} />
++                <IssueCard key={issue.id} issue={issue} onDragStart={handleDragStart} onOpen={setSelectedIssueId} />
+               ))}
+             </div>
+           </div>
+         ))}
+       </div>
++      {selectedIssue && (
++        <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/50 p-6 pt-12" onClick={() => setSelectedIssueId(null)}>
++          <section role="dialog" aria-modal="true" aria-labelledby="issue-detail-title" className="w-full max-w-3xl rounded-lg bg-white p-6 shadow-xl" onClick={event => event.stopPropagation()}>
++            <header className="mb-5 flex items-start justify-between gap-5 border-b border-gray-200 pb-4">
++              <div>
++                <p className="mb-2 text-sm text-gray-500">Issue #{selectedIssue.id} · {selectedIssue.status.replace('_', ' ')}</p>
++                <h2 id="issue-detail-title" className="text-xl font-bold text-gray-900">{selectedIssue.title}</h2>
++              </div>
++              <button type="button" aria-label="Close issue" className="rounded p-1 text-gray-500 hover:bg-gray-100" onClick={() => setSelectedIssueId(null)}><X size={20} /></button>
++            </header>
++            <div className="mb-5 flex flex-wrap gap-2">
++              {selectedIssue.labels.map(label => <span key={label} className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">{label}</span>)}
++            </div>
++            <h3 className="mb-3 font-semibold text-gray-800">Description</h3>
++            <div className="prose max-h-[65vh] max-w-none overflow-y-auto break-words text-sm leading-6 text-gray-800">
++              {selectedIssue.description ? <ReactMarkdown>{selectedIssue.description}</ReactMarkdown> : <p className="text-gray-500">No description provided.</p>}
++            </div>
++          </section>
++        </div>
++      )}
+       {isModalOpen && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+           <div className="w-full max-w-lg rounded-lg bg-white p-6">

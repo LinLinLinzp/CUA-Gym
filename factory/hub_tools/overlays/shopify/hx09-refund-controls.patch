@@ -1,0 +1,233 @@
+diff --git a/src/pages/ProductDetail.jsx b/src/pages/ProductDetail.jsx
+--- a/src/pages/ProductDetail.jsx
++++ b/src/pages/ProductDetail.jsx
+@@ -195,14 +195,26 @@
+               <div className="space-y-2">
+                 {formData.variants.map(variant => (
+                   <div key={variant.id} className="flex items-center gap-2 p-3 rounded-lg border" style={{ borderColor: '#e3e3e3' }}>
+-                    <div className="flex-1 grid grid-cols-4 gap-2">
+-                      <input type="text" className="text-[13px]" placeholder="Title" value={variant.title} onChange={e => updateVariant(variant.id, { title: e.target.value })} />
+-                      <input type="text" className="text-[13px]" placeholder="SKU" value={variant.sku} onChange={e => updateVariant(variant.id, { sku: e.target.value })} />
+-                      <div className="relative">
++                    <div className="flex-1 min-w-0 grid grid-cols-4 gap-2">
++                      <label className="min-w-0 text-[11px] font-medium text-[#616161]">
++                        Variant
++                        <input type="text" className="min-w-0 w-full mt-1 text-[13px]" placeholder="Title" value={variant.title} onChange={e => updateVariant(variant.id, { title: e.target.value })} />
++                      </label>
++                      <label className="min-w-0 text-[11px] font-medium text-[#616161]">
++                        SKU
++                        <input type="text" className="min-w-0 w-full mt-1 text-[13px]" placeholder="SKU" value={variant.sku} onChange={e => updateVariant(variant.id, { sku: e.target.value })} />
++                      </label>
++                      <label className="min-w-0 text-[11px] font-medium text-[#616161]">
++                        Price
++                        <span className="relative mt-1 block">
+-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[#616161] text-[13px]">$</span>
++                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[#616161] text-[13px]">$</span>
+-                        <input type="text" className="text-[13px] pl-5" placeholder="0.00" value={variant.price} onChange={e => updateVariant(variant.id, { price: e.target.value })} />
++                          <input type="text" className="min-w-0 w-full text-[13px] pl-5" placeholder="0.00" aria-label="Variant price" value={variant.price} onChange={e => updateVariant(variant.id, { price: e.target.value })} />
++                        </span>
++                      </label>
+-                      </div>
+-                      <input type="number" className="text-[13px]" placeholder="Qty" value={variant.inventoryQuantity} onChange={e => updateVariant(variant.id, { inventoryQuantity: parseInt(e.target.value) || 0 })} />
++                      <label className="min-w-0 text-[11px] font-medium text-[#616161]">
++                        Available quantity
++                        <input type="number" className="min-w-0 w-full mt-1 text-[13px]" placeholder="Qty" aria-label="Variant quantity" value={variant.inventoryQuantity} onChange={e => updateVariant(variant.id, { inventoryQuantity: parseInt(e.target.value) || 0 })} />
++                      </label>
+                     </div>
+                     <button onClick={() => removeVariant(variant.id)} className="p-1 hover:bg-[#ffd2d2] text-[#d72c0d] rounded">
+                       <Trash2 size={14} />
+
+--- a/src/pages/OrderDetail.jsx
++++ b/src/pages/OrderDetail.jsx
+@@ -40,7 +40,7 @@
+ export default function OrderDetail() {
+   const { id } = useParams();
+   const navigate = useNavigate();
+-  const { state, updateOrder } = useStore();
++  const { state, updateOrder, updateProduct, updateCustomer } = useStore();
+   const [showFulfillModal, setShowFulfillModal] = useState(false);
+   const [showRefundModal, setShowRefundModal] = useState(false);
+   const [showEditModal, setShowEditModal] = useState(false);
+@@ -50,6 +50,10 @@
+   const [refundItems, setRefundItems] = useState([]);
+   const [refundShipping, setRefundShipping] = useState(false);
+   const [refundNote, setRefundNote] = useState('');
++  const [restockItems,setRestockItems]=useState(true);
++  const [refundMethod,setRefundMethod]=useState('original');
++  const [notifyCustomer,setNotifyCustomer]=useState(true);
++  const [customRefundAmount,setCustomRefundAmount]=useState('');
+   const [showMoreMenu, setShowMoreMenu] = useState(false);
+   const [localNotice, setLocalNotice] = useState('');
+ 
+@@ -89,11 +93,19 @@
+         return { lineItemId: item.id, sku: li?.sku || '', quantity: item.qty, amount: (li ? parseFloat(li.price) * item.qty : 0).toFixed(2) };
+       });
+     const shippingAmount = refundShipping ? parseFloat(order.totalShippingPrice || 0) : 0;
+-    const refundTotal = lines.reduce((sum, l) => sum + parseFloat(l.amount), 0) + shippingAmount;
++    const selectedTotal = lines.reduce((sum, l) => sum + parseFloat(l.amount), 0) + shippingAmount;
++    const priorTotal = (order.refunds || []).reduce((sum,r)=>sum+Number(r.total || 0),0);
++    const limit = Math.min(selectedTotal,Number(order.totalPrice)-priorTotal);
++    const refundTotal = customRefundAmount==='' ? limit : Number(customRefundAmount);
++    if (!(refundTotal>0 && refundTotal<=limit && Math.abs(Math.round(refundTotal*100)-refundTotal*100)<0.000001)) return;
++    const merchandiseTotal = lines.reduce((sum,l)=>sum+Number(l.amount),0);
++    const shippingRefund = Math.min(shippingAmount,refundTotal);
++    let remainingCents=Math.round((refundTotal-shippingRefund)*100);
++    const refundedLines=lines.map((line,i)=>{const amount=i===lines.length-1?remainingCents:Math.round((refundTotal-shippingRefund)*100*Number(line.amount)/merchandiseTotal);remainingCents-=amount;return {...line,amount:(amount/100).toFixed(2),restock:restockItems};});
+     const now = new Date().toISOString();
+     const refunds = [
+       ...(order.refunds || []),
+-      { id: `refund_${Date.now()}`, createdAt: now, lineItems: lines, shipping: shippingAmount.toFixed(2), total: refundTotal.toFixed(2), note: refundNote }
++      { id: `refund_${Date.now()}`, createdAt: now, lineItems: refundedLines, shipping: shippingRefund.toFixed(2), total: refundTotal.toFixed(2), note: refundNote, paymentMethod:refundMethod, restock:restockItems, notifyCustomer, status:'succeeded' }
+     ];
+     const refundedSoFar = refunds.reduce((sum, r) => sum + parseFloat(r.total), 0);
+     const newFinancialStatus = refundedSoFar >= parseFloat(order.totalPrice) - 0.005 ? 'refunded' : 'partially_refunded';
+@@ -102,7 +114,7 @@
+       {
+         id: `evt_${Date.now()}`,
+         type: 'refund',
+-        message: `Refund of $${refundTotal.toFixed(2)} was issued${refundNote ? ': ' + refundNote : ''}`,
++        message: `Refund of $${refundTotal.toFixed(2)} was issued to ${refundMethod==='original'?'original payment method':'store credit'}${refundNote ? ': ' + refundNote : ''}. ${restockItems?'Selected tracked items restocked.':'Manual inventory handling selected.'} ${notifyCustomer?'Customer notification sent.':'Customer notification not sent.'}`,
+         createdAt: now,
+         user: 'Alex Chen'
+       }
+@@ -113,7 +125,18 @@
+       timeline: newTimeline,
+       updatedAt: now
+     });
++    if (restockItems) {
++      for (const product of state.products || []) {
++        const selected=lines.map(l=>({...l,source:order.lineItems.find(x=>x.id===l.lineItemId)})).filter(l=>l.source?.productId===product.id);
++        if (selected.length) updateProduct(product.id,{variants:(product.variants || []).map(v=>({...v,inventoryQuantity:Number(v.inventoryQuantity || 0)+selected.filter(l=>(l.source.variantId===v.id || l.sku===v.sku) && v.inventoryManagement==='shopify').reduce((n,l)=>n+l.quantity,0)}))});
++      }
++    }
++    if (refundMethod==='store_credit' && order.customer?.id) {
++      const customer=state.customers.find(c=>c.id===order.customer.id);
++      if(customer)updateCustomer(customer.id,{storeCreditBalance:(Number(customer.storeCreditBalance || 0)+refundTotal).toFixed(2)});
++    }
+     setShowRefundModal(false);
++    setCustomRefundAmount('');
+     setRefundItems([]);
+     setRefundShipping(false);
+     setRefundNote('');
+@@ -183,6 +206,7 @@
+   // Initialize refund items from line items when modal opens
+   const openRefundModal = () => {
+     setRefundItems((order.lineItems || []).map(li => ({ id: li.id, qty: 0 })));
++    setRestockItems(true);setRefundMethod('original');setNotifyCustomer(true);setCustomRefundAmount('');
+     setShowRefundModal(true);
+   };
+ 
+@@ -216,7 +240,7 @@
+           </div>
+         </div>
+         <div className="flex gap-2">
+-          {['paid', 'partially_paid'].includes(order.financialStatus) && (
++          {['paid', 'partially_paid', 'partially_refunded'].includes(order.financialStatus) && (
+             <button onClick={openRefundModal} className="btn-secondary text-[13px]">Refund</button>
+           )}
+           <button onClick={() => setShowEditModal(true)} className="btn-secondary text-[13px]">Edit</button>
+@@ -406,85 +430,25 @@
+         </div>
+       )}
+ 
+-      {/* Refund Modal */}
+-      {showRefundModal && (
+-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+-          <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-modal">
+-            <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: '#e3e3e3' }}>
+-              <h3 className="text-[16px] font-bold text-[#303030]">Issue refund</h3>
+-              <button onClick={() => setShowRefundModal(false)} className="p-1 hover:bg-[#f1f1f1] rounded"><X size={20} className="text-[#616161]" /></button>
+-            </div>
+-            <form onSubmit={handleRefund} className="p-4 space-y-4">
+-              <div>
+-                <p className="text-[13px] font-medium text-[#303030] mb-2">Select items to refund</p>
+-                <div className="space-y-2">
+-                  {(order.lineItems || []).map((li, idx) => {
+-                    const refundItem = refundItems.find(r => r.id === li.id) || { qty: 0 };
+-                    const remaining = li.quantity - refundedQty(li.id);
+-                    return (
+-                      <div key={li.id} className="flex items-center gap-3">
+-                        <div className="flex-1 text-[13px] text-[#303030]">
+-                          {li.title} {li.variantTitle ? `- ${li.variantTitle}` : ''}
+-                          {remaining < li.quantity && <span className="ml-1 text-[12px] text-[#616161]">({li.quantity - remaining} already refunded)</span>}
+-                        </div>
+-                        <div className="text-[12px] text-[#616161]">${parseFloat(li.price).toFixed(2)}</div>
+-                        <div className="flex items-center gap-1">
+-                          <span className="text-[12px] text-[#616161]">Qty:</span>
+-                          <input
+-                            type="number"
+-                            min="0"
+-                            max={remaining}
+-                            disabled={remaining <= 0}
+-                            className="w-14 text-[13px]"
+-                            value={refundItem.qty}
+-                            onChange={e => {
+-                              const qty = Math.max(0, Math.min(parseInt(e.target.value) || 0, remaining));
+-                              setRefundItems(prev => prev.map(r => r.id === li.id ? { ...r, qty } : r));
+-                            }}
+-                          />
+-                        </div>
+-                      </div>
+-                    );
+-                  })}
+-                </div>
+-              </div>
+-              <div className="flex items-center gap-2">
+-                <input
+-                  type="checkbox"
+-                  id="refund-shipping"
+-                  checked={refundShipping}
+-                  onChange={e => setRefundShipping(e.target.checked)}
+-                  className="w-4 h-4"
+-                  style={{ accentColor: '#008060' }}
+-                />
+-                <label htmlFor="refund-shipping" className="text-[13px] text-[#303030]">Refund shipping (${parseFloat(order.totalShippingPrice || 0).toFixed(2)})</label>
+-              </div>
+-              <div>
+-                <label className="block text-[13px] font-medium text-[#303030] mb-1">Reason</label>
+-                <input
+-                  type="text"
+-                  className="w-full text-[13px]"
+-                  placeholder="Reason for refund..."
+-                  value={refundNote}
+-                  onChange={e => setRefundNote(e.target.value)}
+-                />
+-              </div>
+-              <div className="p-3 rounded-lg bg-[#f9fafb] border text-[13px]" style={{ borderColor: '#e3e3e3' }}>
+-                <div className="flex justify-between font-medium">
+-                  <span>Refund total</span>
+-                  <span>${refundTotal.toFixed(2)}</span>
+-                </div>
+-              </div>
+-              <div className="flex justify-end gap-2 pt-2">
+-                <button type="button" onClick={() => setShowRefundModal(false)} className="btn-secondary text-[13px]">Cancel</button>
+-                <button type="submit" className="btn-danger text-[13px]" disabled={refundTotal <= 0}>
+-                  Refund ${refundTotal.toFixed(2)}
+-                </button>
+-              </div>
+-            </form>
+-          </div>
+-        </div>
+-      )}
++      {/* Refund page: documented item, restock, shipping, method and notification choices. */}
++      {showRefundModal && <section className="fixed top-14 left-60 right-0 bottom-0 bg-[#f6f6f7] z-40 overflow-y-auto" aria-label="Refund order">
++        <form onSubmit={handleRefund} className="max-w-6xl mx-auto p-6 space-y-5">
++          <header className="flex items-center gap-3"><button type="button" aria-label="Back to order" onClick={()=>setShowRefundModal(false)} className="p-2"><ArrowLeft size={20}/></button><h1 className="text-xl font-semibold">Refund {order.name}</h1></header>
++          <div className="grid grid-cols-3 gap-5 items-start"><div className="col-span-2 space-y-5">
++            <section className="bg-white rounded-lg border p-5"><h2 className="font-semibold mb-3">Refund items</h2><p className="text-sm text-gray-500 mb-4">Select quantities to refund. Items with quantity 0 are not refunded.</p>
++              {(order.lineItems || []).map((li,i)=>{const item=refundItems.find(r=>r.id===li.id) || {qty:0};const available=li.quantity-refundedQty(li.id);return <div key={li.id} className="flex items-center justify-between gap-3 py-4 border-t"><div><p className="text-sm font-medium">{li.title} · {li.variantTitle}</p><p className="text-xs text-gray-500">{li.sku} · ${Number(li.price).toFixed(2)} each · {available} refundable</p></div><input aria-label={`Refund quantity ${li.sku}`} type="number" min="0" max={available} disabled={available<=0} className="w-20 border rounded p-2 text-sm" value={item.qty} onChange={e=>{const qty=Math.max(0,Math.min(Number.parseInt(e.target.value)||0,available));setRefundItems(old=>old.map(r=>r.id===li.id?{...r,qty}:r));setCustomRefundAmount('');}}/></div>;})}
++              <label className="flex items-center gap-2 mt-4 text-sm"><input type="checkbox" checked={restockItems} onChange={e=>setRestockItems(e.target.checked)}/>Restock items</label><p className="text-xs text-gray-500 mt-1 ml-6">Adds selected tracked quantities back to inventory. Deselect to handle inventory manually.</p>
++            </section>
++            <section className="bg-white rounded-lg border p-5"><h2 className="font-semibold mb-3">Refund shipping</h2><label className="text-sm flex items-center gap-2"><input type="checkbox" checked={refundShipping} onChange={e=>{setRefundShipping(e.target.checked);setCustomRefundAmount('');}}/>Shipping (${Number(order.totalShippingPrice || 0).toFixed(2)})</label></section>
++            <section className="bg-white rounded-lg border p-5"><label className="font-semibold block mb-3">Reason for refund</label><input aria-label="Reason for refund" placeholder="Add a reason for the refund" className="w-full border rounded p-2 text-sm" value={refundNote} onChange={e=>setRefundNote(e.target.value)}/><p className="text-xs text-gray-500 mt-2">Only you and other staff can see this reason.</p></section>
++          </div><aside className="bg-white rounded-lg border p-5 space-y-4">
++            <h2 className="font-semibold">Summary</h2><div className="flex justify-between text-sm"><span>Items</span><span>${(refundTotal-(refundShipping?Number(order.totalShippingPrice || 0):0)).toFixed(2)}</span></div><div className="flex justify-between text-sm"><span>Shipping</span><span>${(refundShipping?Number(order.totalShippingPrice || 0):0).toFixed(2)}</span></div>
++            <div className="border-t pt-4"><label className="block text-sm mb-1">Refund method</label><select aria-label="Refund method" className="w-full border rounded p-2 text-sm" value={refundMethod} onChange={e=>setRefundMethod(e.target.value)}><option value="original">{order.paymentMethodLabel || 'Original payment method'}</option><option value="store_credit" disabled={!order.customer?.id}>Store credit</option></select></div>
++            <div><label className="block text-sm mb-1">Refund amount</label><input aria-label="Refund amount" inputMode="decimal" className="w-full border rounded p-2 text-sm" value={customRefundAmount===''?refundTotal.toFixed(2):customRefundAmount} onChange={e=>setCustomRefundAmount(e.target.value)}/><p className="text-xs text-gray-500 mt-1">Maximum selected amount: ${refundTotal.toFixed(2)}. Remaining paid balance: ${(Number(order.totalPrice)-(order.refunds || []).reduce((n,r)=>n+Number(r.total || 0),0)).toFixed(2)}.</p></div>
++            <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={notifyCustomer} onChange={e=>setNotifyCustomer(e.target.checked)}/>Send a notification to the customer</label>
++            <button type="submit" className="btn-primary w-full" disabled={!/^\d+(?:\.\d{1,2})?$/.test(String(customRefundAmount===''?refundTotal.toFixed(2):customRefundAmount)) || !(Number(customRefundAmount===''?refundTotal:customRefundAmount)>0 && Number(customRefundAmount===''?refundTotal:customRefundAmount)<=Math.min(refundTotal,Number(order.totalPrice)-(order.refunds || []).reduce((n,r)=>n+Number(r.total || 0),0)))}>Refund ${(Number(customRefundAmount===''?refundTotal:customRefundAmount)||0).toFixed(2)}</button>
++          </aside></div>
++        </form></section>}
+ 
+       {/* Edit Order Modal */}
+       {showEditModal && (

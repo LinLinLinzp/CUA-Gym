@@ -1,0 +1,518 @@
+{
+ "airbnb": {
+  "hub": "airbnb_mock",
+  "brand": "Airbnb",
+  "origins": [
+   "https://www.airbnb.com"
+  ],
+  "scenario": "生活消费",
+  "tier": "A",
+  "workflows": "search stays, book/cancel, guest-host messages, reviews, wishlists",
+  "engine": "codex",
+  "rounds": 0
+ },
+ "medium": {
+  "hub": "medium_mock",
+  "brand": "Medium",
+  "origins": [
+   "https://medium.com"
+  ],
+  "scenario": "文化内容",
+  "tier": "A",
+  "workflows": "drafts, publish, lists, responses, publications",
+  "engine": "codex",
+  "rounds": 0
+ },
+ "yahoo_mail": {
+  "hub": "yahoo_mail_mock",
+  "brand": "Yahoo Mail",
+  "origins": [
+   "https://mail.yahoo.com"
+  ],
+  "scenario": "公共工具",
+  "tier": "A",
+  "workflows": "inbox, folders, filters, attachments, reply/forward, contacts",
+  "engine": "codex",
+  "rounds": 0,
+  "audit_debt": [
+   "### AUDIT-003 · The shared Harbor runtime rejects uploads ending in a newline",
+   "### AUDIT-012 · A fast reload can silently drop a confirmed action"
+  ]
+ },
+ "clickup": {
+  "hub": "clickup_mock",
+  "brand": "ClickUp",
+  "origins": [
+   "https://app.clickup.com"
+  ],
+  "scenario": "组织办公",
+  "tier": "A",
+  "workflows": "tasks, docs, sprints, time tracking",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-401 · A passive Doc load saves the entire workspace",
+   "### AUDIT-402 · Saving a time-entry note can silently shorten logged time",
+   "### AUDIT-403 · Resubmitting an injected sheet without history crashes"
+  ]
+ },
+ "mattermost": {
+  "hub": "mattermost_mock",
+  "brand": "Mattermost",
+  "origins": [
+   "https://acme.cloud.mattermost.com"
+  ],
+  "scenario": "公共工具",
+  "tier": "A",
+  "workflows": "channels, threads, pinned posts, file uploads",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-012 · Retry save can erase another tab’s committed post"
+  ]
+ },
+ "xero": {
+  "hub": "xero_mock",
+  "brand": "Xero",
+  "origins": [
+   "https://go.xero.com"
+  ],
+  "scenario": "专业事务",
+  "tier": "A",
+  "workflows": "invoices, bank reconciliation, bills, reports",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · Out-of-order snapshots lose a successful bulk change",
+   "### AUDIT-002 · Selecting a contact in a sparse invoice or bill editor throws",
+   "### AUDIT-003 · Excel export can record success and fail before downloading",
+   "### AUDIT-004 · Account Transactions source links lead to the wrong record"
+  ]
+ },
+ "microsoft_excel_for_the_web": {
+  "hub": "microsoft_excel_for_the_web_mock",
+  "brand": "Microsoft Excel for the web",
+  "origins": [
+   "https://excel.cloud.microsoft"
+  ],
+  "scenario": "公共工具",
+  "tier": "A",
+  "workflows": "workbooks, sheets, formulas, filters, sharing",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-018 · Create workbook throws while the initial save is pending",
+   "### AUDIT-019 · A failed initial read replaces injected current state with the seed",
+   "### AUDIT-020 · Overlapping saves can erase an acknowledged edit across browser contexts",
+   "### AUDIT-021 · Sorting a subset of formula inputs silently changes the calculation"
+  ]
+ },
+ "microsoft_word_for_the_web": {
+  "hub": "microsoft_word_for_the_web_mock",
+  "brand": "Microsoft Word for the web",
+  "origins": [
+   "https://word.cloud.microsoft"
+  ],
+  "scenario": "公共工具",
+  "tier": "A",
+  "workflows": "documents, comments, track changes, sharing",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · Out-of-order POSTs erase successful user edits",
+   "### AUDIT-002 · An Anyone edit link can report an invitation without saving it"
+  ]
+ },
+ "bitbucket": {
+  "hub": "bitbucket_mock",
+  "brand": "Bitbucket",
+  "origins": [
+   "https://bitbucket.org"
+  ],
+  "scenario": "数字技术",
+  "tier": "A",
+  "workflows": "repos, PRs, pipelines",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · Harbor returns 404 for Source file deep links",
+   "### AUDIT-002 · A late save silently reverts a newer successful action in `/go`"
+  ]
+ },
+ "netsuite": {
+  "hub": "netsuite_mock",
+  "brand": "NetSuite",
+  "origins": [
+   "https://acme.app.netsuite.com"
+  ],
+  "scenario": "产业运营",
+  "tier": "A",
+  "workflows": "sales orders, POs, inventory, invoices",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · A late boot POST can erase an acknowledged save",
+   "### AUDIT-002 · Stock transfer can record a quantity that never moves"
+  ]
+ },
+ "walmart": {
+  "hub": "walmart_mock",
+  "brand": "Walmart",
+  "origins": [
+   "https://www.walmart.com"
+  ],
+  "scenario": "生活消费",
+  "tier": "A",
+  "workflows": "cart, orders, returns, pickup slots, registry",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · An older request can erase a newer committed snapshot",
+   "### AUDIT-002 · A second tab overwrites an already saved change for the same SID"
+  ]
+ },
+ "substack": {
+  "hub": "substack_mock",
+  "brand": "Substack",
+  "origins": [
+   "https://substack.com"
+  ],
+  "scenario": "文化内容",
+  "tier": "A",
+  "workflows": "posts, subscribers, comp subscriptions, comments",
+  "engine": "codex",
+  "rounds": 2,
+  "audit_debt": []
+ },
+ "freshbooks": {
+  "hub": "freshbooks_mock",
+  "brand": "FreshBooks",
+  "origins": [
+   "https://my.freshbooks.com"
+  ],
+  "scenario": "专业事务",
+  "tier": "A",
+  "workflows": "invoices, time, expenses, retainers",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · A stale tab erases a saved transaction",
+   "### AUDIT-002 · A delayed hydration POST can overwrite the first saved transaction",
+   "### AUDIT-003 · Bottom invoice row menus open beyond the viewport",
+   "### AUDIT-004 · Mark as Sent silently drops the command for an invoice without status",
+   "### AUDIT-005 · A sparse injected retainer period creates an invalid fee invoice"
+  ]
+ },
+ "azure_devops": {
+  "hub": "azure_devops_mock",
+  "brand": "Azure DevOps",
+  "origins": [
+   "https://dev.azure.com"
+  ],
+  "scenario": "数字技术",
+  "tier": "A",
+  "workflows": "boards, repos, pipelines, releases",
+  "engine": "codex",
+  "rounds": 3,
+  "audit_debt": [
+   "### AUDIT-007 · Overlapping saves from independent browser profiles can erase an acknowledged edit",
+   "### AUDIT-013 · Opening a workspace in a fresh profile can overwrite a save",
+   "### AUDIT-014 · Renaming a saved query can silently revert its clauses"
+  ]
+ },
+ "basecamp": {
+  "hub": "basecamp_mock",
+  "brand": "Basecamp",
+  "origins": [
+   "https://3.basecamp.com"
+  ],
+  "scenario": "组织办公",
+  "tier": "A",
+  "workflows": "to-dos, message boards, schedules",
+  "engine": "codex",
+  "rounds": 4,
+  "audit_debt": [
+   "### AUDIT-013 · Editing one field in a stale tab overwrites another tab’s saved field",
+   "### AUDIT-014 · Retry clears a pending to-do after its parent list is trashed",
+   "### AUDIT-015 · A failed first state read lets boot overwrite injected records"
+  ]
+ },
+ "target": {
+  "hub": "target_mock",
+  "brand": "Target",
+  "origins": [
+   "https://www.target.com"
+  ],
+  "scenario": "生活消费",
+  "tier": "A",
+  "workflows": "cart, Circle offers, order pickup, returns",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · An older whole-state save can erase a later action"
+  ]
+ },
+ "wordpress_com": {
+  "hub": "wordpress_com_mock",
+  "brand": "WordPress.com",
+  "origins": [
+   "https://wordpress.com"
+  ],
+  "scenario": "文化内容",
+  "tier": "A",
+  "workflows": "posts, pages, media, comments moderation",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · A failed server write still shows a save confirmation",
+   "### AUDIT-002 · An earlier save can overwrite a later save",
+   "### AUDIT-003 · Literal WordPress admin deep links return 404 in Harbor"
+  ]
+ },
+ "california_dmv": {
+  "hub": "california_dmv_mock",
+  "brand": "California DMV",
+  "origins": [
+   "https://www.dmv.ca.gov"
+  ],
+  "scenario": "公共事务",
+  "tier": "A",
+  "workflows": "appointments, registration renewal, address change",
+  "engine": "codex",
+  "rounds": 2,
+  "audit_debt": [
+   "### AUDIT-006 · A failed initial state read overwrites the session",
+   "### AUDIT-007 · Independent browser sessions can erase confirmed requests"
+  ]
+ },
+ "smartsheet": {
+  "hub": "smartsheet_mock",
+  "brand": "Smartsheet",
+  "origins": [
+   "https://app.smartsheet.com"
+  ],
+  "scenario": "组织办公",
+  "tier": "A",
+  "workflows": "sheets, forms, approvals, Gantt",
+  "engine": "codex",
+  "rounds": 1,
+  "audit_debt": [
+   "### AUDIT-001 · Delayed saves overwrite newer revisions in `/go`",
+   "### AUDIT-002 · Saving a form can silently remove an existing required field"
+  ]
+ },
+ "wayfair": {
+  "hub": "wayfair_mock",
+  "brand": "Wayfair",
+  "origins": [
+   "https://www.wayfair.com"
+  ],
+  "scenario": "生活消费",
+  "tier": "B",
+  "workflows": "orders, delivery scheduling, damage claims, returns",
+  "audit_debt": [],
+  "source_branch": "codex/mock-wayfair-grubhub",
+  "source_commit": "409a181010a7210b67deadae667d2c5d0252057c",
+  "source_tree": "ad5cda18ab06163ba87d18b02a5453e1cc2006f8"
+ },
+ "grubhub": {
+  "hub": "grubhub_mock",
+  "brand": "Grubhub",
+  "origins": [
+   "https://www.grubhub.com"
+  ],
+  "scenario": "生活消费",
+  "tier": "B",
+  "workflows": "orders, scheduled delivery, refunds",
+  "audit_debt": [],
+  "source_branch": "codex/mock-wayfair-grubhub",
+  "source_commit": "409a181010a7210b67deadae667d2c5d0252057c",
+  "source_tree": "b1827610bdbfb386a1cde5c65baa9e284ea3ce76"
+ },
+ "etsy": {
+  "hub": "etsy_mock",
+  "brand": "Etsy",
+  "origins": [
+   "https://www.etsy.com"
+  ],
+  "scenario": "生活消费",
+  "tier": "A",
+  "workflows": "buy, messages to shops, cases/returns, favorites",
+  "audit_debt": [],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "3aa53e455fa14dbde186c48b690aefda2c7a1165"
+ },
+ "heroku": {
+  "hub": "heroku_mock",
+  "brand": "Heroku",
+  "origins": [
+   "https://dashboard.heroku.com"
+  ],
+  "scenario": "数字技术",
+  "tier": "A",
+  "workflows": "apps, dynos, add-ons, releases",
+  "audit_debt": [],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "a0fa74e793c01299a37858c879728e5f06e2d385"
+ },
+ "lexisnexis": {
+  "hub": "lexisnexis_mock",
+  "brand": "LexisNexis",
+  "origins": [
+   "https://advance.lexis.com"
+  ],
+  "scenario": "专业事务",
+  "tier": "A",
+  "workflows": "research folders, citations, alerts",
+  "audit_debt": [],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "aaf4fc69058f0d36dd71610ed5cfb8b83d1dd28d"
+ },
+ "best_buy": {
+  "hub": "best_buy_mock",
+  "brand": "Best Buy",
+  "origins": [
+   "https://www.bestbuy.com"
+  ],
+  "scenario": "生活消费",
+  "tier": "A",
+  "workflows": "orders, price match, protection plans, returns",
+  "audit_debt": [],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "7f865e6cf00f703b3f127261578282d3677fedee"
+ },
+ "digitalocean": {
+  "hub": "digitalocean_mock",
+  "brand": "DigitalOcean",
+  "origins": [
+   "https://cloud.digitalocean.com"
+  ],
+  "scenario": "数字技术",
+  "tier": "A",
+  "workflows": "droplets, DNS, snapshots",
+  "audit_debt": [
+   "### AUDIT-001 · A valid injected world can exceed Chromium's keepalive byte limit",
+   "### AUDIT-002 · A delayed baseline can overwrite a saved mutation"
+  ],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "1d39c8ec29030158842b02f1cfc3897c54b80837"
+ },
+ "freshdesk": {
+  "hub": "freshdesk_mock",
+  "brand": "Freshdesk",
+  "origins": [
+   "https://acme.freshdesk.com"
+  ],
+  "scenario": "产业运营",
+  "tier": "A",
+  "workflows": "tickets, SLAs, canned responses",
+  "audit_debt": [
+   "### AUDIT-001 · A delayed boot snapshot can erase a successful first edit"
+  ],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "f5feb108c8878972c3f499d6e9dc4140ffaa7c1f"
+ },
+ "goodreads": {
+  "hub": "goodreads_mock",
+  "brand": "Goodreads",
+  "origins": [
+   "https://www.goodreads.com"
+  ],
+  "scenario": "文化内容",
+  "tier": "A",
+  "workflows": "shelves, reviews, reading challenge",
+  "audit_debt": [
+   "### AUDIT-001 · A delayed startup baseline overwrites a user save",
+   "### AUDIT-002 · A rejected state save still announces success"
+  ],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "f8ef07768abc2144e26be0d0776dabeca1c46650"
+ },
+ "imdb": {
+  "hub": "imdb_mock",
+  "brand": "IMDb",
+  "origins": [
+   "https://www.imdb.com"
+  ],
+  "scenario": "文化内容",
+  "tier": "A",
+  "workflows": "watchlist, ratings, lists",
+  "audit_debt": [
+   "### AUDIT-001 · Baseline could overwrite the first mutation"
+  ],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "f4a22590d657da633f9aab6dbb89867049d43a71"
+ },
+ "my_social_security": {
+  "hub": "my_social_security_mock",
+  "brand": "my Social Security",
+  "origins": [
+   "https://secure.ssa.gov"
+  ],
+  "scenario": "公共事务",
+  "tier": "A",
+  "workflows": "benefit statements, direct deposit, letters",
+  "audit_debt": [],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "5d47557637ad2201151af3aed0ad78623c887e51"
+ },
+ "myuscis": {
+  "hub": "myuscis_mock",
+  "brand": "myUSCIS",
+  "origins": [
+   "https://my.uscis.gov"
+  ],
+  "scenario": "公共事务",
+  "tier": "A",
+  "workflows": "case status, forms, address change",
+  "audit_debt": [
+   "### AUDIT-001 · A delayed startup write can erase the first user action"
+  ],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "9d1ecf2c4cb28d1101cb3622aae6bb0f65428ebf"
+ },
+ "surveymonkey": {
+  "hub": "surveymonkey_mock",
+  "brand": "SurveyMonkey",
+  "origins": [
+   "https://www.surveymonkey.com"
+  ],
+  "scenario": "组织办公",
+  "tier": "A",
+  "workflows": "surveys, responses, collectors",
+  "audit_debt": [
+   "### AUDIT-001 · Saving one answer can undo a different answer in another tab",
+   "### AUDIT-002 · Saving a closed message can silently reverse the collector’s identity setting",
+   "### AUDIT-003 · Saving a sparse injected choice throws before validation"
+  ],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "70e950e41fd76f05968baa7db1f5d8897d1b049f"
+ },
+ "typeform": {
+  "hub": "typeform_mock",
+  "brand": "Typeform",
+  "origins": [
+   "https://admin.typeform.com"
+  ],
+  "scenario": "组织办公",
+  "tier": "A",
+  "workflows": "forms, logic, responses",
+  "audit_debt": [
+   "### AUDIT-001 · Confirming a draft edit can erase a newer edit"
+  ],
+  "source_branch": "codex/mock-tier-a-production",
+  "source_commit": "7db18e5abed32442a16eb714085047b4b3bb4941",
+  "source_tree": "0982d95b58ed59d9ff01379fa81c4b1badda34bc"
+ }
+}

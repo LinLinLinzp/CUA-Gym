@@ -1,0 +1,414 @@
+diff --git a/public/zendesk-navigation-mark.svg b/public/zendesk-navigation-mark.svg
+new file mode 100644
+index 0000000..70b37a9
+--- /dev/null
++++ b/public/zendesk-navigation-mark.svg
+@@ -0,0 +1,3 @@
++<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" focusable="false" viewBox="0 0 26 26">
++  <path fill="currentColor" d="M12 8.2v14.5H0zM12 3c0 3.3-2.7 6-6 6S0 6.3 0 3h12zm2 19.7c0-3.3 2.7-6 6-6s6 2.7 6 6H14zm0-5.2V3h12z"/>
++</svg>
+diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+index 883f6c8..16db746 100644
+--- a/src/components/Sidebar.jsx
++++ b/src/components/Sidebar.jsx
+@@ -79,12 +79,9 @@ export default function Sidebar() {
+ 
+   return (
+     <nav className="sidebar">
+-      <div className="sidebar-logo" onClick={() => navigate(appendQuery('/'))}>
+-        <svg viewBox="0 0 26 26" fill="none">
+-          <path d="M13 0C5.82 0 0 5.82 0 13s5.82 13 13 13 13-5.82 13-13S20.18 0 13 0z" fill="#03363D"/>
+-          <path d="M18.5 8.5l-4.2 9.3h-2.6L7.5 8.5h2.8l2.7 6.2 2.7-6.2h2.8z" fill="#fff"/>
+-        </svg>
+-      </div>
++      <button type="button" className="sidebar-logo" aria-label="Zendesk Home" onClick={() => navigate(appendQuery('/'))}>
++        <span className="sidebar-logo-mark" aria-hidden="true" />
++      </button>
+ 
+       <div className="sidebar-nav">
+         {navItems.map((item) => (
+diff --git a/src/context/AppContext.jsx b/src/context/AppContext.jsx
+index 4345b8b..12cc323 100644
+--- a/src/context/AppContext.jsx
++++ b/src/context/AppContext.jsx
+@@ -56,6 +56,28 @@ function appReducer(state, action) {
+       return { ...state, comments: newComments, tickets: updatedTickets };
+     }
+ 
++    case 'DISCLOSURE_UPDATE': {
++      const { tid, comment, changes, kind } = action.payload;
++      const thread = state.comments[tid] || [];
++      const ticket = state.tickets.find(row => row.id === tid);
++      const current = thread.find(row => row.id === comment.id);
++      if (!state.currentUser.canRedactContent || !ticket || current !== comment) return state;
++      if (!['email', 'web'].includes(ticket.via?.channel)) return state;
++      const now = new Date().toISOString();
++      const tickets = state.tickets.map(row => row.id === tid ? {
++        ...row,
++        updated_at: now,
++        description: kind === 'redact' && thread[0] === current && row.description === current.body ? changes.body : row.description,
++        tags: kind === 'redact' ? [...new Set([...row.tags, 'redacted_content'])] : row.tags,
++        disclosure_events: [...(row.disclosure_events || []), { kind, comment_id: current.id, at: now }],
++      } : row);
++      return {
++        ...state,
++        tickets,
++        comments: { ...state.comments, [tid]: thread.map(row => row === current ? { ...row, ...changes } : row) },
++      };
++    }
++
+     case 'UPDATE_COMMENT': {
+       const { ticketId: tid, commentId, changes } = action.payload;
+       const updated = { ...state.comments };
+diff --git a/src/index.css b/src/index.css
+index 223a8c2..f1fe3c7 100644
+--- a/src/index.css
++++ b/src/index.css
+@@ -92,15 +92,19 @@ body {
+   width: 28px;
+   height: 28px;
+   margin-bottom: 20px;
++  border: 0;
++  background: transparent;
+   cursor: pointer;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+ }
+ 
+-.sidebar-logo svg {
+-  width: 28px;
+-  height: 28px;
++.sidebar-logo-mark {
++  width: 20px;
++  height: 20px;
++  background: #fff;
++  mask: url("/zendesk-navigation-mark.svg") center / contain no-repeat;
+ }
+ 
+ .sidebar-nav {
+@@ -638,9 +642,26 @@
+ .status-dot.new { background: #4A90D9; }
+ .status-dot.open { background: #E35B51; }
+ .status-dot.pending { background: #3091EC; }
+ .status-dot.hold { background: #2F3941; }
+ .status-dot.solved { background: #87929D; }
+ .status-dot.closed { background: #C2C8CC; }
+ 
++.status-dot.views-ticket-status {
++  display: inline-grid;
++  place-items: center;
++  width: 15px;
++  height: 15px;
++  border-radius: 3px;
++  color: white;
++  font-size: 9px;
++  font-weight: 700;
++  line-height: 1;
++}
++.status-dot.views-ticket-status.new { background: #ffb057; color: #382300; }
++.status-dot.views-ticket-status.open { background: #c73228; }
++.status-dot.views-ticket-status.pending { background: #176fc1; }
++.status-dot.views-ticket-status.solved,
++.status-dot.views-ticket-status.closed { background: #d8dcde; color: #2f3941; }
++
+ /* Priority Badge */
+ .priority-badge {
+diff --git a/src/pages/DisclosurePanel.css b/src/pages/DisclosurePanel.css
+new file mode 100644
+index 0000000..fd683e3
+--- /dev/null
++++ b/src/pages/DisclosurePanel.css
+@@ -0,0 +1,32 @@
++body:has(.disclosure-utility), .disclosure-dialog { font-family: Arial, "Liberation Sans", sans-serif; }
++.disclosure-dialog { width: min(900px, 90vw); max-height: 87vh; overflow: auto; color: #202d3a; border: 1px solid #c4cfdb; border-radius: 10px; padding: 20px; }
++.disclosure-dialog::backdrop { background: #101b32a0; }
++.disclosure-dialog header, .disclosure-dialog footer, .disclosure-mark { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
++.disclosure-dialog header { margin-bottom: 16px; }
++.disclosure-dialog h2 { margin: 0; font-size: 18px; }
++.disclosure-dialog textarea { width: 100%; box-sizing: border-box; resize: vertical; margin: 8px 0; padding: 9px; font: 13px/20px "Courier New", "Liberation Mono", monospace; }
++.disclosure-dialog button, .disclosure-utility button, .disclosure-file { font: inherit; border: 1px solid #a9b9ce; border-radius: 5px; padding: 5px 10px; background: white; color: #183958; cursor: pointer; }
++.disclosure-dialog .disclosure-primary { background: #284973; color: white; border-color: #284973; }
++.disclosure-dialog button:disabled { opacity: .45; cursor: default; }
++.disclosure-dialog fieldset { margin: 12px 0; padding: 8px; border: 1px solid #a9b9ce; }
++.disclosure-dialog fieldset label { display: block; margin: 4px; }
++.disclosure-mark { padding: 6px 0; }
++.disclosure-mark mark { overflow-wrap: anywhere; white-space: pre-wrap; }
++.disclosure-file { display: inline-block; margin: 6px 8px 0 0; }
++.disclosure-utility { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
++.disclosure-comment-actions { position: relative; margin-left: auto; }
++.disclosure-comment-actions [role="menu"] { position: absolute; top: 100%; right: 0; z-index: 1; background: white; width: max-content; padding: 4px; border: 1px solid #a9b9ce; border-radius: 5px; }
++.disclosure-request { background: #f8fafc; padding: 24px; height: 100%; overflow: auto; color: #26374a; }
++.disclosure-request header { display: flex; justify-content: space-between; border-bottom: 2px solid #567594; padding-bottom: 16px; }
++.disclosure-request-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, 25%); gap: 20px; }
++.disclosure-request article { padding: 14px 0; border-bottom: 1px solid #c4cfdb; }
++.disclosure-request article p, .disclosure-attachment-preview { white-space: pre-wrap; overflow-wrap: anywhere; }
++.disclosure-request time { display: block; font-size: 12px; color: #536679; }
++.disclosure-request dl { margin: 0; background: #eaf0f7; padding: 12px; height: fit-content; }
++.disclosure-request dd { margin: 0 0 12px; }
++.disclosure-events { padding: 12px; }
++.disclosure-events > article { padding: 12px 0; border-bottom: 1px solid #c4cfdb; white-space: pre-wrap; }
++
++.disclosure-dialog { margin: auto; }
++.disclosure-file { text-decoration: none; }
++
+diff --git a/src/pages/DisclosurePanel.jsx b/src/pages/DisclosurePanel.jsx
+new file mode 100644
+index 0000000..d1bd246
+--- /dev/null
++++ b/src/pages/DisclosurePanel.jsx
+@@ -0,0 +1,96 @@
++import React, { useEffect, useRef, useState } from 'react';
++import './DisclosurePanel.css';
++
++export function AttachmentList({ comment, onOpen }) {
++  return (comment.attachments || []).map(file => (
++    <button key={file.id} type="button" className="disclosure-file"
++      onClick={() => onOpen(file)}>{file.file_name}</button>
++  ));
++}
++
++export function DisclosureDialog({ title, children, onClose }) {
++  const ref = useRef(null);
++  useEffect(() => {
++    ref.current.showModal();
++  }, []);
++  return <dialog ref={ref} className="disclosure-dialog" aria-label={title}
++    onCancel={event => { event.preventDefault(); onClose(); }}>
++    <header><h2>{title}</h2><button type="button" onClick={onClose} aria-label="Close dialog">×</button></header>
++    {children}
++  </dialog>;
++}
++
++export function RedactionEditor({ comment, onApply }) {
++  const [ranges, setRanges] = useState([]);
++  const [files, setFiles] = useState([]);
++  const [notice, setNotice] = useState('');
++  const selection = useRef(null);
++
++  function markSelection() {
++    const { selectionStart: start, selectionEnd: end } = selection.current;
++    if (start === end) {
++      setNotice('Select a text range first.');
++      return;
++    }
++    if (ranges.some(range => start < range.end && end > range.start)) {
++      setNotice('This selection overlaps a marked range. Unmark the earlier selection first.');
++      return;
++    }
++    setRanges([...ranges, { start, end }]);
++    setNotice('');
++  }
++
++  function apply() {
++    const body = [...ranges].sort((left, right) => right.start - left.start).reduce(
++      (text, { start, end }) => text.slice(0, start) + '█'.repeat(end - start) + text.slice(end), comment.body);
++    const attachments = (comment.attachments || []).filter(file => !files.includes(file.id));
++    onApply({ body, html_body: '', attachments });
++  }
++
++  return <div>
++    <label htmlFor="redaction-source">Comment text</label>
++    <textarea id="redaction-source" ref={selection} readOnly wrap="off" rows={6} value={comment.body} />
++    <button type="button" onClick={markSelection}>Mark for redaction</button>
++    {notice && <p role="status">{notice}</p>}
++    {ranges.map(({ start, end }) => <div className="disclosure-mark" key={start}>
++      <mark>{comment.body.slice(start, end)}</mark>
++      <button type="button" onClick={() => setRanges(ranges.filter(range => range.start !== start))}>Unmark</button>
++    </div>)}
++    {(comment.attachments || []).length > 0 && <fieldset>
++      <legend>Attachments to redact</legend>
++      {comment.attachments.map(file => <label key={file.id}>
++        <input type="checkbox" checked={files.includes(file.id)}
++          onChange={event => setFiles(event.target.checked ? [...files, file.id] : files.filter(id => id !== file.id))} />
++        {file.file_name}
++      </label>)}
++    </fieldset>}
++    <footer>
++      <p>Redaction permanently removes the marked material from this ticket.</p>
++      <button type="button" className="disclosure-primary" onClick={apply} disabled={!ranges.length && !files.length}>Redact</button>
++    </footer>
++  </div>;
++}
++
++export function RequestView({ ticket, comments, requester, getUser, onOpen }) {
++  return <section className="disclosure-request">
++    <header><strong>Harborline Help Center</strong><span>{requester.name}</span></header>
++    <p>My activities / Requests / #{ticket.id}</p>
++    <h2>{ticket.subject}</h2>
++    <div className="disclosure-request-columns">
++      <div>
++        {comments.filter(comment => comment.public).map(comment => <article key={comment.id}>
++          <strong>{getUser(comment.author_id)?.name}</strong>
++          <time dateTime={comment.created_at}>{new Date(comment.created_at).toLocaleString()}</time>
++          <p>{comment.body}</p>
++          <AttachmentList comment={comment} onOpen={onOpen} />
++        </article>)}
++      </div>
++      <dl>
++        <dt>Requester</dt><dd>{requester.name}</dd>
++        <dt>Request ID</dt><dd>#{ticket.id}</dd>
++        <dt>Status</dt><dd>{ticket.status === 'pending' ? 'Awaiting your reply' : ticket.status}</dd>
++      </dl>
++    </div>
++  </section>;
++}
++
+diff --git a/src/pages/TicketDetail.jsx b/src/pages/TicketDetail.jsx
+index ce8b5e7..9db5484 100644
+--- a/src/pages/TicketDetail.jsx
++++ b/src/pages/TicketDetail.jsx
+@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
+ import { Lock, Bold, Italic, List, ListOrdered, Code, LinkIcon, Paperclip, ChevronDown, ChevronUp, Plus, X, UserPlus, PanelRightClose, PanelRightOpen, Trash2 } from 'lucide-react';
+ import { useApp } from '../context/AppContext.jsx';
+ import { useToast } from '../context/ToastContext.jsx';
++import { AttachmentList, DisclosureDialog, RedactionEditor, RequestView } from './DisclosurePanel.jsx';
+ import StatusBadge from '../components/StatusBadge.jsx';
+ import PriorityBadge from '../components/PriorityBadge.jsx';
+ import SlaIndicator from '../components/SlaIndicator.jsx';
+@@ -31,6 +32,9 @@ export default function TicketDetail() {
+   const [stayOnTicket, setStayOnTicket] = useState(true);
+   const [contextPanelOpen, setContextPanelOpen] = useState(true);
+   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
++  const [disclosureMode, setDisclosureMode] = useState('conversation');
++  const [openActions, setOpenActions] = useState(null);
++  const [disclosureDialog, setDisclosureDialog] = useState(null);
+   const messagesEndRef = useRef(null);
+   const textareaRef = useRef(null);
+   const macroDropdownRef = useRef(null);
+@@ -48,6 +52,12 @@ export default function TicketDetail() {
+     if (ticket) {
+       dispatch({ type: 'OPEN_TICKET_TAB', payload: tid });
+     }
++    setDisclosureMode('conversation');
++    setOpenActions(null);
++    setDisclosureDialog(null);
++    setReplyText('');
++    setReplyMode('public');
++    setSubmitStatus(ticket?.status || 'open');
+   }, [tid]);
+ 
+   useEffect(() => {
+@@ -104,6 +114,15 @@ export default function TicketDetail() {
+   const org = state.organizations.find(o => o.id === ticket.organization_id);
+   const group = state.groups.find(g => g.id === ticket.group_id);
+ 
++  const canRedact = state.currentUser.canRedactContent && ['email', 'web'].includes(ticket.via?.channel);
++  const closeDisclosureDialog = () => setDisclosureDialog(null);
++  const openAttachment = file => setDisclosureDialog({ kind: 'attachment', file });
++  const changeComment = changes => {
++    dispatch({ type: 'DISCLOSURE_UPDATE', payload: { tid, comment: disclosureDialog.comment, changes, kind: disclosureDialog.kind } });
++    closeDisclosureDialog();
++    addToast(disclosureDialog.kind === 'redact' ? 'Marked content redacted' : 'Comment converted to internal note');
++  };
++
+   const requesterTickets = state.tickets.filter(t => t.id !== tid && t.requester_id === ticket.requester_id);
+ 
+   const handleFieldChange = (field, value) => {
+@@ -117,7 +136,7 @@ export default function TicketDetail() {
+       ticket_id: tid,
+       author_id: state.currentUser.id,
+       body: replyText.trim(),
+-      html_body: `<p>${replyText.trim().replace(/\n/g, '<br>')}</p>`,
++      html_body: state.currentUser.canRedactContent ? '' : `<p>${replyText.trim().replace(/\n/g, '<br>')}</p>`,
+       public: replyMode === 'public',
+       type: 'Comment',
+       attachments: [],
+@@ -518,6 +537,11 @@ export default function TicketDetail() {
+             <div className="conversation-via">via {ticket.via?.channel || 'web'}</div>
+             <SlaIndicator ticket={ticket} />
+           </div>
++          {canRedact && <nav className="disclosure-utility" aria-label="Ticket presentation">
++            <button type="button" aria-pressed={disclosureMode === 'conversation'} onClick={() => setDisclosureMode('conversation')}>Conversation</button>
++            <button type="button" aria-pressed={disclosureMode === 'events'} onClick={() => setDisclosureMode('events')}>Events</button>
++            {ticket.is_public && <button type="button" aria-pressed={disclosureMode === 'request'} onClick={() => setDisclosureMode('request')}>Requester view</button>}
++          </nav>}
+           {ticket.satisfaction_rating && ticket.satisfaction_rating.score && (
+             <div style={{ marginTop: 8, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+               <span style={{ color: '#68737D' }}>Satisfaction:</span>
+@@ -539,7 +563,19 @@ export default function TicketDetail() {
+           )}
+         </div>
+ 
+-        <div className="conversation-messages">
++        {disclosureMode === 'request' && <RequestView ticket={ticket} comments={comments}
++          requester={requester} getUser={getUserById} onOpen={openAttachment} />}
++        {disclosureMode === 'events' && <div className="conversation-messages disclosure-events">
++          {comments.map(comment => <article key={comment.id}>
++            <strong>{getUserById(comment.author_id)?.name} · {comment.public ? 'Public reply' : 'Internal note'}</strong>
++            <p>{comment.body}</p>
++            {comment.public && <button type="button" onClick={() => setDisclosureDialog({ kind: 'convert', comment })}>Convert to internal note</button>}
++          </article>)}
++          {(ticket.disclosure_events || []).map((event, index) => <article key={index}>
++            {event.kind === 'convert' ? 'Comment converted to internal note' : 'Comment content redacted'} · {formatTime(event.at)}
++          </article>)}
++        </div>}
++        <div className="conversation-messages" hidden={disclosureMode !== 'conversation'} style={{ display: disclosureMode !== 'conversation' ? 'none' : undefined }}>
+           {comments.map(comment => {
+             const author = getUserById(comment.author_id);
+             const isInternal = !comment.public;
+@@ -563,13 +599,24 @@ export default function TicketDetail() {
+                     </span>
+                     <div className="comment-time">{formatTime(comment.created_at)}</div>
+                   </div>
++                  {canRedact && <div className="disclosure-comment-actions">
++                    <button type="button" className="header-btn" aria-label="Comment options"
++                      aria-expanded={openActions === comment.id} onClick={() => setOpenActions(openActions === comment.id ? null : comment.id)}>⋯</button>
++                    {openActions === comment.id && <div role="menu">
++                      <button type="button" role="menuitem" onClick={() => {
++                        setOpenActions(null);
++                        setDisclosureDialog({ kind: 'redact', comment });
++                      }}>Mark text for redaction</button>
++                    </div>}
++                  </div>}
+                 </div>
+                 <div className="comment-body">
+                   {comment.html_body ? (
+                     <div dangerouslySetInnerHTML={{ __html: comment.html_body }} />
+                   ) : (
+-                    comment.body
++                    <div style={{ whiteSpace: 'pre-wrap' }}>{comment.body}</div>
+                   )}
++                  {canRedact && <AttachmentList comment={comment} onOpen={openAttachment} />}
+                 </div>
+               </div>
+             );
+@@ -577,8 +624,22 @@ export default function TicketDetail() {
+           <div ref={messagesEndRef} />
+         </div>
+ 
++        {disclosureDialog?.kind === 'redact' && <DisclosureDialog title="Redact comment content" onClose={closeDisclosureDialog}>
++          <RedactionEditor comment={disclosureDialog.comment} onApply={changeComment} />
++        </DisclosureDialog>}
++        {disclosureDialog?.kind === 'convert' && <DisclosureDialog title="Convert to internal note" onClose={closeDisclosureDialog}>
++          <p>The requester and anyone copied on the ticket will lose access to this comment. You cannot make it public again.</p>
++          <footer><button type="button" onClick={closeDisclosureDialog}>Cancel</button>
++            <button type="button" className="disclosure-primary" onClick={() => changeComment({ public: false })}>Convert to internal note</button>
++          </footer>
++        </DisclosureDialog>}
++        {disclosureDialog?.kind === 'attachment' && <DisclosureDialog title={disclosureDialog.file.file_name} onClose={closeDisclosureDialog}>
++          <pre className="disclosure-attachment-preview">{disclosureDialog.file.content}</pre>
++          <footer><a className="disclosure-file" download={disclosureDialog.file.file_name}
++            href={`data:text/plain;charset=utf-8,${encodeURIComponent(disclosureDialog.file.content)}`}>Download</a></footer>
++        </DisclosureDialog>}
+         {/* Reply Composer */}
+-        <div className="reply-composer">
++        <div className="reply-composer" style={{ display: disclosureMode !== 'conversation' ? 'none' : undefined }}>
+           <div className="reply-mode-toggle">
+             <button
+               className={`reply-mode-btn ${replyMode === 'public' ? 'active public' : ''}`}
+diff --git a/src/pages/ViewsPage.jsx b/src/pages/ViewsPage.jsx
+--- a/src/pages/ViewsPage.jsx
++++ b/src/pages/ViewsPage.jsx
+@@ -285,7 +285,10 @@
+                     />
+                   </td>
+                   <td className="status-cell">
+-                    <span className={`status-dot ${ticket.status}`} />
++                    <span className={`status-dot views-ticket-status ${ticket.status}`}
++                      role="img" aria-label={ticket.status} title={ticket.status}>
++                      {ticket.status.slice(0, 1).toUpperCase()}
++                    </span>
+                   </td>
+                   <td className="id-cell">#{ticket.id}</td>
+                   <td className="subject-cell">

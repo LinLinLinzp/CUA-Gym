@@ -1,0 +1,59 @@
+* { box-sizing:border-box }
+body { margin:0; color:#222; font:16px/1.48 "Segoe UI",Arial,sans-serif }
+header { border-bottom:1px solid #ccc }
+.bar, main { max-width:1312px; margin:auto; padding-inline:32px }
+.bar { min-height:84px; display:flex; align-items:center; gap:36px }
+.bar img { width:125px }
+.bar strong { margin-left:auto }
+main { display:grid; grid-template-columns:248px minmax(0,1fr); gap:42px; padding-block:48px }
+h1 { font-size:30px; margin:6px 0 24px }
+aside hr { border:0; border-top:1px solid #ccc }
+aside h3 { font-size:18px }
+.eyebrow { color:#5c5c5c; font-size:13px }
+a { color:#006792 }
+section { position:relative }
+.workbar { background:#416d07; color:white; display:flex; gap:12px; align-items:center; padding:0 16px; min-height:56px; border-radius:3px }
+.workbar h2 { font-size:19px; margin:0 auto 0 0 }
+.workbar #toggle-works { padding:8px 0; font:inherit }
+#toggle-works::before { content:"⌄"; margin-right:12px }
+#toggle-works[aria-expanded=false]::before { content:"›" }
+.selection[hidden] { display:none }
+button,select,input { font:inherit }
+button,select,input[type=checkbox] { cursor:pointer }
+button { border:1px solid #bbb; background:white; color:#075e83; border-radius:4px; padding:8px 15px }
+.workbar button,.sort { color:white; background:transparent; border:0; font-size:15px; font-weight:600 }
+.workbar b { font-size:23px; vertical-align:middle }
+.sort { display:flex; align-items:center; gap:5px }
+.sort select { color:white; border:0; background:#416d07; max-width:115px }
+#manual { position:absolute; right:95px; top:48px; z-index:2; width:min(330px,80%); padding:16px 18px; text-align:left; box-shadow:0 3px 12px #0003; color:#222 }
+#manual small { display:block; margin-top:5px }
+.selection { display:flex; align-items:center; gap:20px; min-height:88px; flex-wrap:wrap; padding:12px 15px; font-size:14px }
+.selection label { display:flex; gap:7px; align-items:center }
+input[type=checkbox] { width:17px; height:17px; accent-color:#427414 }
+.selection select,.visibility,dialog select { border:1px solid #bbb; border-radius:4px; background:white; padding:7px }
+article { border:1px solid #bbb; border-radius:3px; margin-bottom:16px }
+.workhead { display:flex; align-items:center; gap:10px; padding:7px 12px; min-height:55px; background:#eee; border-bottom:1px solid #bbb }
+.workhead h3 { flex:1; font-size:16px; margin:0 }
+.visibility { width:135px; padding-left:8px }
+.privacy-control { position:relative }
+.privacy-control::before,.visibility-field::before { content:""; position:absolute; top:50%; left:12px; width:12px; height:8px; border:2px solid #498000; border-radius:65%; transform:translateY(-50%); pointer-events:none }
+.privacy-control[data-level="Only me"]::before { border-color:#b74c23;border-radius:2px;width:8px;height:8px }
+.privacy-control[data-level="Trusted parties"]::before { border-color:#b77600 }
+.privacy-control select,.visibility-field select { padding-left:34px }
+.source-icon { display:inline-grid; margin:0 8px; width:18px; height:18px; place-items:center; border-radius:50%; background:#72afc9; color:white; font-size:11px }
+.visibility-help { margin:12px 24px }
+.visibility-field { position:relative; width:160px }
+.edit { font-size:23px; color:#111; background:transparent; border:0; border-radius:50%; padding:0; width:35px; height:35px }
+.edit:hover { background:#d4d4d4 }
+article p { margin:0; min-height:65px; padding:14px 16px }
+.source-row { border-top:1px solid #bbb; padding:14px 16px }
+.source-row small { font-size:14px }
+dialog { padding:0; width:min(660px,94vw); max-height:90vh; border:1px solid #bbb; border-radius:4px; box-shadow:0 8px 32px #0003 }
+dialog::backdrop { background:#0006 }
+dialog h2 { margin:0; padding:14px 24px; background:#f1f1f1; font-size:22px }
+dialog .subhead { margin:22px 24px 6px; padding-bottom:8px; border-bottom:2px solid #a6ce39; font-size:18px }
+dialog label { display:block; margin:12px 24px; font-weight:600 }
+dialog input,dialog select { display:block; width:100%; margin-top:3px; border:1px solid #999; padding:8px; font-weight:400 }
+dialog footer { background:#fafafa; border-top:1px solid #bbb; padding:16px 24px; display:flex; gap:18px; margin-top:24px }
+.primary { color:white; background:#287e9c; font-weight:600 }
+@media(max-width:760px){main{display:block;padding:20px}aside{margin-bottom:22px}.bar{padding:12px;gap:12px}.selection{gap:8px}.workhead{flex-wrap:wrap}.workhead h3{min-width:55%}.sort select{max-width:75px}}

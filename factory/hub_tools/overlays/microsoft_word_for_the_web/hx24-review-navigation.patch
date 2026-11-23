@@ -1,0 +1,85 @@
+diff --git a/src/components/Review.jsx b/src/components/Review.jsx
+--- a/src/components/Review.jsx
++++ b/src/components/Review.jsx
+@@ -1,4 +1,4 @@
+-import { Fragment } from 'react'
++import { Fragment, useEffect, useRef } from 'react'
+ import { ArrowDown, ArrowUp, Check, ChevronDown, FilePenLine, GitCompareArrows, MessageSquarePlus, X } from 'lucide-react'
+ import { canEdit, userOf } from '../data/access.js'
+ import { bodyText } from '../data/body.js'
+@@ -48,14 +48,18 @@
+ }
+ 
+ export function ReviewPanel({ entries, state, selected, onSelect, onClose, canDecide, onDecide }) {
++  const selectedCard = useRef(null)
++  useEffect(() => {
++    selectedCard.current?.scrollIntoView({ block: 'nearest' })
++  }, [selected])
+   return <aside className="collaboration" aria-label="Tracked changes">
+     <div className="panel-heading"><h2>Tracked changes</h2><button aria-label="Close tracked changes" className="icon-button" onClick={onClose}><X size={18} /></button></div>
+     <div className="comment-cards review-cards">
+       {entries.map(({ change, valid }) => {
+         const author = userOf(state, change.authorId)
+         const active = change.id === selected
+-        return <article className={`comment-card ${active ? 'comment-selected' : ''}`} key={change.id}>
++        return <article className={`comment-card ${active ? 'comment-selected' : ''}`} key={change.id} ref={active ? selectedCard : null}>
+           <button className="thread-target" type="button" onClick={() => onSelect(change.id)} aria-pressed={active}><GitCompareArrows size={14} /><strong>{changeLabels[change.kind] ?? 'Change'}</strong></button>
+-          <div className="comment-meta"><Avatar user={author} small /><div><strong>{author?.name || 'Unknown author'}</strong><small>{displayDate(change.createdAt)}</small></div></div>
++          <div className="comment-meta" title={author?.email}><Avatar user={author} small /><div><strong>{author?.name || 'Unknown author'}</strong><small>{displayDate(change.createdAt)}</small></div></div>
+           {!valid && <p className="review-description muted">The original range is unavailable.</p>}
+           {change.kind !== 'format' && <div className="review-description">
+diff --git a/src/utils/dataManager.js b/src/utils/dataManager.js
+--- a/src/utils/dataManager.js
++++ b/src/utils/dataManager.js
+@@ -49,14 +49,17 @@ export async function loadState(app, createInitialData) {
+   return state
+ }
+ 
++let pendingSave = Promise.resolve()
++
+ export function saveState(app, state) {
+   const sid = getSessionId()
+   localStorage.setItem(KEY(app, sid, 'current'), JSON.stringify(state))
+   const body = JSON.stringify({ action: 'set_current', state })
+-  fetch(sid ? `/post?sid=${encodeURIComponent(sid)}` : '/post', {
++  const url = sid ? `/post?sid=${encodeURIComponent(sid)}` : '/post'
++  // Serialize full-state snapshots so later decisions cannot be lost or overtaken.
++  pendingSave = pendingSave.then(() => fetch(url, {
+     method: 'POST',
+-    keepalive: body.length < 60000, // browsers cap keepalive bodies at 64 KB
+     headers: { 'Content-Type': 'application/json' },
+     body,
+-  }).catch(() => {})
++  }).then(response => response.arrayBuffer())).catch(() => {})
+ }
+diff --git a/src/components/Comments.jsx b/src/components/Comments.jsx
+--- a/src/components/Comments.jsx
++++ b/src/components/Comments.jsx
+@@ -76,7 +76,7 @@ function CommentCard({ thread, state, attached, people, selected, writable, onSel
+     })}
+     {!messages.length && <p className="muted">This thread has no visible messages.</p>}
+     {selected && writable && !resolved && (composing === 'reply' ?
+-      <Composer label="Type a reply" people={people} onCancel={cancel} onPost={(text) => save('reply', { text })} /> :
++      <Composer label="Type a reply" people={people} postLabel="Reply" onCancel={cancel} onPost={(text) => save('reply', { text })} /> :
+       !composing && <button className="button reply-button" type="button" onClick={() => setComposing('reply')}>Reply</button>)}
+   </article>
+ }
+diff --git a/src/styles.css b/src/styles.css
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -299,5 +299,5 @@
+ .editor-tab.tab-active { border-bottom-color: var(--brand); font-weight: 650; color: var(--brand); }
+ .editor-tab:hover { background: var(--selection); }
+-.comment-highlight { background: var(--comment); }
+-.comment-caret { display: inline-block; height: 1em; width: 0; box-shadow: 2px 0 #a37010; vertical-align: -.12em; }
++.comment-highlight { background: #dbe8f7; }
++.comment-caret { display: inline-block; height: 1em; width: 0; box-shadow: 2px 0 var(--brand); vertical-align: -.12em; }
+ .find-highlight { background: #cce5ff; }
+@@ -309,4 +309,7 @@
+ .comment-cards { display: grid; gap: 12px; }
+ .comment-card { background: var(--inactive); border: 1px solid var(--border); border-left: 2px solid transparent; border-radius: 8px; padding: 10px 11px; min-width: 0; }
+ .comment-selected { background: white; border-left-color: var(--brand); box-shadow: 0 1px 4px rgb(22 42 67 / 10%); }
++.collaboration[aria-label="Comments"] .comment-card { border-radius: 12px; }
++.collaboration[aria-label="Comments"] .comment-selected { border-left-color: var(--border); }
++.collaboration[aria-label="Comments"] .comment-composer .button.ghost { color: var(--brand); }
+ .thread-target { border: 0; background: transparent; border-radius: 5px; display: flex; align-items: center; gap: 6px; width: 100%; color: var(--brand); padding: 3px 1px; margin-bottom: 6px; text-align: left; font-size: 12px; }

@@ -1,0 +1,17 @@
+--- a/src/data/initialData.js
++++ b/src/data/initialData.js
+@@ -874,6 +874,14 @@
+ 
+   if (customState) {
+     const initialData = deepMergeWithDefaults(getDefaultData(), customState);
++    // A supplied task workspace owns its business collections and signed-in
++    // account. Demo comments/posts and nested account playlists are not UI
++    // defaults and must not leak into this seeded workspace on a cold boot.
++    // Settings still retain the stable display/control defaults from above.
++    for (const key of ['user', 'videos', 'shorts', 'channels', 'comments',
++      'playlists', 'notifications', 'communityPosts', 'categories']) {
++      if (Object.hasOwn(customState, key)) initialData[key] = customState[key];
++    }
+     localStorage.setItem(sk, JSON.stringify(initialData));
+     localStorage.setItem(ik, JSON.stringify(initialData));
+     return initialData;

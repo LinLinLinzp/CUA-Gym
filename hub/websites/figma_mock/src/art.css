@@ -1,0 +1,6 @@
+.preview { position: relative; aspect-ratio: 16/9; background: #edf0f2; border-bottom: 1px solid #dce1e4; overflow: hidden; display: grid; place-items: center; border-radius: 7px 7px 0 0; container-type: inline-size; }
+.preview-sheet { position: absolute; inset: 10% 8%; box-shadow: 0 1px 5px #17233318; background: #fff; overflow: hidden; }
+.preview-layer { position: absolute; display: grid; place-items: center; font: 650 clamp(3px, 4.5cqi, 12px)/1.15 "Segoe UI", sans-serif; overflow: hidden; color: #23292e; overflow-wrap: anywhere; text-align: center; border-radius: 2px; }
+.preview-layer.preview-text { place-items: start; align-content: center; text-align: left; }
+.preview-blank { color: #82918f; font-size: 23px; }
+.preview.swatch { flex: 0 0 60px; width: 60px; border-radius: 4px; border: 1px solid #dce1e4; }

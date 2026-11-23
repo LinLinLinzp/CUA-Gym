@@ -1,0 +1,584 @@
+diff --git a/SCHEMA.md b/SCHEMA.md
+--- a/SCHEMA.md
++++ b/SCHEMA.md
+@@ -254,3 +254,17 @@
+   }
+ }
+ ```
++## Inventory reports and processed price updates
++
++The Inventory Reports page creates an immutable tab-delimited snapshot of the
++specified inventory view. Each item in `inventoryReports` holds the report type,
++request and completion timestamps, status, generated file content and row count.
++Using the download button adds the first download timestamp.
++
++The inventory-upload workflow stores the selected original file and records its
++path and processing result in `inventoryFileUploads`. Each valid unique row in
++a Product specifications file updates the corresponding existing product's size,
++color, material and approved compliance certificate; failed rows are unchanged.
++Fulfillment channels are preserved and FBA stock is preserved. A failed row
++adds a field error to the processing report. Submitted files and processing
++reports remain available in upload history.
+diff --git a/src/App.jsx b/src/App.jsx
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -26,6 +26,8 @@
+ import NotificationPrefs from './pages/NotificationPrefs';
+ import ShippingSettings from './pages/ShippingSettings';
+ import InsightsPage from './pages/InsightsPage';
++import InventoryReports from './pages/InventoryReports';
++import InventoryUploads from './pages/InventoryUploads';
+ 
+ function RedirectWithQuery({ to }) {
+   const [searchParams] = useSearchParams();
+@@ -39,6 +41,7 @@
+       <Route path="/go" element={<Go />} />
+       <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
+       <Route path="/inventory" element={<AppLayout><Inventory /></AppLayout>} />
++      <Route path="/inventory/upload" element={<AppLayout><InventoryUploads /></AppLayout>} />
+       <Route path="/inventory/fba" element={<AppLayout><FBAInventory /></AppLayout>} />
+       <Route path="/inventory/planning" element={<AppLayout><InventoryPlanning /></AppLayout>} />
+       <Route path="/inventory/shipments" element={<AppLayout><FBAShipments /></AppLayout>} />
+@@ -54,6 +57,7 @@
+       <Route path="/advertising/create" element={<AppLayout><CreateCampaign /></AppLayout>} />
+       <Route path="/advertising/:id" element={<AppLayout><CampaignDetail /></AppLayout>} />
+       <Route path="/reports" element={<AppLayout><BusinessReports /></AppLayout>} />
++      <Route path="/reports/inventory" element={<AppLayout><InventoryReports /></AppLayout>} />
+       <Route path="/reports/advertising" element={<AppLayout><InsightsPage title="Advertising Reports" /></AppLayout>} />
+       <Route path="/payments" element={<AppLayout><Payments /></AppLayout>} />
+       <Route path="/account-health" element={<AppLayout><AccountHealth /></AppLayout>} />
+diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+--- a/src/components/Sidebar.jsx
++++ b/src/components/Sidebar.jsx
+@@ -3,7 +3,10 @@
+ import { X } from 'lucide-react';
+ 
+ const sections = [
+-  { header: 'CATALOG', items: [{ label: 'Add Products', to: '/catalog/add-product' }] },
++  { header: 'CATALOG', items: [
++    { label: 'Add Products', to: '/catalog/add-product' },
++    { label: 'Add Products via Upload', to: '/inventory/upload' }
++  ] },
+   { header: 'INVENTORY', items: [
+     { label: 'Manage All Inventory', to: '/inventory' },
+     { label: 'Manage FBA Inventory', to: '/inventory/fba' },
+@@ -27,6 +30,7 @@
+   { header: 'GROWTH', items: [{ label: 'Growth Opportunities', to: '/growth' }] },
+   { header: 'REPORTS', items: [
+     { label: 'Business Reports', to: '/reports' },
++    { label: 'Inventory Reports', to: '/reports/inventory' },
+     { label: 'Payments', to: '/payments' },
+     { label: 'Advertising Reports', to: '/reports/advertising' }
+   ]},
+diff --git a/src/context/AppContext.jsx b/src/context/AppContext.jsx
+--- a/src/context/AppContext.jsx
++++ b/src/context/AppContext.jsx
+@@ -1,5 +1,6 @@
+ import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
+ import { initializeData, getInitialState, fetchCustomState, getSessionId, saveState, initialKey } from '../utils/dataManager';
++import { applyPriceQuantity, requestReport } from '../utils/inventoryBatches';
+ 
+ const AppContext = createContext();
+ 
+@@ -13,6 +14,26 @@
+   switch (action.type) {
+     case 'SET_STATE':
+       return { ...state, ...action.payload };
++    case 'REQUEST_INVENTORY_REPORT': {
++      const inventoryReports = state.inventoryReports || [];
++      const report = requestReport(state.products, inventoryReports, action.payload.reportType, action.payload.at);
++      return { ...state, inventoryReports: [...inventoryReports, report] };
++    }
++    case 'DOWNLOAD_INVENTORY_REPORT':
++      return {
++        ...state,
++        inventoryReports: (state.inventoryReports || []).map(report => (
++          report.id === action.payload.id && !report.downloadedAt
++            ? { ...report, downloadedAt: action.payload.at }
++            : report
++        ))
++      };
++    case 'UPLOAD_PRICE_QUANTITY': {
++      const inventoryFileUploads = state.inventoryFileUploads || [];
++      const { uploaded, text, at } = action.payload;
++      const { record, products } = applyPriceQuantity(state.products, inventoryFileUploads, uploaded, text, at);
++      return { ...state, products, inventoryFileUploads: [...inventoryFileUploads, record] };
++    }
+     case 'UPDATE_PRODUCT':
+       return { ...state, products: state.products.map(p => p.id === action.payload.id ? { ...p, ...action.payload } : p) };
+     case 'ADD_PRODUCT':
+diff --git a/src/pages/Inventory.jsx b/src/pages/Inventory.jsx
+--- a/src/pages/Inventory.jsx
++++ b/src/pages/Inventory.jsx
+@@ -66,7 +66,11 @@
+ }
+ 
+ export default function Inventory() {
+-  const { state, dispatch, showToast } = useApp();
++  const app = useApp();
++  return app.state ? <InventoryTable {...app} /> : null;
++}
++
++function InventoryTable({ state, dispatch, showToast }) {
+   const navigate = useNavigate();
+   const [searchParams] = useSearchParams();
+   const initialSearch = searchParams.get('search') || '';
+@@ -79,7 +83,6 @@
+   const [selected, setSelected] = useState([]);
+   const [deleteConfirm, setDeleteConfirm] = useState(null);
+ 
+-  if (!state) return null;
+   const { products } = state;
+ 
+   const tabCounts = useMemo(() => {
+@@ -124,7 +127,11 @@
+     <div>
+       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+         <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>Manage All Inventory</h1>
+-        <button className="btn-primary" onClick={() => navigate('/catalog/add-product')}>+ Add a Product</button>
++        <div style={{ display: 'flex', gap: 8 }}>
++          <Link className="btn-secondary" to="/reports/inventory">Inventory Reports</Link>
++          <Link className="btn-secondary" to="/inventory/upload">Add Products via Upload</Link>
++          <button className="btn-primary" onClick={() => navigate('/catalog/add-product')}>+ Add a Product</button>
++        </div>
+       </div>
+ 
+       {/* Tabs */}
+diff --git a/src/pages/InventoryReports.jsx b/src/pages/InventoryReports.jsx
+new file mode 100644
+--- /dev/null
++++ b/src/pages/InventoryReports.jsx
+@@ -0,0 +1,96 @@
++import React, { useState } from 'react';
++import { Link } from 'react-router-dom';
++import { Download, FileSpreadsheet } from 'lucide-react';
++import { useApp } from '../context/AppContext';
++import { REPORT_TYPES, saveTextFile } from '../utils/inventoryBatches';
++
++const date = value => value ? new Date(value).toLocaleString() : '—';
++
++export default function InventoryReports() {
++  const { state, dispatch } = useApp();
++  const [requestType, setRequestType] = useState('active_listings');
++  const [filterType, setFilterType] = useState('all');
++  const [search, setSearch] = useState('');
++  if (!state) return null;
++
++  const reports = [...(state.inventoryReports || [])].reverse().filter(report => {
++    const query = search.trim().toLowerCase();
++    const matchesQuery = [report.id, report.fileName].some(value => value?.toLowerCase().includes(query));
++    return matchesQuery && (filterType === 'all' || filterType === report.reportType);
++  });
++
++  function request() {
++    dispatch({ type: 'REQUEST_INVENTORY_REPORT', payload: { reportType: requestType, at: new Date().toISOString() } });
++    setFilterType('all');
++    setSearch('');
++  }
++
++  function download(report) {
++    if (!report.content) return;
++    saveTextFile(report.fileName, report.content);
++    dispatch({ type: 'DOWNLOAD_INVENTORY_REPORT', payload: { id: report.id, at: new Date().toISOString() } });
++  }
++
++  return (
++    <main>
++      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 15 }}>
++        <div>
++          <Link to="/inventory">Manage All Inventory</Link>
++          <h1 style={{ fontSize: 28, lineHeight: '36px', margin: '4px 0' }}>Inventory Reports</h1>
++        </div>
++        <Link to="/inventory/upload" className="btn-secondary">Add Products via Upload</Link>
++      </div>
++      <section className="card">
++        <h2 className="card-title">Request an inventory report</h2>
++        <div style={{ display: 'flex', gap: 14, alignItems: 'end' }}>
++          <label>
++            <strong>Report type</strong><br />
++            <select className="form-select" value={requestType} onChange={event => setRequestType(event.target.value)}>
++              {Object.entries(REPORT_TYPES).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
++            </select>
++          </label>
++          <button className="btn-primary" onClick={request}><FileSpreadsheet size={15} /> Request Report</button>
++        </div>
++        <p style={{ marginBottom: 0, color: 'var(--muted)' }}>
++          {requestType === 'all_listings'
++            ? 'Includes active, inactive, suppressed, and zero-quantity listings.'
++            : 'Includes active listings only. For inactive offers, request an All Listings Report.'}
++        </p>
++      </section>
++
++      <section className="card">
++        <h2 className="card-title">Check Report Status &amp; Download</h2>
++        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
++          <input className="form-input" aria-label="Search reports" placeholder="Search by report ID or filename"
++            value={search} onChange={event => setSearch(event.target.value)} style={{ width: 255 }} />
++          <select className="form-select" aria-label="Filter report type" value={filterType}
++            onChange={event => setFilterType(event.target.value)}>
++            <option value="all">All report types</option>
++            {Object.entries(REPORT_TYPES).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
++          </select>
++        </div>
++        <div style={{ overflowX: 'auto' }}>
++          <table className="data-table">
++            <thead><tr><th>Report ID</th><th>Report type</th><th>Requested</th><th>Status</th><th>Listings</th><th>Action</th></tr></thead>
++            <tbody>
++              {reports.map(report => (
++                <tr key={report.id}>
++                  <td>{report.id}</td><td>{report.reportName}</td><td>{date(report.requestedAt)}</td>
++                  <td><span className="badge badge-success">{report.status}</span></td><td>{report.rowCount}</td>
++                  <td>
++                    {report.content ? (
++                      <button className="btn-secondary" onClick={() => download(report)}>
++                        <Download size={14} /> Download
++                      </button>
++                    ) : 'File expired'}
++                  </td>
++                </tr>
++              ))}
++              {!reports.length && <tr><td colSpan={6}>No reports match the selected filters.</td></tr>}
++            </tbody>
++          </table>
++        </div>
++      </section>
++    </main>
++  );
++}
+diff --git a/src/pages/InventoryUploads.jsx b/src/pages/InventoryUploads.jsx
+new file mode 100644
+--- /dev/null
++++ b/src/pages/InventoryUploads.jsx
+@@ -0,0 +1,155 @@
++import React, { useRef, useState } from 'react';
++import { Link } from 'react-router-dom';
++import { FileText, Upload } from 'lucide-react';
++import { useApp } from '../context/AppContext';
++import { getSessionId } from '../utils/dataManager';
++import { saveTextFile, tsv, UPDATE_COLUMNS } from '../utils/inventoryBatches';
++
++const date = value => value ? new Date(value).toLocaleString() : '—';
++const statusClass = { Done: 'success', 'Done with errors': 'pending', Failed: 'error' };
++
++function downloadResult(record) {
++  const rows = [
++    ['Batch ID', record.id],
++    ['Processed', record.recordsProcessed, 'Successful', record.recordsSuccessful],
++    ['Row', 'SKU', 'Status', 'Issue'],
++    ...(record.rowResults || record.errors || []).map(error => [error.row, error.sku, error.status || 'Rejected', error.message])
++  ];
++  saveTextFile(record.id + '_processing_report.txt', tsv(rows));
++}
++
++export default function InventoryUploads() {
++  const { state, dispatch } = useApp();
++  const input = useRef(null);
++  const inFlight = useRef(false);
++  const [panel, setPanel] = useState('upload');
++  const [file, setFile] = useState(null);
++  const [kind, setKind] = useState('');
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState('');
++  const [query, setQuery] = useState('');
++  const [status, setStatus] = useState('all');
++  if (!state) return null;
++
++  const batches = [...(state.inventoryFileUploads || [])].reverse().filter(batch => (
++    (status === 'all' || batch.status === status) &&
++    [batch.id, batch.fileName].some(value => value?.toLowerCase().includes(query.trim().toLowerCase()))
++  ));
++
++  async function submit(event) {
++    event.preventDefault();
++    const sid = getSessionId();
++    if (!file || kind !== 'price_quantity' || inFlight.current) return;
++    if (file.size > 1_000_000 || !/\.(txt|tsv)$/i.test(file.name)) {
++      setError('Choose a tab-delimited .txt or .tsv file under 1 MB.');
++      return;
++    }
++    inFlight.current = true;
++    setBusy(true);
++    setError('');
++    try {
++      const text = await file.text();
++      const form = new FormData();
++      form.append('files', file);
++      const url = sid ? '/upload?sid=' + encodeURIComponent(sid) : '/upload';
++      const response = await fetch(url, { method: 'POST', body: form });
++      if (!response.ok) throw new Error('Upload request failed');
++      const { files } = await response.json();
++      if (!files?.[0]?.url) throw new Error('Upload receipt is missing');
++      dispatch({ type: 'UPLOAD_PRICE_QUANTITY', payload: { uploaded: files[0], text, at: new Date().toISOString() } });
++      setFile(null);
++      if (input.current) input.current.value = '';
++      setStatus('all');
++      setQuery('');
++      setPanel('status');
++    } catch {
++      setError('We could not store this upload. Check your file and try again.');
++    } finally {
++      setBusy(false);
++      inFlight.current = false;
++    }
++  }
++
++  return (
++    <main>
++      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 15 }}>
++        <div>
++          <Link to="/inventory">Manage All Inventory</Link>
++          <h1 style={{ fontSize: 28, lineHeight: '36px', margin: '4px 0' }}>Add Products via Upload</h1>
++        </div>
++        <Link to="/reports/inventory" className="btn-secondary">Inventory Reports</Link>
++      </div>
++      <nav aria-label="Inventory upload" style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--divider)', marginBottom: 14 }}>
++        {Object.entries({ upload: 'Upload your inventory file', status: 'Check Upload Status' }).map(([key, label]) => (
++          <button key={key} className="btn-secondary" aria-current={panel === key ? 'page' : undefined}
++            onClick={() => setPanel(key)} style={{ height: 38, borderBottom: panel === key ? '3px solid var(--info)' : undefined }}>
++            {label}
++          </button>
++        ))}
++      </nav>
++
++      {panel === 'upload' ? (
++        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(360px, 2fr) minmax(230px, 1fr)', gap: 14 }}>
++          <section className="card">
++            <h2 className="card-title">Submit an inventory file</h2>
++            <form onSubmit={submit} style={{ display: 'grid', gap: 14, justifyItems: 'start' }}>
++              <div><strong>Marketplace</strong><br />{state.seller?.marketplace || 'United States'}</div>
++              <label><strong>File type</strong><br />
++                <select className="form-select" value={kind} onChange={event => setKind(event.target.value)}>
++                  <option value="">Select a file type</option>
++                  <option value="price_quantity">Product specifications</option>
++                </select>
++              </label>
++              <label><strong>Inventory file</strong><br />
++                <input type="file" ref={input} accept=".txt,.tsv" onChange={event => setFile(event.target.files[0] || null)} />
++              </label>
++              {error && <div role="alert" className="badge badge-error">{error}</div>}
++              <button className="btn-primary" disabled={!file || !kind || busy}>
++                <Upload size={15} /> {busy ? 'Uploading…' : 'Upload'}
++              </button>
++            </form>
++          </section>
++          <aside className="card" style={{ alignSelf: 'start' }}>
++            <h2 className="card-title">Update existing offers</h2>
++            <p>Update size, color and material for existing variants. Certificate requirements are checked per item.</p>
++            <button className="btn-secondary"
++              onClick={() => saveTextFile('ProductSpecificationsTemplate.txt', tsv([UPDATE_COLUMNS]))}>
++              <FileText size={15} /> Download template
++            </button>
++          </aside>
++        </div>
++      ) : (
++        <section className="card">
++          <h2 className="card-title">Monitor upload status</h2>
++          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
++            <input aria-label="Search inventory uploads" className="form-input" value={query}
++              placeholder="Search by batch ID or filename" style={{ width: 255 }}
++              onChange={event => setQuery(event.target.value)} />
++            <select aria-label="Upload status" className="form-select" value={status} onChange={event => setStatus(event.target.value)}>
++              <option value="all">All statuses</option>
++              {Object.keys(statusClass).map(label => <option key={label} value={label}>{label}</option>)}
++            </select>
++          </div>
++          <div style={{ overflowX: 'auto' }}>
++            <table className="data-table">
++              <thead><tr><th>Date submitted</th><th>Batch ID</th><th>File name</th><th>File type</th><th>Status</th><th>Results</th><th>Actions</th></tr></thead>
++              <tbody>
++                {batches.map(batch => (
++                  <tr key={batch.id}>
++                    <td>{date(batch.uploadedAt)}</td><td>{batch.id}</td>
++                    <td>{batch.url ? <a href={batch.url} download>{batch.fileName}</a> : batch.fileName}</td>
++                    <td>Product specifications</td>
++                    <td><span className={'badge badge-' + (statusClass[batch.status] || 'info')}>{batch.status}</span></td>
++                    <td>{batch.recordsSuccessful} of {batch.recordsProcessed} successful</td>
++                    <td><button type="button" className="btn-link" onClick={() => downloadResult(batch)}>Download Processing Report</button></td>
++                  </tr>
++                ))}
++                {!batches.length && <tr><td colSpan={7}>No uploads match the selected filters.</td></tr>}
++              </tbody>
++            </table>
++          </div>
++        </section>
++      )}
++    </main>
++  );
++}
+diff --git a/src/pages/Pricing.jsx b/src/pages/Pricing.jsx
+--- a/src/pages/Pricing.jsx
++++ b/src/pages/Pricing.jsx
+@@ -5,11 +5,14 @@
+ function fmt(n) { return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+ 
+ export default function Pricing() {
+-  const { state, dispatch, showToast } = useApp();
++  const app = useApp();
++  return app.state ? <PricingTable {...app} /> : null;
++}
++
++function PricingTable({ state, dispatch, showToast }) {
+   const [search, setSearch] = useState('');
+   const navigate = useNavigate();
+ 
+-  if (!state) return null;
+   const { products } = state;
+ 
+   const filtered = useMemo(() => {
+@@ -39,6 +42,8 @@
+             <tr>
+               <th>Product</th>
+               <th>Your Price</th>
++              <th>Minimum Price</th>
++              <th>Maximum Price</th>
+               <th>Buy Box Price</th>
+               <th>Buy Box Owner</th>
+               <th>Lowest Price</th>
+@@ -63,6 +68,8 @@
+                     </span>
+                   )}
+                 </td>
++                <td>{prod.minimumSellerAllowedPrice == null ? '—' : fmt(prod.minimumSellerAllowedPrice)}</td>
++                <td>{prod.maximumSellerAllowedPrice == null ? '—' : fmt(prod.maximumSellerAllowedPrice)}</td>
+                 <td style={{ fontWeight: 700, color: prod.buyBoxOwner ? '#067d62' : '#111' }}>{fmt(prod.buyBoxPrice)}</td>
+                 <td>
+                   {prod.buyBoxOwner
+diff --git a/src/utils/dataManager.js b/src/utils/dataManager.js
+--- a/src/utils/dataManager.js
++++ b/src/utils/dataManager.js
+@@ -599,6 +599,8 @@
+       unreadMessages: 3
+     },
+     products,
++    inventoryReports: [],
++    inventoryFileUploads: [],
+     orders,
+     messages,
+     returns: returns_data,
+diff --git a/src/utils/inventoryBatches.js b/src/utils/inventoryBatches.js
+new file mode 100644
+--- /dev/null
++++ b/src/utils/inventoryBatches.js
+@@ -0,0 +1,111 @@
++const REPORT_COLUMNS = [
++  'seller-sku', 'asin1', 'item-name', 'price', 'minimum-seller-allowed-price',
++  'maximum-seller-allowed-price', 'quantity', 'fulfillment-channel', 'status'
++];
++
++export const UPDATE_COLUMNS = ['sku','size_name','color_name','material_type','compliance_certificate'];
++
++export const REPORT_TYPES = {
++  all_listings: 'All Listings Report',
++  active_listings: 'Active Listings Report'
++};
++
++function money(value) {
++  return Number.isFinite(value) ? value.toFixed(2) : '';
++}
++
++function field(value) {
++  return String(value ?? '').replace(/[\t\r\n]+/g, ' ');
++}
++
++export function tsv(rows) {
++  return rows.map(row => row.map(field).join('\t')).join('\n') + '\n';
++}
++
++function nextId(prefix, previous) {
++  const used = new Set(previous.map(entry => entry.id));
++  let index = previous.length + 1;
++  let id = prefix + String(index).padStart(3, '0');
++  while (used.has(id)) {
++    index += 1;
++    id = prefix + String(index).padStart(3, '0');
++  }
++  return id;
++}
++
++export function requestReport(products, previous, reportType, at) {
++  const snapshot = products.filter(product => reportType === 'all_listings' || product.status === 'Active');
++  const rows = snapshot.map(product => [
++    product.sku, product.asin, product.title, money(product.price),
++    money(product.minimumSellerAllowedPrice), money(product.maximumSellerAllowedPrice),
++    product.availableQuantity, product.fulfillmentChannel === 'FBA' ? 'AMAZON_NA' : 'DEFAULT',
++    product.status
++  ]);
++  const title = REPORT_TYPES[reportType];
++  return {
++    id: nextId('RPT_', previous), reportType, reportName: title,
++    requestedAt: at, completedAt: at, downloadedAt: null, status: 'Ready',
++    fileName: title.replaceAll(' ', '') + '_' + at.slice(0, 10) + '.txt',
++    rowCount: rows.length, content: tsv([REPORT_COLUMNS, ...rows])
++  };
++}
++
++function parseUpdate(parts, products, seen) {
++  const [sku, priceText, minText, maxText, quantityText, channel] = parts;
++  if (parts.length !== UPDATE_COLUMNS.length) return { message: 'Expected six tab-delimited fields.' };
++  const stored = products.get(sku);
++  if (!stored) return { message: 'Seller SKU does not match an existing offer.' };
++  if (seen.has(sku)) return { message: 'Seller SKU is repeated in this file.' };
++  seen.add(sku);
++  const moneyValues = [priceText, minText, maxText];
++  if (!moneyValues.every(text => /^\d+\.\d{2}$/.test(text) && Number.isFinite(Number(text)))) {
++    return { message: 'Each price must be a dollar amount with two decimal places.' };
++  }
++  const [price, minimumSellerAllowedPrice, maximumSellerAllowedPrice] = moneyValues.map(Number);
++  if (minimumSellerAllowedPrice < 0 || price <= 0 || maximumSellerAllowedPrice < minimumSellerAllowedPrice ||
++      price < minimumSellerAllowedPrice || price > maximumSellerAllowedPrice) {
++    return { message: 'The selling price is outside the supplied pricing limits.' };
++  }
++  const fba = stored.fulfillmentChannel === 'FBA';
++  if (channel !== (fba ? 'AMAZON_NA' : 'DEFAULT')) return { message: 'Fulfillment channel differs from the existing offer.' };
++  if (fba ? quantityText !== '' : !/^\d+$/.test(quantityText) || !Number.isSafeInteger(Number(quantityText))) {
++    return { message: fba ? 'FBA quantities must be left blank.' : 'Quantity must be a nonnegative integer.' };
++  }
++  return {
++    price, minimumSellerAllowedPrice, maximumSellerAllowedPrice,
++    availableQuantity: fba ? stored.availableQuantity : Number(quantityText)
++  };
++}
++
++export function applyPriceQuantity(products, previous, uploaded, text, uploadedAt) {
++  const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(line=>line.length>0), header=['sku','size_name','color_name','material_type','compliance_certificate'];
++  const rows=lines.slice(1),errors=[],rowResults=[],changed=new Map(),seen=new Set();
++  if(lines[0]!==header.join('\t')) errors.push({row:1,sku:'',message:'Use the Product specifications template.'});
++  else rows.forEach((line,index)=>{
++    const parts=line.split('\t'),sku=parts[0],p=products.find(p=>p.sku===sku);let message='';
++    if(parts.length!==5 || !p) message='Unknown SKU or invalid column count';
++    else if(seen.has(sku)) message='Duplicate SKU in submission';
++    else if(!parts[1]||!parts[2]||!parts[3]) message='Required size_name, color_name and material_type missing';
++    else if(parts[1]!==p.catalogValidation.size_name) message='8541: size_name conflicts with manufacturer variant';
++    else if(!['Stoneware','Borosilicate glass','Cotton'].includes(parts[3])) message='90244: material_type is not a supported enumeration';
++    else if(p.catalogValidation.certificateRequired&&!p.catalogValidation.approvedCertificates.includes(parts[4])) message=p.catalogValidation.certificateIssue;
++    else if(!p.catalogValidation.certificateRequired&&parts[4]) message='8570: certificate does not apply to this variant';
++    seen.add(sku);
++    if(message) errors.push({row:index+2,sku,message});
++    else changed.set(sku,Object.fromEntries(header.slice(1).map((key,i)=>[key,parts[i+1]])));
++    rowResults.push({row:index+2,sku,status:message?'Rejected':'Accepted',message});
++  });
++  const record={id:nextId('UPL_',previous),fileType:'catalog_specs',fileName:uploaded.original_name,storedName:uploaded.stored_name,url:uploaded.url,size:uploaded.size,contentType:uploaded.content_type,uploadedAt,recordsProcessed:rows.length,recordsSuccessful:changed.size,errors,rowResults,status:errors.length?(changed.size?'Done with errors':'Failed'):'Done'};
++  return {record,products:products.map(p=>changed.has(p.sku)?{...p,...changed.get(p.sku),lastUpdated:uploadedAt}:p)};
++}
++
++export function saveTextFile(name, content) {
++  const url = URL.createObjectURL(new Blob([content], { type: 'text/tab-separated-values' }));
++  const link = document.createElement('a');
++  link.href = url;
++  link.download = name;
++  document.body.append(link);
++  link.click();
++  link.remove();
++  setTimeout(() => URL.revokeObjectURL(url), 4000);
++}
+diff --git a/src/pages/Inventory.jsx b/src/pages/Inventory.jsx
+--- a/src/pages/Inventory.jsx
++++ b/src/pages/Inventory.jsx
+@@ -178,6 +178,7 @@
+                   <Link to={`/catalog/edit-product/${prod.id}`} style={{ fontWeight: 700, display: 'block', maxWidth: 240 }} className="truncate">{prod.title.slice(0, 60)}{prod.title.length > 60 ? '...' : ''}</Link>
+                   <div style={{ fontSize: 11, color: '#555' }}>SKU: {prod.sku}</div>
+                   <div style={{ fontSize: 11, color: '#555' }}>ASIN: {prod.asin}</div>
++                  {prod.size_name && <div style={{ fontSize: 11, color: '#555' }}>Specifications: {prod.size_name} / {prod.color_name} / {prod.material_type}</div>}
+                 </td>
+                 <td><InlineEdit value={prod.price} type="price" onSave={v => savePrice(prod.id, v)} prefix="$" /></td>
+                 <td><InlineEdit value={prod.availableQuantity} type="qty" onSave={v => saveQty(prod.id, v)} /></td>

@@ -1,0 +1,11 @@
+# Provenance and native surfaces
+
+Resident browser app source was inspected at Hub revision 77fa41779a13baac6410d4278ef0f03a5ee765f9.
+
+- Wayfair’s official Help and Contact page exposes order tracking and Update Delivery. Wayfair’s shareholder materials describe selection of a time/date for large items. The resident Wayfair site uses its existing Deliveries list, shipment details, available slots, and reschedule confirmation. Its SCHEMA.md and `src/data/actions.js` describe the persisted old and replacement appointment records. Slots, identities, goods, and the address here are synthetic. [Wayfair Help & Contact](https://www.wayfair.com/help-and-contact) [Wayfair shareholder letter](https://investor.wayfair.com/files/doc_earnings/2023/q4/generic/2023-Shareholder-Letter.pdf)
+- Asana documents the due date, description, and upload controls in the task-details pane. The resident Asana ProjectDetail page updates the original task and stores a native attachment record tied to a real uploaded blob. The published drawing belongs there so the installation crew can retrieve the editable file. [Asana task fields](https://help.asana.com/s/article/task-fields?language=en_US)
+- Microsoft Teams documents channel replies associated with the original post. The resident Teams channel Posts view stores the new reply with its `replyToId`. The pinned mock omits reply bodies in the thread panel, so the crew and clearance evidence appears in companion channel posts. The crew reply uses the text composer and points back to the Asana project and task where the file lives. [Microsoft Teams channel messages](https://support.microsoft.com/en-gb/teams/teams-channels/send-or-reply-to-a-channel-message-in-microsoft-teams)
+- The native `drawio` application opens the provided uncompressed mxGraph document and can save compressed or uncompressed editable output. The document has editable vertices, separate static and carry-route layers, and connected draw.io edges. The measurements, coordinates, and original marked plan are purpose-built fictional site material. [draw.io connectors and waypoints](https://www.drawio.com/doc/faq/connectors)
+
+Website workflow mappings were reviewed against resident source and the public official material. Comparable native UI screenshots and the actual GUI author run remain to be collected.
+

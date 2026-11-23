@@ -1,0 +1,34 @@
+--- /dev/null
++++ b/src/pages/Entitlements.tsx
+@@ -0,0 +1,13 @@
++import React,{useState} from 'react';
++import {useApp} from '../context/AppContext';
++export function Entitlements(){
++const {state,updateState}=useApp();const s:any=state;const [tab,T]=useState('Entitlements'),[edit,E]=useState<any>(null),[a,A]=useState(''),[c,C]=useState(''),[date,D]=useState(''),[ref,R]=useState(''),[review,V]=useState(false),[msg,M]=useState('');
++const account=(id:string)=>s.accounts.find((x:any)=>x.accountId===id)?.name||id;const person=(id:string)=>{const x=s.contacts.find((x:any)=>x.contactId===id);return x?x.firstName+' '+x.lastName+' ['+id+']':id};
++return <div><h1>Service Console · Entitlements</h1><p>Manage service entitlements by account and support contact.</p><div style={{display:'flex',gap:16,margin:'20px 0'}}>{['Entitlements','Contracts','Memberships','Contacts','History'].map(t=><button className="btn btn-secondary" onClick={()=>T(t)}>{t}</button>)}</div><p role="status">{msg}</p>
++{tab==='Entitlements'&&<table style={{width:'100%'}}><thead><tr>{['ID','Service / validity','Account','Contact','Action'].map(x=><th>{x}</th>)}</tr></thead><tbody>{s.entitlements.map((x:any)=><tr style={{height:84}}><td>{x.id}</td><td>{x.service}<br/>{x.start} — {x.end}<br/>{x.status}</td><td>{account(x.accountId)}</td><td>{person(x.contactId)}</td><td><button className="btn btn-secondary" onClick={()=>{E(x);A('');C('');D('');R('');V(false)}}>Transfer {x.id}</button></td></tr>)}</tbody></table>}
++{tab==='Contracts'&&s.contracts.map((x:any)=><article style={{padding:16,borderBottom:'1px solid #aaa'}}><h2>{x.id} · {x.service}</h2><p>Executed {x.signed}; effective {x.effective}. {account(x.accountId)}</p><p>Signer identity {x.signer}; service member {x.member}. {x.scope}</p></article>)}
++{tab==='Memberships'&&s.memberships.map((x:any)=><article style={{padding:14}}><h3>{person(x.contactId)}</h3><p>{account(x.accountId)}; {x.role}; joined {x.joined}; ends {x.ended||'ongoing'}.</p></article>)}
++{tab==='Contacts'&&s.contacts.map((x:any)=><article style={{padding:14}}><a href={'/contacts/'+x.contactId}>{person(x.contactId)}</a><p>{x.email} · {x.description}</p></article>)}
++{tab==='History'&&s.cases.map((x:any)=><article style={{padding:14}}><a href={'/cases/'+x.caseId}>{x.caseNumber} · {x.subject}</a><p>{person(x.contactId)} · {account(x.accountId)} · {x.createdDate}</p></article>)}
++{edit&&<div role="dialog" style={{position:'fixed',inset:'120px 220px',background:'white',padding:30,boxShadow:'0 0 0 2000px #0006',overflow:'auto'}}><h2>{review?'Review transfer':'Transfer '+edit.id}</h2>{review?<><p>{edit.id}: {account(edit.accountId)} / {person(edit.contactId)} → {account(a)} / {person(c)}</p><p>Effective {date}. {ref}</p><button className="btn btn-secondary" onClick={()=>{updateState({entitlements:s.entitlements.map((x:any)=>x.id===edit.id?{...x,accountId:a,contactId:c,effectiveDate:date,reason:ref}:x)} as any);E(null);M('Transfer saved. Review the register.')}}>Confirm transfer</button><button className="btn btn-secondary" onClick={()=>V(false)}>Back</button></>:<><label>Destination account<select style={{display:'block',width:'100%',marginBottom:16}} value={a} onChange={e=>{A(e.target.value);C('')}}><option value="">Choose account</option>{s.accounts.map((x:any)=><option value={x.accountId}>{x.name}</option>)}</select></label><label>Service contact<select style={{display:'block',width:'100%',marginBottom:16}} value={c} disabled={!a} onChange={e=>C(e.target.value)}><option value="">Choose related contact</option>{s.memberships.filter((x:any)=>x.accountId===a).map((x:any)=><option value={x.contactId}>{person(x.contactId)} — {x.role}, joined {x.joined}</option>)}</select></label><label>Effective date<input placeholder="YYYY-MM-DD" style={{display:'block',width:'100%',marginBottom:16}} value={date} onChange={e=>D(e.target.value)}/></label><label>Contract reference<textarea style={{display:'block',width:'100%',marginBottom:16}} value={ref} onChange={e=>R(e.target.value)}/></label><button className="btn btn-secondary" disabled={!a||!c||!date||!ref.trim()} onClick={()=>V(true)}>Review transfer</button></>}<button className="btn btn-secondary" onClick={()=>E(null)}>Cancel</button></div>}
++</div>}
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -4,6 +4,7 @@
+ import { AppProvider } from './context/AppContext';
+ import { TopNav } from './components/TopNav';
+ import { Sidebar } from './components/Sidebar';
++import { Entitlements } from './pages/Entitlements';
+ import { Home } from './pages/Home';
+ import { Leads } from './pages/Leads';
+ import { LeadDetail } from './pages/LeadDetail';
+@@ -60,6 +61,7 @@
+             <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+             <main style={{ flex: 1, overflow: 'auto', padding: '24px', background: 'var(--bg)' }}>
+               <Routes>
++                <Route path="/entitlements" element={<Entitlements />} />
+                 <Route path="/" element={<Home onShowToast={showToast} />} />
+                 <Route path="/leads" element={<Leads onShowToast={showToast} />} />
+                 <Route path="/leads/:id" element={<LeadDetail onShowToast={showToast} />} />

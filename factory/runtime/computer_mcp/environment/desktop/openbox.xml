@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <keyboard>
+    <keybind key="A-Tab"><action name="NextWindow"/></keybind>
+    <keybind key="A-F4"><action name="Close"/></keybind>
+    <keybind key="A-F7"><action name="Move"/></keybind>
+    <keybind key="W-t">
+      <action name="Execute"><command>xfce4-terminal --disable-server --title="Workspace Terminal" --command="sudo -n -u workspace-cli /usr/local/bin/cua-workspace-shell"</command></action>
+    </keybind>
+    <keybind key="W-e">
+      <action name="Execute"><command>/usr/bin/thunar /workspace</command></action>
+    </keybind>
+  </keyboard>
+  <mouse>
+    <context name="Titlebar">
+      <mousebind button="Left" action="Drag"><action name="Move"/></mousebind>
+    </context>
+    <context name="Frame">
+      <mousebind button="A-Left" action="Drag"><action name="Move"/></mousebind>
+    </context>
+  </mouse>
+  <applications>
+    <application class="*"><maximized>yes</maximized></application>
+  </applications>
+</openbox_config>

@@ -1,0 +1,7 @@
+# Task-scoped curator review
+
+The spec opts in with computer_mcp.artwork_review=true. The coordinator maps that to config.sites.asana.artwork_review=true. The runtime imports hx01_artwork_review.apply_review and calls it inside the write lock, only on opted-in Asana writes, with (VAR_DIR, site, current, new_state, task_now()). Its returned dict is the state to persist. The new module must sit alongside sitehost.py and Pillow must be available on that desktop runtime.
+
+The initial Asana state has artworkReviewChannel. New user-dana comments on task-tide-marks-release containing both registered channel hosts request a review. The extension resolves actual current WordPress featured media and the unique published Tide Marks Pin. It reads the referenced stored bytes, creates actual viewport render attachments under files/asana/review, appends a curator comment and a server-owned artworkReviews receipt, and prevents stale tabs from deleting those records. It never awards points. The private verifier independently decodes final uploads and PSD layers, checks the expected repaired composite, preservation of accepted upload identity/hash, and the final receipt binding.
+
+Named overlays: asana/hx01-placement-review; wordpress_com/hx01-feature-viewport; pinterest/hx01-pin-viewport. No existing mock source was edited. Main and contrast roots must be separate. No Harbor or model run is performed by this source author.

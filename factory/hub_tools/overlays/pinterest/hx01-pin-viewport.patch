@@ -1,0 +1,20 @@
+--- a/src/pages/PinDetail.jsx
++++ b/src/pages/PinDetail.jsx
+@@ -151,6 +151,7 @@
+           <div className="w-full md:w-1/2 bg-[#e5e5e0] flex items-center justify-center">
+             <img
+               src={pin.image}
++              style={state.galleryPlacementViewport && pin.title === "Tide Marks: An Indoor Print Exhibition" ? {aspectRatio: `${state.galleryPlacementViewport[0]} / ${state.galleryPlacementViewport[1]}`,height: "auto",maxHeight: "none",objectFit: "cover",objectPosition: "top"} : undefined}
+               alt={pin.altText || pin.title}
+               className="w-full h-auto max-h-[80vh] object-contain"
+             />
+--- a/src/components/PinModal.jsx
++++ b/src/components/PinModal.jsx
+@@ -170,6 +170,7 @@
+         <div className="w-full md:w-1/2 bg-[#e5e5e0] flex items-center justify-center relative group min-h-[300px]">
+           <img
+             src={pin.image}
++              style={state.galleryPlacementViewport && pin.title === "Tide Marks: An Indoor Print Exhibition" ? {aspectRatio: `${state.galleryPlacementViewport[0]} / ${state.galleryPlacementViewport[1]}`,height: "auto",maxHeight: "none",objectFit: "cover",objectPosition: "top"} : undefined}
+             alt={pin.altText || pin.title}
+             className="w-full h-full object-contain max-h-[90vh]"
+           />

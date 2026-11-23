@@ -1,0 +1,155 @@
+--- a/src/pages/project/MergeRequestDetail.jsx
++++ b/src/pages/project/MergeRequestDetail.jsx
+@@ -1,19 +1,28 @@
+ import React from 'react';
+-import { useParams } from 'react-router-dom';
++import { Link, useLocation, useParams } from 'react-router-dom';
+ import { useStore } from '../../store';
+-import { GitPullRequest, Check, ThumbsUp } from 'lucide-react';
++import { GitPullRequest, Check, XCircle } from 'lucide-react';
+ 
+ export default function MergeRequestDetail() {
+   const { projectId, mrId } = useParams();
++  const { search } = useLocation();
+   const { state, updateState } = useStore();
+   const mr = state.mergeRequests.find(m => m.id === parseInt(mrId));
+ 
+-  if (!mr) return <div>Merge Request not found</div>;
++  if (!mr || mr.projectId !== Number(projectId)) return <div>Merge Request not found</div>;
++  const pipeline = state.pipelines
++    .filter(run => run.projectId === mr.projectId && run.branch === mr.sourceBranch)
++    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id - a.id)[0];
++  const passed = pipeline?.status === 'success';
++  const StatusIcon = passed ? Check : XCircle;
++  const changes = mr.changes || [];
+ 
+   const handleMerge = () => {
++    if (!passed || mr.status !== 'open') return;
++    const mergedAt = new Date().toISOString();
+     updateState(prev => ({
+       mergeRequests: prev.mergeRequests.map(m => 
+-        m.id === mr.id ? { ...m, status: 'merged' } : m
++        m.id === mr.id ? { ...m, status: 'merged', mergedAt } : m
+       )
+     }));
+   };
+@@ -35,59 +44,67 @@
+         </div>
+       </div>
+ 
++      <div className="mb-5 text-sm text-gray-700">
++        <span className="font-mono bg-gray-100 rounded px-2 py-1">{mr.sourceBranch}</span>
++        <span className="mx-2 text-gray-500">→</span>
++        <span className="font-mono bg-gray-100 rounded px-2 py-1">{mr.targetBranch}</span>
++        {mr.description && <p className="mt-4 whitespace-pre-wrap">{mr.description}</p>}
++      </div>
++
+       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+-            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
+-               <Check size={20} />
++            <div className={`w-10 h-10 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-500'} flex items-center justify-center text-white`}>
++              <StatusIcon size={20} />
+             </div>
+             <div>
+-               <div className="font-bold text-gray-900">Ready to merge!</div>
+-               <div className="text-sm text-gray-500">Pipeline passed. No conflicts.</div>
++              <div className="font-bold text-gray-900">{passed ? 'Pipeline passed' : 'Merge checks incomplete'}</div>
++              {pipeline ? (
++                <Link className="text-sm text-blue-700" to={`/projects/${projectId}/pipelines/${pipeline.id}${search}`}>
++                  #{pipeline.id} · {pipeline.status}
++                </Link>
++              ) : <div className="text-sm text-gray-500">No pipeline on this source branch</div>}
+             </div>
+          </div>
+          {mr.status === 'open' && (
+            <button 
+              onClick={handleMerge}
+-             className="bg-gitlab-info text-white px-4 py-2 rounded font-medium hover:bg-blue-700"
++             disabled={!passed}
++             className="bg-gitlab-info text-white px-4 py-2 rounded font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
+            >
+              Merge
+            </button>
+          )}
+          {mr.status === 'merged' && (
+            <div className="text-blue-600 font-bold flex items-center gap-2">
+-             <GitPullRequest size={20} /> Merged
++             <GitPullRequest size={20} /> Merged {mr.mergedAt && new Date(mr.mergedAt).toLocaleString()}
+            </div>
+          )}
+       </div>
+ 
+       <div className="border border-gray-200 rounded-lg overflow-hidden">
+         <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 font-medium text-sm flex justify-between">
+-           <span>Changes</span>
+-           <span className="text-gray-500">Showing 1 file</span>
++          <span>Changes</span>
++          <span className="text-gray-500">{changes.length} {changes.length === 1 ? 'file' : 'files'}</span>
+         </div>
+-        <div className="p-0">
+-          <div className="border-b border-gray-100 px-4 py-2 bg-white text-sm font-mono text-gray-700">
+-            src/components/Login.jsx
++        {changes.length === 0 && <p className="m-4 text-gray-500 text-sm">No changed files in this revision.</p>}
++        {changes.map(file => (
++          <div key={file.path}>
++            <div className="border-b border-gray-100 px-4 py-2 bg-white text-sm font-mono text-gray-700">{file.path}</div>
++            <div className="font-mono text-sm bg-white overflow-x-auto">
++              {file.lines.map((line, index) => {
++                const kind = line[0];
++                const color = kind === '+' ? 'bg-green-50 text-green-900'
++                  : kind === '-' ? 'bg-red-50 text-red-900' : 'text-gray-500';
++                return (
++                  <div key={index} className={`flex ${color}`}>
++                    <span className="w-10 text-right pr-2 text-gray-400 border-r border-gray-200">{file.start + index}</span>
++                    <code className="flex-1 px-4 py-1 whitespace-pre">{line}</code>
++                  </div>
++                );
++              })}
++            </div>
+           </div>
+-          <div className="font-mono text-sm bg-white overflow-x-auto">
+-             <div className="flex">
+-               <div className="w-10 bg-gray-50 text-right pr-2 text-gray-400 select-none border-r border-gray-200 py-1">1</div>
+-               <div className="flex-1 px-4 py-1 text-gray-400">{'  const Login = () => {'}</div>
+-             </div>
+-             <div className="flex bg-red-50">
+-               <div className="w-10 bg-red-100 text-right pr-2 text-gray-400 select-none border-r border-gray-200 py-1">2</div>
+-               <div className="flex-1 px-4 py-1 text-red-900">{'-   return <div>Login</div>;'}</div>
+-             </div>
+-             <div className="flex bg-green-50">
+-               <div className="w-10 bg-green-100 text-right pr-2 text-gray-400 select-none border-r border-gray-200 py-1">2</div>
+-               <div className="flex-1 px-4 py-1 text-green-900">{'+   return <div><LoginForm /></div>;'}</div>
+-             </div>
+-             <div className="flex">
+-               <div className="w-10 bg-gray-50 text-right pr-2 text-gray-400 select-none border-r border-gray-200 py-1">3</div>
+-               <div className="flex-1 px-4 py-1 text-gray-400">  {'}'}</div>
+-             </div>
+-          </div>
+-        </div>
++        ))}
+       </div>
+     </div>
+   );
+--- a/src/pages/project/Wiki.jsx
++++ b/src/pages/project/Wiki.jsx
+@@ -21,7 +21,7 @@
+ 
+   const handleSave = () => {
+     updateState(prev => ({
+-      wiki: prev.wiki.map(p => p.id === selectedPageId ? { ...p, content: editContent } : p)
++      wiki: prev.wiki.map(p => p.id === selectedPageId ? { ...p, content: editContent, updatedAt: new Date().toISOString() } : p)
+     }));
+     setIsEditing(false);
+   };
+--- a/src/components/layout/Sidebar.jsx
++++ b/src/components/layout/Sidebar.jsx
+@@ -26,7 +26,7 @@
+             <path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 0 1-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 0 1 4.82 2a.43.43 0 0 1 .58.04l2.5 2.5 1.84-5.56a.42.42 0 0 1 .57-.27.42.42 0 0 1 .23.27l1.84 5.56 2.5-2.5a.43.43 0 0 1 .58-.04.42.42 0 0 1 .11.16l2.44 7.51 1.22 3.78a.84.84 0 0 1-.3.94z"/>
+           </svg>
+         </div>
+-        <span className="font-bold text-lg tracking-tight">GitLab Mock</span>
++        <span className="font-bold text-lg tracking-tight">Brightloop Engineering</span>
+       </div>
+ 
+       <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
